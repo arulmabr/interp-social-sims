@@ -8,6 +8,9 @@ Date: 2026-05-23
 - Creativity Open-SAE response-only frequency decomposition over 320 response-task rows.
 - Safe-risk Open-SAE calibration over 4,200 saved responses.
 - Safe-risk behavior exactly matches the old saved behavior summary.
+- Ultimatum source audit over 2,040 saved responses, with 51 behavior cells and parsed old Goodfire log rows.
+- Trust-game source audit over 200 saved responses, with 20 behavior cells.
+- Open-SAE runner supports `creativity`, `safe_risky`, `ultimatum`, and `trust` dataset kinds.
 
 ## Caveats
 
@@ -19,7 +22,5 @@ Date: 2026-05-23
 
 ## Pending
 
-- Add Open-SAE loaders for ultimatum saved outputs.
-- Add Open-SAE loaders for trust-game saved outputs.
 - Run GPU feature decompositions for ultimatum and trust-game.
 - Produce final paper-style figures for all games from the open pipeline.

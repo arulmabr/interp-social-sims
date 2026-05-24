@@ -1,8 +1,8 @@
 # GPU Regeneration Roadmap
 
 This repo currently has complete Open-SAE reruns for creativity and safe-risk choice.
-The remaining work is to reproduce the old Ember feature-inspection layer for the other
-saved game outputs using the open Goodfire SAE.
+It also has loaders and non-GPU source audits for ultimatum and trust-game. The
+remaining work is to run the Open-SAE GPU feature decomposition for those two games.
 
 ## Completed
 
@@ -22,15 +22,14 @@ saved game outputs using the open Goodfire SAE.
 - Top-k rows: 42,000
 - Behavior match against old saved summary: exact, max absolute difference 0.0
 
-## Pending: Ultimatum Game
+## Ready for GPU: Ultimatum Game
 
 Raw saved data:
 
 `data/raw/games/ultimatum/results_20251008_201139/`
 
-Required implementation:
+Implemented loader behavior:
 
-- Add `--dataset-kind ultimatum` to `scripts/run_open_sae_feature_inspection.py`.
 - Parse files named `ultimatum_<condition>_<offer>.csv`.
 - Use `answer.ultimatum_response` as the answer.
 - Use `comment.ultimatum_response_comment` as the explanatory text.
@@ -43,24 +42,30 @@ Expected source scale from included data:
 
 - 3 conditions: baseline, prompting, steering
 - 17 offers: 10 through 90 by 5
-- 10 agents per cell in the included selected run
-- Expected response units: 510
-- Expected top-k rows with `--top-k 10`: 5,100
+- 40 agents per cell in the included selected run
+- Expected response units: 2,040
+- Expected top-k rows with `--top-k 10`: 20,400
 
-## Pending: Trust Game
+Current non-GPU audit:
+
+- Output: `data/processed/games/ultimatum/source_audit/`
+- Response units: 2,040
+- Behavior rows: 51
+- Parsed old Goodfire rows: 20,260
+
+## Ready for GPU: Trust Game
 
 Raw saved data:
 
 `data/raw/games/trust/results/`
 
-Required implementation:
+Implemented loader behavior:
 
-- Add `--dataset-kind trust` to `scripts/run_open_sae_feature_inspection.py`.
 - Parse files named `trust_game_<condition>_sent_<amount>.csv`.
 - Use `answer.trust_return` as the numeric return.
 - Use `comment.trust_return_comment` as the explanatory text.
 - Use `prompt.trust_return_user_prompt` and `generated_tokens.trust_return_generated_tokens`.
-- Preserve sent amount and tripled amount in response-unit metadata.
+- Preserve sent amount as the numeric reward-like axis; behavior summary records tripled amount.
 - Write behavior summary with average return and return ratio by condition and sent amount.
 
 Expected source scale from included data:
@@ -70,6 +75,12 @@ Expected source scale from included data:
 - 10 agents per cell
 - Expected response units: 200
 - Expected top-k rows with `--top-k 10`: 2,000
+
+Current non-GPU audit:
+
+- Output: `data/processed/games/trust/source_audit/`
+- Response units: 200
+- Behavior rows: 20
 
 ## GPU Target
 

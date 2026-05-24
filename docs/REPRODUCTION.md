@@ -13,6 +13,16 @@ python scripts/run_open_sae_feature_inspection.py \
   --dry-run \
   --expected-units 4200
 
+python scripts/run_open_sae_feature_inspection.py \
+  --dataset-kind ultimatum \
+  --dry-run \
+  --expected-units 2040
+
+python scripts/run_open_sae_feature_inspection.py \
+  --dataset-kind trust \
+  --dry-run \
+  --expected-units 200
+
 python tests/verify_release_artifacts.py
 ```
 
@@ -66,12 +76,69 @@ python scripts/run_open_sae_feature_inspection.py \
   --load-in-4bit
 ```
 
-## Pending Game Regeneration
+## Ultimatum Source Audit
 
-The raw data for ultimatum and trust-game is included. The next implementation step is
-to extend `scripts/run_open_sae_feature_inspection.py` with loaders for:
+This does not load the model or SAE. It reconstructs the saved response units, parses
+the old Goodfire log, and writes behavior summaries.
 
-- `dataset-kind ultimatum`
-- `dataset-kind trust`
+```bash
+python scripts/run_open_sae_feature_inspection.py \
+  --dataset-kind ultimatum \
+  --audit-only \
+  --expected-units 2040 \
+  --source-dir data/raw/games/ultimatum/results_20251008_201139 \
+  --output-dir data/processed/games/ultimatum/source_audit_rerun \
+  --goodfire-log data/raw/games/ultimatum/results_20251008_201139/feature_activations.txt
+```
 
-After those loaders exist, use the same Open-SAE model/SAE/hook setup above.
+## Trust Source Audit
+
+```bash
+python scripts/run_open_sae_feature_inspection.py \
+  --dataset-kind trust \
+  --audit-only \
+  --expected-units 200 \
+  --source-dir data/raw/games/trust/results \
+  --output-dir data/processed/games/trust/source_audit_rerun
+```
+
+## Ultimatum Open-SAE Rerun
+
+On RunPod, the combined smoke/full script is:
+
+```bash
+./runpod/run_remaining_games_open_sae.sh
+```
+
+The individual command is:
+
+```bash
+python scripts/run_open_sae_feature_inspection.py \
+  --dataset-kind ultimatum \
+  --activation-scope all_content \
+  --source-dir data/raw/games/ultimatum/results_20251008_201139 \
+  --output-dir data/processed/games/ultimatum/open_sae_rerun \
+  --model-id meta-llama/Llama-3.3-70B-Instruct \
+  --sae-repo Goodfire/Llama-3.3-70B-Instruct-SAE-l50 \
+  --hook model.layers.50 \
+  --top-k 10 \
+  --expected-units 2040 \
+  --goodfire-log data/raw/games/ultimatum/results_20251008_201139/feature_activations.txt \
+  --load-in-4bit
+```
+
+## Trust Open-SAE Rerun
+
+```bash
+python scripts/run_open_sae_feature_inspection.py \
+  --dataset-kind trust \
+  --activation-scope all_content \
+  --source-dir data/raw/games/trust/results \
+  --output-dir data/processed/games/trust/open_sae_rerun \
+  --model-id meta-llama/Llama-3.3-70B-Instruct \
+  --sae-repo Goodfire/Llama-3.3-70B-Instruct-SAE-l50 \
+  --hook model.layers.50 \
+  --top-k 10 \
+  --expected-units 200 \
+  --load-in-4bit
+```

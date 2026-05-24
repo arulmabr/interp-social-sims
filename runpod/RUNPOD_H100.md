@@ -20,5 +20,11 @@ export HF_TOKEN=...
 export OPENAI_API_KEY=...
 ```
 
+Run the remaining game Open-SAE smoke tests and full jobs:
+
+```bash
+./runpod/run_remaining_games_open_sae.sh
+```
+
 Stop the pod immediately after outputs are synced back. If the volume is retained, it
 continues to accrue idle storage cost.

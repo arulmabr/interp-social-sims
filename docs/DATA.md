@@ -51,7 +51,20 @@ Raw source:
 
 Unit: one saved responder response for an offer and condition.
 
-Status: included as raw saved data. Open-SAE loader/regeneration is pending.
+Source scale:
+
+- 3 conditions: baseline, prompting, steering
+- 17 offers: 10 through 90 by 5
+- 40 agents per condition-offer cell
+- 2,040 saved response units
+
+Source-audit output:
+
+`data/processed/games/ultimatum/source_audit/`
+
+It contains reconstructed response units, accept/reject behavior summaries, the saved
+acceptance-rate plot, and a parsed copy of the old `feature_activations.txt` log.
+GPU Open-SAE feature regeneration is pending.
 
 ## Trust Game
 
@@ -61,4 +74,16 @@ Raw source:
 
 Unit: one saved receiver return decision for a sent amount and condition.
 
-Status: included as raw saved data. Open-SAE loader/regeneration is pending.
+Source scale:
+
+- 2 conditions: baseline, intervention
+- 10 sent amounts: 10 through 100 by 10
+- 10 agents per condition-sent-amount cell
+- 200 saved response units
+
+Source-audit output:
+
+`data/processed/games/trust/source_audit/`
+
+It contains reconstructed response units, mean-return behavior summaries, and the saved
+mean-return plot. GPU Open-SAE feature regeneration is pending.

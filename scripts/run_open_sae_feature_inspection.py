@@ -37,6 +37,10 @@ CREATIVITY_SOURCE_DIR = (
 SAFE_RISKY_SOURCE_DIR = (
     REPO_ROOT / "data" / "raw" / "games" / "safe_risky" / "results_20251018_205613"
 )
+ULTIMATUM_SOURCE_DIR = (
+    REPO_ROOT / "data" / "raw" / "games" / "ultimatum" / "results_20251008_201139"
+)
+TRUST_SOURCE_DIR = REPO_ROOT / "data" / "raw" / "games" / "trust" / "results"
 
 DEFAULT_MODEL_ID = "meta-llama/Llama-3.3-70B-Instruct"
 DEFAULT_SAE_REPO = "Goodfire/Llama-3.3-70B-Instruct-SAE-l50"
@@ -82,6 +86,54 @@ SAFE_RISKY_CONDITION_ORDER = [
     "steering",
 ]
 
+ULTIMATUM_TASK = "ultimatum_response"
+ULTIMATUM_TASK_TITLES = {ULTIMATUM_TASK: "Ultimatum Game"}
+ULTIMATUM_CONDITION_TITLES = {
+    "baseline": "Baseline",
+    "prompting": "Prompting",
+    "steering": "Steering",
+}
+ULTIMATUM_CONDITION_ORDER = ["baseline", "prompting", "steering"]
+
+TRUST_TASK = "trust_return"
+TRUST_TASK_TITLES = {TRUST_TASK: "Trust Game"}
+TRUST_CONDITION_TITLES = {
+    "baseline": "Baseline",
+    "intervention": "Intervention",
+}
+TRUST_CONDITION_ORDER = ["baseline", "intervention"]
+
+DATASET_SOURCE_DIRS = {
+    "creativity": CREATIVITY_SOURCE_DIR,
+    "safe_risky": SAFE_RISKY_SOURCE_DIR,
+    "ultimatum": ULTIMATUM_SOURCE_DIR,
+    "trust": TRUST_SOURCE_DIR,
+}
+DATASET_TASKS = {
+    "creativity": CREATIVITY_TASKS,
+    "safe_risky": [SAFE_RISKY_TASK],
+    "ultimatum": [ULTIMATUM_TASK],
+    "trust": [TRUST_TASK],
+}
+DATASET_TASK_TITLES = {
+    "creativity": CREATIVITY_TASK_TITLES,
+    "safe_risky": SAFE_RISKY_TASK_TITLES,
+    "ultimatum": ULTIMATUM_TASK_TITLES,
+    "trust": TRUST_TASK_TITLES,
+}
+DATASET_CONDITION_TITLES = {
+    "creativity": CREATIVITY_CONDITION_TITLES,
+    "safe_risky": SAFE_RISKY_CONDITION_TITLES,
+    "ultimatum": ULTIMATUM_CONDITION_TITLES,
+    "trust": TRUST_CONDITION_TITLES,
+}
+DATASET_CONDITION_ORDERS = {
+    "creativity": list(CREATIVITY_CONDITION_FILES),
+    "safe_risky": SAFE_RISKY_CONDITION_ORDER,
+    "ultimatum": ULTIMATUM_CONDITION_ORDER,
+    "trust": TRUST_CONDITION_ORDER,
+}
+
 
 @dataclass(frozen=True)
 class WorkUnit:
@@ -121,7 +173,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--dataset-kind",
-        choices=["creativity", "safe_risky"],
+        choices=["creativity", "safe_risky", "ultimatum", "trust"],
         required=True,
         help="Saved dataset schema to load.",
     )
@@ -185,7 +237,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--rewards",
         default=None,
-        help="Comma-separated safe-risk risky reward values to keep.",
+        help=(
+            "Comma-separated numeric game values to keep: safe-risk risky reward, "
+            "ultimatum offer, or trust sent amount."
+        ),
     )
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument(
@@ -285,14 +340,14 @@ def file_sha256(path: Path) -> str:
 
 
 def default_source_dir(dataset_kind: str) -> Path:
-    return CREATIVITY_SOURCE_DIR if dataset_kind == "creativity" else SAFE_RISKY_SOURCE_DIR
+    return DATASET_SOURCE_DIRS[dataset_kind]
 
 
 def default_output_dir(dataset_kind: str, source_dir: Path, activation_scope: str) -> Path:
     if dataset_kind == "creativity":
         suffix = f"goodfire_open_sae_40agent_features_{activation_scope}"
         return source_dir.parent / f"{source_dir.name}_{suffix}"
-    suffix = f"goodfire_open_sae_calibration_{activation_scope}"
+    suffix = f"goodfire_open_sae_{dataset_kind}_{activation_scope}"
     return source_dir.parent / f"{source_dir.name}_{suffix}"
 
 
@@ -517,19 +572,282 @@ def load_safe_risky_units(
     return units, validation
 
 
+ULTIMATUM_FILE_RE = re.compile(r"^ultimatum_(?P<condition>.+)_(?P<offer>\d+)\.csv$")
+TRUST_FILE_RE = re.compile(r"^trust_game_(?P<condition>.+)_sent_(?P<sent>\d+)\.csv$")
+
+
+def condition_value_sort_key(
+    path: Path,
+    *,
+    pattern: re.Pattern[str],
+    condition_order_values: list[str],
+    value_group: str,
+) -> tuple[int, str, int]:
+    match = pattern.match(path.name)
+    if not match:
+        return (999, path.name, 0)
+    condition = match.group("condition")
+    value = int(match.group(value_group))
+    try:
+        order = condition_order_values.index(condition)
+    except ValueError:
+        order = 500
+    return (order, condition, value)
+
+
+def load_ultimatum_units(
+    source_dir: Path,
+    *,
+    strict: bool,
+    conditions: set[str] | None,
+    offers: set[int] | None,
+    max_agents_per_cell: int | None,
+    limit_units: int | None,
+) -> tuple[list[WorkUnit], dict[str, Any]]:
+    pd = import_pandas()
+    units: list[WorkUnit] = []
+    validation: dict[str, Any] = {
+        "dataset_kind": "ultimatum",
+        "source_dir": str(source_dir),
+        "csv_files": {},
+        "task": ULTIMATUM_TASK,
+        "expected_rows_per_condition_offer": 40,
+    }
+
+    if not source_dir.exists():
+        raise FileNotFoundError(f"Source directory does not exist: {source_dir}")
+
+    csv_paths = sorted(
+        source_dir.glob("ultimatum_*.csv"),
+        key=lambda path: condition_value_sort_key(
+            path,
+            pattern=ULTIMATUM_FILE_RE,
+            condition_order_values=ULTIMATUM_CONDITION_ORDER,
+            value_group="offer",
+        ),
+    )
+    csv_paths = [path for path in csv_paths if ULTIMATUM_FILE_RE.match(path.name)]
+    if not csv_paths:
+        raise FileNotFoundError(f"No ultimatum_<condition>_<offer>.csv files in {source_dir}")
+
+    seen_conditions: set[str] = set()
+    seen_offers: set[int] = set()
+    for csv_path in csv_paths:
+        match = ULTIMATUM_FILE_RE.match(csv_path.name)
+        if match is None:
+            continue
+        condition = match.group("condition")
+        offer = int(match.group("offer"))
+        seen_conditions.add(condition)
+        seen_offers.add(offer)
+        if conditions is not None and condition not in conditions:
+            continue
+        if offers is not None and offer not in offers:
+            continue
+
+        frame = pd.read_csv(csv_path)
+        validation["csv_files"][csv_path.name] = {
+            "path": str(csv_path),
+            "condition": condition,
+            "offer": offer,
+            "rows": int(len(frame)),
+            "columns": list(frame.columns),
+            "sha256": file_sha256(csv_path),
+        }
+        if strict and len(frame) != 40:
+            raise ValueError(f"{csv_path} has {len(frame)} rows, expected 40")
+        required = [
+            "answer.ultimatum_response",
+            "prompt.ultimatum_response_user_prompt",
+            "generated_tokens.ultimatum_response_generated_tokens",
+        ]
+        missing = [column for column in required if column not in frame.columns]
+        if missing:
+            raise ValueError(f"{csv_path} is missing required columns: {missing}")
+
+        if max_agents_per_cell is not None:
+            frame = frame.head(max_agents_per_cell)
+
+        for row_index, row in frame.iterrows():
+            agent_index = normalized_agent_index(row.get("agent.agent_index"), row_index)
+            unit_id = f"ultimatum:{condition}:{offer}:{row_index}"
+            units.append(
+                WorkUnit(
+                    unit_id=unit_id,
+                    dataset_kind="ultimatum",
+                    condition=condition,
+                    task=ULTIMATUM_TASK,
+                    source_file=csv_path.name,
+                    source_row_index=int(row_index),
+                    response_index=int(row_index) + 1,
+                    agent_index=agent_index,
+                    agent_subject_id=safe_text(row.get("agent.subject_id")),
+                    reward=offer,
+                    answer_text=safe_text(row.get("answer.ultimatum_response")),
+                    comment_text=safe_text(row.get("comment.ultimatum_response_comment")),
+                    system_prompt=safe_text(row.get("prompt.ultimatum_response_system_prompt")),
+                    user_prompt=safe_text(row.get("prompt.ultimatum_response_user_prompt")),
+                    response_text=safe_text(
+                        row.get("generated_tokens.ultimatum_response_generated_tokens")
+                    ),
+                )
+            )
+
+    validation["available_conditions"] = sorted(seen_conditions)
+    validation["available_offers"] = sorted(seen_offers)
+    validation["selected_conditions"] = sorted(conditions) if conditions else None
+    validation["selected_offers"] = sorted(offers) if offers else None
+    validation["actual_response_task_units_unfiltered"] = len(units)
+    validation["selected_csv_file_count"] = len(validation["csv_files"])
+
+    if conditions is not None:
+        missing_conditions = sorted(conditions - seen_conditions)
+        if missing_conditions:
+            raise ValueError(f"Unknown ultimatum conditions: {missing_conditions}")
+    if offers is not None:
+        missing_offers = sorted(offers - seen_offers)
+        if missing_offers:
+            raise ValueError(f"Unknown ultimatum offers: {missing_offers}")
+
+    if limit_units is not None:
+        units = units[:limit_units]
+        validation["limited_response_task_units"] = len(units)
+
+    return units, validation
+
+
+def load_trust_units(
+    source_dir: Path,
+    *,
+    strict: bool,
+    conditions: set[str] | None,
+    sent_amounts: set[int] | None,
+    max_agents_per_cell: int | None,
+    limit_units: int | None,
+) -> tuple[list[WorkUnit], dict[str, Any]]:
+    pd = import_pandas()
+    units: list[WorkUnit] = []
+    validation: dict[str, Any] = {
+        "dataset_kind": "trust",
+        "source_dir": str(source_dir),
+        "csv_files": {},
+        "task": TRUST_TASK,
+        "expected_rows_per_condition_sent_amount": 10,
+    }
+
+    if not source_dir.exists():
+        raise FileNotFoundError(f"Source directory does not exist: {source_dir}")
+
+    csv_paths = sorted(
+        source_dir.glob("trust_game_*_sent_*.csv"),
+        key=lambda path: condition_value_sort_key(
+            path,
+            pattern=TRUST_FILE_RE,
+            condition_order_values=TRUST_CONDITION_ORDER,
+            value_group="sent",
+        ),
+    )
+    csv_paths = [path for path in csv_paths if TRUST_FILE_RE.match(path.name)]
+    if not csv_paths:
+        raise FileNotFoundError(f"No trust_game_<condition>_sent_<amount>.csv files in {source_dir}")
+
+    seen_conditions: set[str] = set()
+    seen_sent_amounts: set[int] = set()
+    for csv_path in csv_paths:
+        match = TRUST_FILE_RE.match(csv_path.name)
+        if match is None:
+            continue
+        condition = match.group("condition")
+        sent_amount = int(match.group("sent"))
+        seen_conditions.add(condition)
+        seen_sent_amounts.add(sent_amount)
+        if conditions is not None and condition not in conditions:
+            continue
+        if sent_amounts is not None and sent_amount not in sent_amounts:
+            continue
+
+        frame = pd.read_csv(csv_path)
+        validation["csv_files"][csv_path.name] = {
+            "path": str(csv_path),
+            "condition": condition,
+            "sent_amount": sent_amount,
+            "rows": int(len(frame)),
+            "columns": list(frame.columns),
+            "sha256": file_sha256(csv_path),
+        }
+        if strict and len(frame) != 10:
+            raise ValueError(f"{csv_path} has {len(frame)} rows, expected 10")
+        required = [
+            "answer.trust_return",
+            "prompt.trust_return_user_prompt",
+            "generated_tokens.trust_return_generated_tokens",
+        ]
+        missing = [column for column in required if column not in frame.columns]
+        if missing:
+            raise ValueError(f"{csv_path} is missing required columns: {missing}")
+
+        if max_agents_per_cell is not None:
+            frame = frame.head(max_agents_per_cell)
+
+        for row_index, row in frame.iterrows():
+            agent_index = normalized_agent_index(row.get("agent.agent_index"), row_index)
+            unit_id = f"trust:{condition}:{sent_amount}:{row_index}"
+            units.append(
+                WorkUnit(
+                    unit_id=unit_id,
+                    dataset_kind="trust",
+                    condition=condition,
+                    task=TRUST_TASK,
+                    source_file=csv_path.name,
+                    source_row_index=int(row_index),
+                    response_index=int(row_index) + 1,
+                    agent_index=agent_index,
+                    agent_subject_id=safe_text(row.get("agent.subject_id")),
+                    reward=sent_amount,
+                    answer_text=safe_text(row.get("answer.trust_return")),
+                    comment_text=safe_text(row.get("comment.trust_return_comment")),
+                    system_prompt=safe_text(row.get("prompt.trust_return_system_prompt")),
+                    user_prompt=safe_text(row.get("prompt.trust_return_user_prompt")),
+                    response_text=safe_text(row.get("generated_tokens.trust_return_generated_tokens")),
+                )
+            )
+
+    validation["available_conditions"] = sorted(seen_conditions)
+    validation["available_sent_amounts"] = sorted(seen_sent_amounts)
+    validation["selected_conditions"] = sorted(conditions) if conditions else None
+    validation["selected_sent_amounts"] = sorted(sent_amounts) if sent_amounts else None
+    validation["actual_response_task_units_unfiltered"] = len(units)
+    validation["selected_csv_file_count"] = len(validation["csv_files"])
+
+    if conditions is not None:
+        missing_conditions = sorted(conditions - seen_conditions)
+        if missing_conditions:
+            raise ValueError(f"Unknown trust conditions: {missing_conditions}")
+    if sent_amounts is not None:
+        missing_amounts = sorted(sent_amounts - seen_sent_amounts)
+        if missing_amounts:
+            raise ValueError(f"Unknown trust sent amounts: {missing_amounts}")
+
+    if limit_units is not None:
+        units = units[:limit_units]
+        validation["limited_response_task_units"] = len(units)
+
+    return units, validation
+
+
 def load_work_units(args: argparse.Namespace) -> tuple[list[WorkUnit], dict[str, Any]]:
     conditions = parse_csv_list(args.conditions)
     rewards = parse_int_list(args.rewards)
     if args.dataset_kind == "creativity":
         if rewards:
-            raise ValueError("--rewards applies only to --dataset-kind safe_risky")
+            raise ValueError("--rewards applies only to game datasets, not creativity")
         units, validation = load_creativity_units(
             args.source_dir,
             strict=args.strict,
             conditions=conditions,
             limit_units=args.limit_units,
         )
-    else:
+    elif args.dataset_kind == "safe_risky":
         units, validation = load_safe_risky_units(
             args.source_dir,
             strict=args.strict,
@@ -538,6 +856,26 @@ def load_work_units(args: argparse.Namespace) -> tuple[list[WorkUnit], dict[str,
             max_agents_per_cell=args.max_agents_per_cell,
             limit_units=args.limit_units,
         )
+    elif args.dataset_kind == "ultimatum":
+        units, validation = load_ultimatum_units(
+            args.source_dir,
+            strict=args.strict,
+            conditions=conditions,
+            offers=rewards,
+            max_agents_per_cell=args.max_agents_per_cell,
+            limit_units=args.limit_units,
+        )
+    elif args.dataset_kind == "trust":
+        units, validation = load_trust_units(
+            args.source_dir,
+            strict=args.strict,
+            conditions=conditions,
+            sent_amounts=rewards,
+            max_agents_per_cell=args.max_agents_per_cell,
+            limit_units=args.limit_units,
+        )
+    else:
+        raise ValueError(f"Unsupported dataset kind: {args.dataset_kind}")
 
     validation["actual_response_task_units"] = len(units)
     if args.expected_units is not None and len(units) != args.expected_units:
@@ -549,10 +887,7 @@ def load_work_units(args: argparse.Namespace) -> tuple[list[WorkUnit], dict[str,
 
 def condition_order(dataset_kind: str, conditions: Iterable[str]) -> list[str]:
     seen = list(dict.fromkeys(conditions))
-    if dataset_kind == "creativity":
-        base = list(CREATIVITY_CONDITION_FILES)
-    else:
-        base = SAFE_RISKY_CONDITION_ORDER
+    base = DATASET_CONDITION_ORDERS[dataset_kind]
     ordered = [condition for condition in base if condition in seen]
     ordered.extend(sorted(condition for condition in seen if condition not in ordered))
     return ordered
@@ -560,10 +895,7 @@ def condition_order(dataset_kind: str, conditions: Iterable[str]) -> list[str]:
 
 def task_order(dataset_kind: str, tasks: Iterable[str]) -> list[str]:
     seen = list(dict.fromkeys(tasks))
-    if dataset_kind == "creativity":
-        base = CREATIVITY_TASKS
-    else:
-        base = [SAFE_RISKY_TASK]
+    base = DATASET_TASKS[dataset_kind]
     ordered = [task for task in base if task in seen]
     ordered.extend(sorted(task for task in seen if task not in ordered))
     return ordered
@@ -1262,6 +1594,121 @@ def safe_risky_behavior_summary(units: list[WorkUnit]) -> list[dict[str, Any]]:
     return rows
 
 
+def ultimatum_behavior_summary(units: list[WorkUnit]) -> list[dict[str, Any]]:
+    grouped: dict[tuple[str, int], dict[str, Any]] = {}
+    for unit in units:
+        if unit.reward is None:
+            continue
+        key = (unit.condition, unit.reward)
+        row = grouped.setdefault(
+            key,
+            {
+                "condition": unit.condition,
+                "offer": unit.reward,
+                "accept_count": 0,
+                "reject_count": 0,
+                "other_count": 0,
+                "comment_nonempty_count": 0,
+                "total_responses": 0,
+            },
+        )
+        row["total_responses"] += 1
+        answer = unit.answer_text.lower()
+        if "accept" in answer:
+            row["accept_count"] += 1
+        elif "reject" in answer:
+            row["reject_count"] += 1
+        else:
+            row["other_count"] += 1
+        row["comment_nonempty_count"] += int(bool(unit.comment_text.strip()))
+
+    rows: list[dict[str, Any]] = []
+    for condition, offer in sorted(
+        grouped,
+        key=lambda key: (
+            ULTIMATUM_CONDITION_ORDER.index(key[0])
+            if key[0] in ULTIMATUM_CONDITION_ORDER
+            else 999,
+            key[0],
+            key[1],
+        ),
+    ):
+        row = grouped[(condition, offer)]
+        total = row["total_responses"]
+        row["accept_percentage"] = 100 * row["accept_count"] / total if total else 0
+        row["reject_percentage"] = 100 * row["reject_count"] / total if total else 0
+        row["other_percentage"] = 100 * row["other_count"] / total if total else 0
+        row["comment_nonempty_percentage"] = (
+            100 * row["comment_nonempty_count"] / total if total else 0
+        )
+        rows.append(row)
+    return rows
+
+
+def parse_float_or_none(value: str) -> float | None:
+    text = safe_text(value).strip()
+    if not text:
+        return None
+    match = re.search(r"-?\d+(?:\.\d+)?", text)
+    if not match:
+        return None
+    try:
+        return float(match.group(0))
+    except ValueError:
+        return None
+
+
+def trust_behavior_summary(units: list[WorkUnit]) -> list[dict[str, Any]]:
+    grouped: dict[tuple[str, int], dict[str, Any]] = {}
+    for unit in units:
+        if unit.reward is None:
+            continue
+        key = (unit.condition, unit.reward)
+        row = grouped.setdefault(
+            key,
+            {
+                "condition": unit.condition,
+                "sent_amount": unit.reward,
+                "tripled_amount": unit.reward * 3,
+                "return_sum": 0.0,
+                "valid_numeric_count": 0,
+                "invalid_numeric_count": 0,
+                "comment_nonempty_count": 0,
+                "total_responses": 0,
+            },
+        )
+        row["total_responses"] += 1
+        value = parse_float_or_none(unit.answer_text)
+        if value is None:
+            row["invalid_numeric_count"] += 1
+        else:
+            row["valid_numeric_count"] += 1
+            row["return_sum"] += value
+        row["comment_nonempty_count"] += int(bool(unit.comment_text.strip()))
+
+    rows: list[dict[str, Any]] = []
+    for condition, sent_amount in sorted(
+        grouped,
+        key=lambda key: (
+            TRUST_CONDITION_ORDER.index(key[0]) if key[0] in TRUST_CONDITION_ORDER else 999,
+            key[0],
+            key[1],
+        ),
+    ):
+        row = grouped[(condition, sent_amount)]
+        valid = row["valid_numeric_count"]
+        total = row["total_responses"]
+        row["mean_return"] = row["return_sum"] / valid if valid else 0
+        row["mean_return_share_of_tripled"] = (
+            row["mean_return"] / row["tripled_amount"] if row["tripled_amount"] else 0
+        )
+        row["comment_nonempty_percentage"] = (
+            100 * row["comment_nonempty_count"] / total if total else 0
+        )
+        rows.append(row)
+    return rows
+
+
 def build_safe_risky_behavior_plot(output_dir: Path, summary_rows: list[dict[str, Any]]) -> list[str]:
     if not summary_rows:
         return []
@@ -1318,6 +1765,127 @@ def build_safe_risky_behavior_plot(output_dir: Path, summary_rows: list[dict[str
     plt.close(fig)
     plot_paths.append(str(behavior_path))
     return plot_paths
+
+
+def build_ultimatum_behavior_plot(output_dir: Path, summary_rows: list[dict[str, Any]]) -> list[str]:
+    if not summary_rows:
+        return []
+    try:
+        import matplotlib.pyplot as plt
+    except ImportError:
+        return []
+
+    plot_paths: list[str] = []
+    conditions = condition_order("ultimatum", [row["condition"] for row in summary_rows])
+    offers = sorted({int(row["offer"]) for row in summary_rows})
+    by_key = {(row["condition"], int(row["offer"])): row for row in summary_rows}
+
+    fig, ax = plt.subplots(figsize=(9.5, 5.5))
+    for condition in conditions:
+        xs: list[int] = []
+        ys: list[float] = []
+        for offer in offers:
+            row = by_key.get((condition, offer))
+            if row:
+                xs.append(offer)
+                ys.append(row["accept_percentage"])
+        if xs:
+            ax.plot(
+                xs,
+                ys,
+                marker="o",
+                label=ULTIMATUM_CONDITION_TITLES.get(condition, condition),
+            )
+    ax.set_title("Ultimatum Game Acceptance Rates\n(saved response audit)")
+    ax.set_xlabel("Offer to responder")
+    ax.set_ylabel("Percentage Accepting")
+    ax.set_ylim(0, 105)
+    ax.grid(True, alpha=0.25)
+    ax.legend()
+    fig.tight_layout()
+    path = output_dir / "ultimatum_acceptance_rates_from_saved_outputs.png"
+    fig.savefig(path, dpi=220)
+    plt.close(fig)
+    plot_paths.append(str(path))
+    return plot_paths
+
+
+def build_trust_behavior_plot(output_dir: Path, summary_rows: list[dict[str, Any]]) -> list[str]:
+    if not summary_rows:
+        return []
+    try:
+        import matplotlib.pyplot as plt
+    except ImportError:
+        return []
+
+    plot_paths: list[str] = []
+    conditions = condition_order("trust", [row["condition"] for row in summary_rows])
+    sent_amounts = sorted({int(row["sent_amount"]) for row in summary_rows})
+    by_key = {(row["condition"], int(row["sent_amount"])): row for row in summary_rows}
+
+    fig, ax = plt.subplots(figsize=(9.5, 5.5))
+    for condition in conditions:
+        xs: list[int] = []
+        ys: list[float] = []
+        for sent_amount in sent_amounts:
+            row = by_key.get((condition, sent_amount))
+            if row:
+                xs.append(sent_amount)
+                ys.append(row["mean_return"])
+        if xs:
+            ax.plot(
+                xs,
+                ys,
+                marker="o",
+                label=TRUST_CONDITION_TITLES.get(condition, condition),
+            )
+    ax.set_title("Trust Game Return Amounts\n(saved response audit)")
+    ax.set_xlabel("Amount Sent")
+    ax.set_ylabel("Mean Amount Returned")
+    ax.grid(True, alpha=0.25)
+    ax.legend()
+    fig.tight_layout()
+    path = output_dir / "trust_mean_returns_from_saved_outputs.png"
+    fig.savefig(path, dpi=220)
+    plt.close(fig)
+    plot_paths.append(str(path))
+    return plot_paths
+
+
+def behavior_summary_for_dataset(dataset_kind: str, units: list[WorkUnit]) -> list[dict[str, Any]]:
+    if dataset_kind == "safe_risky":
+        return safe_risky_behavior_summary(units)
+    if dataset_kind == "ultimatum":
+        return ultimatum_behavior_summary(units)
+    if dataset_kind == "trust":
+        return trust_behavior_summary(units)
+    return []
+
+
+def write_behavior_summary(
+    output_dir: Path,
+    dataset_kind: str,
+    behavior_rows: list[dict[str, Any]],
+) -> Path | None:
+    if not behavior_rows:
+        return None
+    path = output_dir / f"{dataset_kind}_behavior_summary.csv"
+    write_csv(path, behavior_rows)
+    return path
+
+
+def build_behavior_plot(
+    output_dir: Path,
+    dataset_kind: str,
+    behavior_rows: list[dict[str, Any]],
+) -> list[str]:
+    if dataset_kind == "safe_risky":
+        return build_safe_risky_behavior_plot(output_dir, behavior_rows)
+    if dataset_kind == "ultimatum":
+        return build_ultimatum_behavior_plot(output_dir, behavior_rows)
+    if dataset_kind == "trust":
+        return build_trust_behavior_plot(output_dir, behavior_rows)
+    return []
 
 
 def normalized_condition_label(label: str) -> str:
@@ -1490,17 +2058,23 @@ def build_plots(
         return []
 
     plot_paths: list[str] = []
-    if dataset_kind == "creativity":
-        condition_titles = CREATIVITY_CONDITION_TITLES
-        task_titles = CREATIVITY_TASK_TITLES
+    if dataset_kind in {"creativity", "ultimatum", "trust"}:
+        condition_titles = DATASET_CONDITION_TITLES[dataset_kind]
+        task_titles = DATASET_TASK_TITLES[dataset_kind]
         conditions = condition_order(dataset_kind, [unit.condition for unit in units])
         tasks = task_order(dataset_kind, [unit.task for unit in units])
         fig, axes = plt.subplots(len(tasks), len(conditions), figsize=(4.6 * len(conditions), 4.8 * len(tasks)))
-        if len(tasks) == 1:
-            axes = [axes]
+        if len(tasks) == 1 and len(conditions) == 1:
+            axes_grid = [[axes]]
+        elif len(tasks) == 1:
+            axes_grid = [list(axes)]
+        elif len(conditions) == 1:
+            axes_grid = [[ax] for ax in axes]
+        else:
+            axes_grid = axes
         for row_idx, task in enumerate(tasks):
             for col_idx, condition in enumerate(conditions):
-                ax = axes[row_idx][col_idx] if len(conditions) > 1 else axes[row_idx]
+                ax = axes_grid[row_idx][col_idx]
                 panel_rows = [
                     row
                     for row in condition_top_rows
@@ -1518,7 +2092,12 @@ def build_plots(
                 ax.tick_params(axis="y", labelsize=7)
         fig.suptitle("Top 5 Activated Goodfire Open-SAE Features by Task and Condition", fontsize=14)
         fig.tight_layout(rect=(0, 0, 1, 0.96))
-        figure_path = output_dir / "open_sae_figure4_replacement_top_features.png"
+        figure_name = (
+            "open_sae_figure4_replacement_top_features.png"
+            if dataset_kind == "creativity"
+            else f"{dataset_kind}_open_sae_top_features_by_condition.png"
+        )
+        figure_path = output_dir / figure_name
         fig.savefig(figure_path, dpi=220)
         plt.close(fig)
         plot_paths.append(str(figure_path))
@@ -1611,6 +2190,8 @@ def build_plots(
 
     tasks = task_order(dataset_kind, [unit.task for unit in units])
     conditions = condition_order(dataset_kind, [unit.condition for unit in units])
+    condition_titles = DATASET_CONDITION_TITLES[dataset_kind]
+    task_titles = DATASET_TASK_TITLES[dataset_kind]
     fig, axes = plt.subplots(1, len(tasks), figsize=(5.5 * len(tasks), 5), sharey=True)
     if len(tasks) == 1:
         axes = [axes]
@@ -1625,12 +2206,10 @@ def build_plots(
             ]
             if values:
                 distributions.append(values)
-                labels.append(
-                    (CREATIVITY_CONDITION_TITLES if dataset_kind == "creativity" else SAFE_RISKY_CONDITION_TITLES).get(condition, condition)
-                )
+                labels.append(condition_titles.get(condition, condition))
         if distributions:
             ax.boxplot(distributions, tick_labels=labels, showfliers=False)
-        ax.set_title((CREATIVITY_TASK_TITLES if dataset_kind == "creativity" else SAFE_RISKY_TASK_TITLES).get(task, task))
+        ax.set_title(task_titles.get(task, task))
         ax.tick_params(axis="x", rotation=20)
         ax.set_ylabel("Top-1 max SAE activation")
     fig.tight_layout()
@@ -1874,9 +2453,7 @@ def run_inference(args: argparse.Namespace, units: list[WorkUnit], validation: d
             goodfire_rows=goodfire_rows,
         )
 
-    behavior_rows: list[dict[str, Any]] = []
-    if args.dataset_kind == "safe_risky":
-        behavior_rows = safe_risky_behavior_summary(units)
+    behavior_rows = behavior_summary_for_dataset(args.dataset_kind, units)
 
     plot_paths = build_plots(
         output_dir=args.output_dir,
@@ -1887,6 +2464,8 @@ def run_inference(args: argparse.Namespace, units: list[WorkUnit], validation: d
         top_feature_rows=top_feature_rows,
         goodfire_overlap_rows=overlap_rows,
     )
+    if args.dataset_kind in {"ultimatum", "trust"}:
+        plot_paths.extend(build_behavior_plot(args.output_dir, args.dataset_kind, behavior_rows))
 
     response_unit_rows = [asdict(unit) for unit in units]
     write_csv(args.output_dir / "open_sae_response_units.csv", response_unit_rows)
@@ -1896,8 +2475,7 @@ def run_inference(args: argparse.Namespace, units: list[WorkUnit], validation: d
     if condition_reward_top_rows:
         write_csv(args.output_dir / "open_sae_condition_reward_top_features.csv", condition_reward_top_rows)
     write_csv(args.output_dir / "open_sae_feature_summary.csv", summary_rows)
-    if behavior_rows:
-        write_csv(args.output_dir / "safe_risky_behavior_summary.csv", behavior_rows)
+    write_behavior_summary(args.output_dir, args.dataset_kind, behavior_rows)
     if goodfire_rows:
         write_csv(args.output_dir / "goodfire_api_feature_activations_parsed.csv", goodfire_rows)
     if overlap_rows:
@@ -1993,10 +2571,9 @@ def run_dataset_audit(args: argparse.Namespace, units: list[WorkUnit], validatio
 
     behavior_rows: list[dict[str, Any]] = []
     plot_paths: list[str] = []
-    if args.dataset_kind == "safe_risky":
-        behavior_rows = safe_risky_behavior_summary(units)
-        write_csv(args.output_dir / "safe_risky_behavior_summary.csv", behavior_rows)
-        plot_paths.extend(build_safe_risky_behavior_plot(args.output_dir, behavior_rows))
+    behavior_rows = behavior_summary_for_dataset(args.dataset_kind, units)
+    write_behavior_summary(args.output_dir, args.dataset_kind, behavior_rows)
+    plot_paths.extend(build_behavior_plot(args.output_dir, args.dataset_kind, behavior_rows))
 
     goodfire_rows: list[dict[str, Any]] = []
     if args.goodfire_log:

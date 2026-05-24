@@ -19,6 +19,13 @@ def require(path: str) -> Path:
     return full
 
 
+def require_nonempty(path: str) -> Path:
+    full = require(path)
+    if full.stat().st_size <= 0:
+        raise AssertionError(f"Artifact is empty: {path}")
+    return full
+
+
 def check_creativity_torrance() -> None:
     evals = pd.read_csv(require("data/processed/creativity/torrance_gpt5_eval/torrance_gpt_evals.csv"))
     summary = pd.read_csv(require("data/processed/creativity/torrance_gpt5_eval/torrance_eval_summary.csv"))
@@ -67,10 +74,40 @@ def check_safe_risky() -> None:
         raise AssertionError("Safe-risk comments are not complete")
 
 
+def check_remaining_game_source_audits() -> None:
+    ultimatum = "data/processed/games/ultimatum/source_audit"
+    ultimatum_units = pd.read_csv(require(f"{ultimatum}/open_sae_response_units.csv"))
+    ultimatum_behavior = pd.read_csv(require(f"{ultimatum}/ultimatum_behavior_summary.csv"))
+    ultimatum_goodfire = pd.read_csv(require(f"{ultimatum}/goodfire_api_feature_activations_parsed.csv"))
+    ultimatum_meta = json.loads(require(f"{ultimatum}/open_sae_metadata.json").read_text())
+    if len(ultimatum_units) != 2040:
+        raise AssertionError(f"Expected 2,040 ultimatum response units, found {len(ultimatum_units)}")
+    if len(ultimatum_behavior) != 51:
+        raise AssertionError(f"Expected 51 ultimatum behavior rows, found {len(ultimatum_behavior)}")
+    if len(ultimatum_goodfire) <= 0:
+        raise AssertionError("Expected parsed old Goodfire ultimatum rows")
+    if ultimatum_meta.get("processed_response_task_units") != 2040:
+        raise AssertionError("Ultimatum source-audit unit count mismatch")
+    require_nonempty(f"{ultimatum}/ultimatum_acceptance_rates_from_saved_outputs.png")
+
+    trust = "data/processed/games/trust/source_audit"
+    trust_units = pd.read_csv(require(f"{trust}/open_sae_response_units.csv"))
+    trust_behavior = pd.read_csv(require(f"{trust}/trust_behavior_summary.csv"))
+    trust_meta = json.loads(require(f"{trust}/open_sae_metadata.json").read_text())
+    if len(trust_units) != 200:
+        raise AssertionError(f"Expected 200 trust response units, found {len(trust_units)}")
+    if len(trust_behavior) != 20:
+        raise AssertionError(f"Expected 20 trust behavior rows, found {len(trust_behavior)}")
+    if trust_meta.get("processed_response_task_units") != 200:
+        raise AssertionError("Trust source-audit unit count mismatch")
+    require_nonempty(f"{trust}/trust_mean_returns_from_saved_outputs.png")
+
+
 def main() -> None:
     check_creativity_torrance()
     check_creativity_open_sae()
     check_safe_risky()
+    check_remaining_game_source_audits()
     print("release artifact verification passed")
 
 
