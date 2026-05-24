@@ -55,6 +55,60 @@ interpretability aids, not exact historical Goodfire Ember label strings.
 The offline lookup is `data/processed/feature_description_lookup.csv`. It stores the
 stable `feature_index`, cached `feature_label`, and corresponding Neuronpedia API URL.
 
+## Compute, Cost, and Scope
+
+The local platform checks and EDSL smoke runs do not require a GPU. The expensive
+step is Open-SAE inspection with Llama 3.3 70B.
+
+Recommended GPU target:
+
+- 1x H100 80GB.
+- 300-500GB pod volume for model cache, SAE weights, source data, and outputs.
+- Hugging Face token with access to `meta-llama/Llama-3.3-70B-Instruct`.
+
+RunPod prices change. As of the May 2026 public pricing page, H100 pod examples
+include H100 PCIe Community around `$1.99/hr`, H100 SXM Community around
+`$2.69/hr`, and H100 PCIe Secure around `$2.89/hr`; check
+[RunPod pricing](https://www.runpod.io/pricing) before launching. RunPod also lists
+pod pricing as hourly but billed by the millisecond, and volume/container storage
+can continue to cost money when pods are idle.
+
+Measured Open-SAE inference time in this repo:
+
+| Run | Units | GPU elapsed |
+| --- | ---: | ---: |
+| Creativity response-only Open-SAE | 320 | 1.8 min |
+| Safe-risk/lottery Open-SAE | 4,200 | 12.4 min |
+| Ultimatum Open-SAE | 2,040 | 7.4 min |
+| Trust Open-SAE | 200 | 1.1 min |
+| Total archived Open-SAE inference | 6,760 | 22.6 min |
+
+At `$1.99-$2.89/hr`, the measured inference time above is about `$0.75-$1.09` of
+raw H100 compute. In practice, first-time reproduction costs more because the pod
+must start, install dependencies, download/cache the 70B model and SAE, and may sit
+idle during debugging. Practical credit guidance:
+
+- Local docs/tests/smoke runs: `$0`, excluding any hosted EDSL model calls.
+- One tiny GPU smoke test after the model is cached: usually under `$1`.
+- Reproduce the archived Open-SAE feature runs once: budget `$10-$25`.
+- Develop and inspect one new 40-agent EDSL game: budget `$25-$50`, depending on
+  model-response generation cost and iteration.
+- Iterative experiments or phase-2 steering work: keep `$100-$200` available.
+
+EDSL response collection cost is separate from Open-SAE inspection. If EDSL uses a
+hosted model provider, token prices depend on that provider and model. If EDSL uses
+your own GPU-backed model, that cost is GPU time instead.
+
+Current steering status:
+
+- Implemented now: saved Goodfire steering provenance and a phase-2 smoke-plan
+  entrypoint.
+- Not implemented yet: live Open-SAE activation-patching generation.
+- Intended steering path: run EDSL generation through a custom GPU backend, hook
+  `model.layers.50`, encode residuals with the Goodfire SAE, nudge selected feature
+  indices, decode back while preserving reconstruction error, save new steered
+  `response_units.csv`, then run post-hoc Open-SAE inspection.
+
 ## Quick Start
 
 ```bash

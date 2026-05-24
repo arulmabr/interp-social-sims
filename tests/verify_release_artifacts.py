@@ -261,6 +261,10 @@ def check_platform_layer() -> None:
     readme = require("README.md").read_text(encoding="utf-8")
     if "building EDSL social simulations" not in readme:
         raise AssertionError("README should foreground the EDSL platform workflow")
+    if "Compute, Cost, and Scope" not in readme:
+        raise AssertionError("README should document compute and cost expectations")
+    if "Current steering status" not in readme:
+        raise AssertionError("README should document the steering implementation boundary")
     build_doc = require("docs/BUILD_A_GAME.md").read_text(encoding="utf-8")
     if "scripts/run_edsl_social_simulation.py" not in build_doc:
         raise AssertionError("BUILD_A_GAME.md is missing the EDSL runner command")
