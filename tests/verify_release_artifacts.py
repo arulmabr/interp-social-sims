@@ -13,6 +13,18 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[1]
 EXPECTED_STEERING_FEATURES = {13142, 20117, 4992}
 FEATURE_FALLBACK_RE = re.compile(r"^feature_\d+$")
+PLATFORM_FILES = [
+    "social_sim_open_sae/__init__.py",
+    "social_sim_open_sae/game_spec.py",
+    "social_sim_open_sae/edsl_adapter.py",
+    "scripts/run_edsl_social_simulation.py",
+    "examples/games/creativity.py",
+    "examples/games/safe_risky.py",
+    "examples/games/ultimatum.py",
+    "examples/games/trust.py",
+    "docs/BUILD_A_GAME.md",
+    "tests/verify_platform_smoke.py",
+]
 
 
 def require(path: str) -> Path:
@@ -243,7 +255,21 @@ def check_steering_provenance() -> None:
         raise AssertionError("Steering smoke plan feature indices mismatch")
 
 
+def check_platform_layer() -> None:
+    for path in PLATFORM_FILES:
+        require_nonempty(path)
+    readme = require("README.md").read_text(encoding="utf-8")
+    if "building EDSL social simulations" not in readme:
+        raise AssertionError("README should foreground the EDSL platform workflow")
+    build_doc = require("docs/BUILD_A_GAME.md").read_text(encoding="utf-8")
+    if "scripts/run_edsl_social_simulation.py" not in build_doc:
+        raise AssertionError("BUILD_A_GAME.md is missing the EDSL runner command")
+    if "--run-dir" not in build_doc:
+        raise AssertionError("BUILD_A_GAME.md is missing the Open-SAE run-dir path")
+
+
 def main() -> None:
+    check_platform_layer()
     check_creativity_torrance()
     check_creativity_open_sae()
     check_safe_risky()

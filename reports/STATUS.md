@@ -1,6 +1,16 @@
-# Current Replication Status
+# Current Platform And Replication Status
 
 Date: 2026-05-23
+
+## Platform Layer
+
+- Public framing is platform-first: build EDSL social simulations, collect fresh
+  model-agent responses, then inspect mechanisms with Goodfire Open-SAE.
+- Reusable EDSL game specs exist for creativity, safe-risk/lottery, ultimatum,
+  and trust.
+- New EDSL runs write `run_manifest.json`, `response_units.csv`, and
+  `response_units.jsonl`.
+- Open-SAE inspection supports normalized EDSL run folders through `--run-dir`.
 
 ## Complete
 
@@ -15,6 +25,7 @@ Date: 2026-05-23
 - Offline feature-description lookup for creativity, safe-risk/lottery, ultimatum, and trust.
 - Creativity high-steering Goodfire controller provenance for features `13142`, `20117`, and `4992`.
 - Open-SAE runner supports `creativity`, `safe_risky`, `ultimatum`, and `trust` dataset kinds.
+- Legacy archived-output loaders remain available for the existing paper fixtures.
 
 ## Caveats
 

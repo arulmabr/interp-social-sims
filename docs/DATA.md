@@ -1,5 +1,21 @@
 # Data Inventory
 
+## Generated EDSL Runs
+
+New social simulations should be collected with
+`scripts/run_edsl_social_simulation.py`. Each generated run folder has:
+
+- `run_manifest.json`: game id, model settings, EDSL game module, questions,
+  conditions, scenario limits, and output counts.
+- `response_units.csv`: one row per model response to inspect with Open-SAE.
+- `response_units.jsonl`: audit copy of the normalized response units.
+- `edsl_results/*.csv`: raw EDSL result exports by condition.
+- `behavior_units.csv`, `behavior_summary.csv`, and `behavior_summary.png` when
+  the game spec defines behavior metrics.
+
+The Open-SAE runner consumes these folders through `--run-dir`. The archived
+datasets below remain regression fixtures and paper-replication examples.
+
 ## Creativity
 
 Raw source:

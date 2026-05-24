@@ -1,8 +1,45 @@
 # Reproduction Guide
 
+## Platform Workflow For New EDSL Games
+
+The preferred public workflow is to collect a new EDSL social-simulation run and
+then inspect that run with Open-SAE:
+
+```bash
+python scripts/run_edsl_social_simulation.py \
+  --game-module examples/games/safe_risky.py \
+  --output-dir runs/safe_risky_demo \
+  --model-id meta-llama/Llama-3.3-70B-Instruct \
+  --agents 40
+
+python scripts/run_open_sae_feature_inspection.py \
+  --run-dir runs/safe_risky_demo \
+  --output-dir runs/safe_risky_demo/open_sae \
+  --model-id meta-llama/Llama-3.3-70B-Instruct \
+  --sae-repo Goodfire/Llama-3.3-70B-Instruct-SAE-l50 \
+  --hook model.layers.50 \
+  --top-k 10 \
+  --load-in-4bit
+```
+
+The archived-output commands below remain as paper-replication fixtures.
+
 ## Local Non-GPU Checks
 
 ```bash
+python scripts/run_edsl_social_simulation.py \
+  --game-module examples/games/safe_risky.py \
+  --output-dir /tmp/safe_risky_demo \
+  --mock-model \
+  --agents 2 \
+  --conditions baseline \
+  --limit-scenarios 1
+
+python scripts/run_open_sae_feature_inspection.py \
+  --run-dir /tmp/safe_risky_demo \
+  --dry-run \
+  --expected-units 2
+
 python scripts/run_open_sae_feature_inspection.py \
   --dataset-kind creativity \
   --dry-run \

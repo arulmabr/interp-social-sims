@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""Inspect saved EDSL responses with Goodfire's open Hugging Face SAE.
+"""Inspect EDSL social-simulation responses with Goodfire's open Hugging Face SAE.
 
-This runner is intentionally dataset-oriented rather than notebook-oriented:
-it validates saved CSV outputs, reconstructs user/assistant transcripts, masks
-chat-template control tokens, computes per-response SAE maxima, and writes
-audit-ready CSV/JSONL outputs.
+The primary interface is now ``--run-dir`` over a normalized EDSL run folder
+created by ``scripts/run_edsl_social_simulation.py``. Legacy saved-output loaders
+remain for the archived creativity, safe-risk, ultimatum, and trust examples.
 """
 
 from __future__ import annotations
@@ -169,13 +168,22 @@ class TokenizedUnit:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Run Open-SAE feature inspection over saved EDSL outputs."
+        description="Run Open-SAE feature inspection over EDSL social-simulation outputs."
+    )
+    parser.add_argument(
+        "--run-dir",
+        type=Path,
+        default=None,
+        help=(
+            "Normalized EDSL run folder containing run_manifest.json and "
+            "response_units.csv. This is the preferred platform interface."
+        ),
     )
     parser.add_argument(
         "--dataset-kind",
         choices=["creativity", "safe_risky", "ultimatum", "trust"],
-        required=True,
-        help="Saved dataset schema to load.",
+        default=None,
+        help="Legacy saved dataset schema to load when --run-dir is not supplied.",
     )
     parser.add_argument("--source-dir", type=Path, default=None)
     parser.add_argument("--output-dir", type=Path, default=None)
@@ -343,6 +351,39 @@ def default_source_dir(dataset_kind: str) -> Path:
     return DATASET_SOURCE_DIRS[dataset_kind]
 
 
+def infer_run_dataset_kind(run_dir: Path) -> str:
+    """Infer a dataset/game id from a normalized EDSL run folder."""
+
+    manifest_path = run_dir / "run_manifest.json"
+    if manifest_path.exists():
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        game_id = safe_text(manifest.get("game_id"))
+        if game_id:
+            return game_id
+    response_units_path = run_dir / "response_units.csv"
+    if response_units_path.exists():
+        pd = import_pandas()
+        frame = pd.read_csv(response_units_path, nrows=1)
+        if "game_id" in frame.columns and len(frame):
+            game_id = safe_text(frame.iloc[0].get("game_id"))
+            if game_id:
+                return game_id
+    return run_dir.name
+
+
+def parse_int_or_none(value: Any) -> int | None:
+    text = safe_text(value)
+    if not text:
+        return None
+    try:
+        parsed = float(text)
+    except ValueError:
+        return None
+    if math.isnan(parsed):
+        return None
+    return int(parsed)
+
+
 def default_output_dir(dataset_kind: str, source_dir: Path, activation_scope: str) -> Path:
     if dataset_kind == "creativity":
         suffix = f"goodfire_open_sae_40agent_features_{activation_scope}"
@@ -440,6 +481,106 @@ def load_creativity_units(
         units = units[:limit_units]
         validation["limited_response_task_units"] = len(units)
 
+    return units, validation
+
+
+def load_run_dir_units(args: argparse.Namespace) -> tuple[list[WorkUnit], dict[str, Any]]:
+    """Load normalized response units produced by the EDSL platform runner."""
+
+    pd = import_pandas()
+    run_dir = args.run_dir
+    response_units_path = run_dir / "response_units.csv"
+    manifest_path = run_dir / "run_manifest.json"
+    if not response_units_path.exists():
+        raise FileNotFoundError(f"Missing normalized response units: {response_units_path}")
+
+    frame = pd.read_csv(response_units_path)
+    manifest: dict[str, Any] = {}
+    if manifest_path.exists():
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    required = ["condition", "task", "user_prompt", "response_text"]
+    missing = [column for column in required if column not in frame.columns]
+    if missing:
+        raise ValueError(f"{response_units_path} is missing required columns: {missing}")
+
+    conditions = parse_csv_list(args.conditions)
+    rewards = parse_int_list(args.rewards)
+    units: list[WorkUnit] = []
+    seen_conditions: set[str] = set()
+    seen_rewards: set[int] = set()
+    per_cell_counts: dict[tuple[str, str, int | None], int] = defaultdict(int)
+    for row_index, row in frame.iterrows():
+        condition = safe_text(row.get("condition"))
+        task = safe_text(row.get("task"))
+        reward = parse_int_or_none(row.get("reward"))
+        seen_conditions.add(condition)
+        if reward is not None:
+            seen_rewards.add(reward)
+        if conditions is not None and condition not in conditions:
+            continue
+        if rewards is not None and reward not in rewards:
+            continue
+        cell_key = (condition, task, reward)
+        if (
+            args.max_agents_per_cell is not None
+            and per_cell_counts[cell_key] >= args.max_agents_per_cell
+        ):
+            continue
+        per_cell_counts[cell_key] += 1
+
+        units.append(
+            WorkUnit(
+                unit_id=safe_text(row.get("unit_id")) or f"{args.dataset_kind}:{row_index}",
+                dataset_kind=args.dataset_kind,
+                condition=condition,
+                task=task,
+                source_file=safe_text(row.get("source_file")) or "response_units.csv",
+                source_row_index=int(row.get("source_row_index", row_index) or row_index),
+                response_index=int(row.get("response_index", row_index + 1) or row_index + 1),
+                agent_index=normalized_agent_index(row.get("agent_index"), row_index),
+                agent_subject_id=safe_text(row.get("agent_subject_id")),
+                reward=reward,
+                answer_text=safe_text(row.get("answer_text")),
+                comment_text=safe_text(row.get("comment_text")),
+                system_prompt=safe_text(row.get("system_prompt")),
+                user_prompt=safe_text(row.get("user_prompt")),
+                response_text=safe_text(row.get("response_text")),
+            )
+        )
+
+    if conditions is not None:
+        missing_conditions = sorted(conditions - seen_conditions)
+        if missing_conditions:
+            raise ValueError(f"Unknown run-dir conditions: {missing_conditions}")
+    if rewards is not None:
+        missing_rewards = sorted(rewards - seen_rewards)
+        if missing_rewards:
+            raise ValueError(f"Unknown run-dir rewards: {missing_rewards}")
+
+    validation = {
+        "dataset_kind": args.dataset_kind,
+        "source_dir": str(run_dir),
+        "run_dir": str(run_dir),
+        "response_units_csv": str(response_units_path),
+        "run_manifest": str(manifest_path) if manifest_path.exists() else None,
+        "manifest": manifest,
+        "csv_rows": int(len(frame)),
+        "csv_columns": list(frame.columns),
+        "sha256": file_sha256(response_units_path),
+        "available_conditions": sorted(seen_conditions),
+        "available_rewards": sorted(seen_rewards),
+        "selected_conditions": sorted(conditions) if conditions else None,
+        "selected_rewards": sorted(rewards) if rewards else None,
+        "actual_response_task_units_unfiltered": int(len(frame)),
+        "selected_csv_file_count": 1,
+    }
+    if args.limit_units is not None:
+        units = units[: args.limit_units]
+        validation["limited_response_task_units"] = len(units)
+    validation["actual_response_task_units"] = len(units)
+    if args.expected_units is not None and len(units) != args.expected_units:
+        raise ValueError(f"Found {len(units)} response units, expected {args.expected_units}")
     return units, validation
 
 
@@ -836,6 +977,9 @@ def load_trust_units(
 
 
 def load_work_units(args: argparse.Namespace) -> tuple[list[WorkUnit], dict[str, Any]]:
+    if args.run_dir is not None:
+        return load_run_dir_units(args)
+
     conditions = parse_csv_list(args.conditions)
     rewards = parse_int_list(args.rewards)
     if args.dataset_kind == "creativity":
@@ -887,7 +1031,7 @@ def load_work_units(args: argparse.Namespace) -> tuple[list[WorkUnit], dict[str,
 
 def condition_order(dataset_kind: str, conditions: Iterable[str]) -> list[str]:
     seen = list(dict.fromkeys(conditions))
-    base = DATASET_CONDITION_ORDERS[dataset_kind]
+    base = DATASET_CONDITION_ORDERS.get(dataset_kind, [])
     ordered = [condition for condition in base if condition in seen]
     ordered.extend(sorted(condition for condition in seen if condition not in ordered))
     return ordered
@@ -895,7 +1039,7 @@ def condition_order(dataset_kind: str, conditions: Iterable[str]) -> list[str]:
 
 def task_order(dataset_kind: str, tasks: Iterable[str]) -> list[str]:
     seen = list(dict.fromkeys(tasks))
-    base = DATASET_TASKS[dataset_kind]
+    base = DATASET_TASKS.get(dataset_kind, [])
     ordered = [task for task in base if task in seen]
     ordered.extend(sorted(task for task in seen if task not in ordered))
     return ordered
@@ -2058,9 +2202,9 @@ def build_plots(
         return []
 
     plot_paths: list[str] = []
-    if dataset_kind in {"creativity", "ultimatum", "trust"}:
-        condition_titles = DATASET_CONDITION_TITLES[dataset_kind]
-        task_titles = DATASET_TASK_TITLES[dataset_kind]
+    if dataset_kind != "safe_risky":
+        condition_titles = DATASET_CONDITION_TITLES.get(dataset_kind, {})
+        task_titles = DATASET_TASK_TITLES.get(dataset_kind, {})
         conditions = condition_order(dataset_kind, [unit.condition for unit in units])
         tasks = task_order(dataset_kind, [unit.task for unit in units])
         fig, axes = plt.subplots(len(tasks), len(conditions), figsize=(4.6 * len(conditions), 4.8 * len(tasks)))
@@ -2190,8 +2334,8 @@ def build_plots(
 
     tasks = task_order(dataset_kind, [unit.task for unit in units])
     conditions = condition_order(dataset_kind, [unit.condition for unit in units])
-    condition_titles = DATASET_CONDITION_TITLES[dataset_kind]
-    task_titles = DATASET_TASK_TITLES[dataset_kind]
+    condition_titles = DATASET_CONDITION_TITLES.get(dataset_kind, {})
+    task_titles = DATASET_TASK_TITLES.get(dataset_kind, {})
     fig, axes = plt.subplots(1, len(tasks), figsize=(5.5 * len(tasks), 5), sharey=True)
     if len(tasks) == 1:
         axes = [axes]
@@ -2620,14 +2764,23 @@ def run_dataset_audit(args: argparse.Namespace, units: list[WorkUnit], validatio
 
 def main() -> None:
     args = parse_args()
-    if args.source_dir is None:
-        args.source_dir = default_source_dir(args.dataset_kind)
-    if args.output_dir is None:
-        args.output_dir = default_output_dir(
-            args.dataset_kind,
-            args.source_dir,
-            args.activation_scope,
-        )
+    if args.run_dir is not None:
+        if args.dataset_kind is None:
+            args.dataset_kind = infer_run_dataset_kind(args.run_dir)
+        args.source_dir = args.run_dir
+        if args.output_dir is None:
+            args.output_dir = args.run_dir / "open_sae"
+    else:
+        if args.dataset_kind is None:
+            raise SystemExit("--dataset-kind is required when --run-dir is not supplied")
+        if args.source_dir is None:
+            args.source_dir = default_source_dir(args.dataset_kind)
+        if args.output_dir is None:
+            args.output_dir = default_output_dir(
+                args.dataset_kind,
+                args.source_dir,
+                args.activation_scope,
+            )
 
     units, validation = load_work_units(args)
     if args.dry_run:
