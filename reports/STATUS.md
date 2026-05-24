@@ -12,6 +12,8 @@ Date: 2026-05-23
 - Trust-game source audit over 200 saved responses, with 20 behavior cells.
 - Ultimatum Open-SAE GPU rerun over 2,040 saved responses, with 20,400 top-k rows.
 - Trust-game Open-SAE GPU rerun over 200 saved responses, with 2,000 top-k rows.
+- Offline feature-description lookup for creativity, safe-risk/lottery, ultimatum, and trust.
+- Creativity high-steering Goodfire controller provenance for features `13142`, `20117`, and `4992`.
 - Open-SAE runner supports `creativity`, `safe_risky`, `ultimatum`, and `trust` dataset kinds.
 
 ## Caveats
@@ -19,6 +21,8 @@ Date: 2026-05-23
 - Goodfire Ember hosted natural-language labels are unavailable.
 - Natural-language labels in processed Open-SAE outputs are Neuronpedia/Open-SAE
   replacement labels.
+- Current steering support documents saved Goodfire controller provenance; open-SAE
+  steering regeneration remains a phase-2 GPU extension.
 - The old unmasked creativity Open-SAE output collapsed to `<|begin_of_text|>` and is
   retained only as a failure control in the ablation report.
 

@@ -4,12 +4,15 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import pandas as pd
 
 
 ROOT = Path(__file__).resolve().parents[1]
+EXPECTED_STEERING_FEATURES = {13142, 20117, 4992}
+FEATURE_FALLBACK_RE = re.compile(r"^feature_\d+$")
 
 
 def require(path: str) -> Path:
@@ -187,12 +190,67 @@ def check_remaining_game_open_sae() -> None:
         raise AssertionError(f"Expected 20 trust behavior rows, found {len(trust_behavior)}")
 
 
+def check_feature_description_lookup() -> None:
+    lookup = pd.read_csv(require("data/processed/feature_description_lookup.csv"))
+    require_nonempty("reports/FEATURE_DESCRIPTION_SUMMARY.md")
+    require_nonempty("docs/LABELS.md")
+    if len(lookup) != 1920:
+        raise AssertionError(f"Expected 1,920 feature-description rows, found {len(lookup)}")
+    counts = lookup.groupby("dataset_kind").size().to_dict()
+    expected_counts = {
+        "creativity": 80,
+        "safe_risky": 1080,
+        "ultimatum": 540,
+        "trust": 220,
+    }
+    if counts != expected_counts:
+        raise AssertionError(f"Unexpected feature-description counts: {counts}")
+    if lookup["feature_label"].fillna("").str.strip().eq("").any():
+        raise AssertionError("Feature-description lookup contains empty labels")
+    if lookup["feature_label"].fillna("").str.match(FEATURE_FALLBACK_RE).any():
+        raise AssertionError("Feature-description lookup contains feature-index fallback labels")
+    if not lookup["neuronpedia_api_url"].str.startswith(
+        "https://www.neuronpedia.org/api/feature/"
+    ).all():
+        raise AssertionError("Feature-description lookup contains invalid Neuronpedia URLs")
+    if set(lookup["label_source"]) != {"cached_neuronpedia"}:
+        raise AssertionError("Feature-description lookup should use cached Neuronpedia labels")
+
+
+def check_steering_provenance() -> None:
+    base = "data/processed/creativity/steering_provenance"
+    steering = pd.read_csv(require(f"{base}/steering_features.csv"))
+    require_nonempty(f"{base}/STEERING_PROVENANCE.md")
+    require_nonempty(f"{base}/open_sae_steering_smoke_plan/open_sae_steering_smoke_plan.json")
+    require_nonempty(f"{base}/open_sae_steering_smoke_plan/open_sae_steering_smoke_units.csv")
+    require_nonempty("docs/STEERING.md")
+    require_nonempty("reports/slack_drafts/gaveal_label_steering_reply.md")
+    found = set(steering["feature_index"].astype(int))
+    if found != EXPECTED_STEERING_FEATURES:
+        raise AssertionError(f"Unexpected steering features: {sorted(found)}")
+    if steering["old_goodfire_label"].fillna("").str.strip().eq("").any():
+        raise AssertionError("Steering provenance contains empty Goodfire labels")
+    if not (steering["nudge_value"].astype(float) > 0).all():
+        raise AssertionError("Steering provenance contains nonpositive nudge values")
+    if set(steering["source_model"]) != {"meta-llama/Llama-3.3-70B-Instruct"}:
+        raise AssertionError("Steering provenance source model mismatch")
+    plan = json.loads(
+        require(f"{base}/open_sae_steering_smoke_plan/open_sae_steering_smoke_plan.json").read_text()
+    )
+    if plan.get("status") != "smoke_plan_only":
+        raise AssertionError("Steering smoke plan status mismatch")
+    if set(plan.get("feature_indices", [])) != EXPECTED_STEERING_FEATURES:
+        raise AssertionError("Steering smoke plan feature indices mismatch")
+
+
 def main() -> None:
     check_creativity_torrance()
     check_creativity_open_sae()
     check_safe_risky()
     check_remaining_game_source_audits()
     check_remaining_game_open_sae()
+    check_feature_description_lookup()
+    check_steering_provenance()
     print("release artifact verification passed")
 
 

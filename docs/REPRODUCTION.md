@@ -26,6 +26,28 @@ python scripts/run_open_sae_feature_inspection.py \
 python tests/verify_release_artifacts.py
 ```
 
+## Cached Feature Description Bundle
+
+This rebuilds the offline lookup that maps top Open-SAE feature indices to cached
+Neuronpedia descriptions.
+
+```bash
+python scripts/build_feature_description_bundle.py --check
+```
+
+The main output is `data/processed/feature_description_lookup.csv`.
+
+## Creativity Steering Provenance
+
+This extracts the saved Goodfire controller features from the high-steering creativity
+condition. It does not regenerate steered responses.
+
+```bash
+python scripts/extract_steering_provenance.py --check
+```
+
+The main output is `data/processed/creativity/steering_provenance/steering_features.csv`.
+
 ## GPT-5 Torrance Judge Rerun
 
 Requires `OPENAI_API_KEY`.
