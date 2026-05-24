@@ -174,9 +174,11 @@ This is provenance for the historical run, not an open-SAE regeneration run.
 
 {chr(10).join(table)}
 
-Phase 2 is to regenerate steered responses with the open Hugging Face SAE by applying
-the same feature indices to `meta-llama/Llama-3.3-70B-Instruct` at
-`model.layers.50` with `Goodfire/Llama-3.3-70B-Instruct-SAE-l50`.
+New steered responses can be generated with `scripts/run_open_sae_steering_generation.py`
+by applying the same feature indices to `meta-llama/Llama-3.3-70B-Instruct` at
+`model.layers.50` with `Goodfire/Llama-3.3-70B-Instruct-SAE-l50`. That open runner is
+not guaranteed to match the deprecated hosted Goodfire controller's private nudge
+calibration exactly.
 """
     path.write_text(text, encoding="utf-8")
 

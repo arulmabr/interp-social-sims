@@ -38,6 +38,12 @@ The normalized output schema is:
 
 ## 3. Collect Responses With EDSL
 
+Check the local environment first:
+
+```bash
+python scripts/check_environment.py
+```
+
 Run a tiny deterministic smoke test first:
 
 ```bash
@@ -94,3 +100,50 @@ The Open-SAE run writes top features per response, aggregate top features by tas
 and condition, feature summaries, metadata, and plots. Feature indices are the
 stable identifiers. Natural-language labels are cached or live Neuronpedia
 descriptions for the Goodfire Open-SAE feature space.
+
+## 6. Optional: Generate A Steered Condition
+
+After you identify candidate feature indices, you can generate a new steered run
+with the live Open-SAE steering runner. This requires the same GPU/model setup as
+Open-SAE inspection.
+
+First validate the prompt selection locally:
+
+```bash
+python scripts/run_open_sae_steering_generation.py \
+  --run-dir runs/my_game_full \
+  --output-dir runs/my_game_steering_smoke_plan \
+  --feature-indices 13142,20117,4992 \
+  --strengths 0.3,0.3,0.3 \
+  --smoke-mode
+```
+
+Then run a small GPU generation smoke test:
+
+```bash
+python scripts/run_open_sae_steering_generation.py \
+  --run-dir runs/my_game_full \
+  --output-dir runs/my_game_steered_smoke \
+  --feature-indices 13142,20117,4992 \
+  --strengths 0.3,0.3,0.3 \
+  --steering-mode clamp_min \
+  --patch-scope last_token \
+  --limit-units 4 \
+  --max-new-tokens 256 \
+  --load-in-4bit \
+  --execute
+```
+
+The generated folder is another normalized EDSL run folder. Inspect it with:
+
+```bash
+python scripts/run_open_sae_feature_inspection.py \
+  --run-dir runs/my_game_steered_smoke \
+  --output-dir runs/my_game_steered_smoke/open_sae \
+  --top-k 10 \
+  --load-in-4bit
+```
+
+Steering strength is explicit and recorded. Do not describe these runs as exact
+reproductions of the old hosted Goodfire controller unless you have separately
+validated that calibration.

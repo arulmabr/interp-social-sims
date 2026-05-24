@@ -71,6 +71,22 @@ def check_game_specs() -> None:
             raise AssertionError(f"Example spec is incomplete: {module_path}")
 
 
+def check_environment_doctor() -> None:
+    """Run the non-strict environment checker."""
+
+    result = run([sys.executable, "scripts/check_environment.py", "--json"])
+    payload = json.loads(result.stdout)
+    names = {row["name"] for row in payload}
+    for required in [
+        "python",
+        "package:edsl",
+        "file:scripts/run_edsl_social_simulation.py",
+        "file:scripts/run_open_sae_feature_inspection.py",
+    ]:
+        if required not in names:
+            raise AssertionError(f"Environment check missing {required}")
+
+
 def check_synthetic_run_dir_loader() -> None:
     """Validate the Open-SAE --run-dir dry-run path without EDSL or GPU."""
 
@@ -144,6 +160,31 @@ def check_synthetic_run_dir_loader() -> None:
         payload = json.loads(result.stdout)
         if payload["dataset_kind"] != "synthetic_game" or payload["unit_count"] != 1:
             raise AssertionError(f"Unexpected dry-run payload: {payload}")
+        steering_dir = run_dir / "steering_smoke"
+        steering_result = run(
+            [
+                sys.executable,
+                "scripts/run_open_sae_steering_generation.py",
+                "--run-dir",
+                str(run_dir),
+                "--output-dir",
+                str(steering_dir),
+                "--feature-indices",
+                "13142,20117,4992",
+                "--strengths",
+                "0.3,0.3,0.3",
+                "--smoke-mode",
+                "--skip-neuronpedia-metadata",
+                "--expected-units",
+                "1",
+            ]
+        )
+        steering_payload = json.loads(steering_result.stdout)
+        if (
+            steering_payload["dataset_kind"] != "synthetic_game"
+            or steering_payload["selected_prompt_units"] != 1
+        ):
+            raise AssertionError(f"Unexpected steering smoke payload: {steering_payload}")
 
 
 def check_edsl_smoke_runs() -> None:
@@ -198,6 +239,7 @@ def check_edsl_smoke_runs() -> None:
 def main() -> None:
     check_docs()
     check_game_specs()
+    check_environment_doctor()
     check_synthetic_run_dir_loader()
     check_edsl_smoke_runs()
     print("platform smoke verification passed")

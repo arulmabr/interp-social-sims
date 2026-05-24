@@ -17,7 +17,15 @@ PLATFORM_FILES = [
     "social_sim_open_sae/__init__.py",
     "social_sim_open_sae/game_spec.py",
     "social_sim_open_sae/edsl_adapter.py",
+    "scripts/check_environment.py",
+    "scripts/build_release_zip.py",
     "scripts/run_edsl_social_simulation.py",
+    "scripts/build_data_manifest.py",
+    "scripts/build_release_completion_audit.py",
+    "scripts/run_open_sae_steering_generation.py",
+    "runpod/run_creativity_open_sae_steering.sh",
+    "runpod/run_safe_risky_five_condition_open_sae.sh",
+    "tests/verify_release_anonymity.py",
     "examples/games/creativity.py",
     "examples/games/safe_risky.py",
     "examples/games/ultimatum.py",
@@ -129,6 +137,54 @@ def check_safe_risky() -> None:
         raise AssertionError("Safe-risk comments are not complete")
 
 
+def check_safe_risky_five_condition_source_audit() -> None:
+    raw = ROOT / "data/raw/games/safe_risky/results_20251008_225522"
+    csvs = sorted(raw.glob("safe_risky_*.csv"))
+    if len(csvs) != 175:
+        raise AssertionError(f"Expected 175 five-condition safe-risk CSVs, found {len(csvs)}")
+
+    base = "data/processed/games/safe_risky/source_audit_five_condition"
+    units = pd.read_csv(require(f"{base}/open_sae_response_units.csv"))
+    behavior = pd.read_csv(require(f"{base}/safe_risky_behavior_summary.csv"))
+    meta = json.loads(require(f"{base}/open_sae_metadata.json").read_text())
+    require_nonempty(f"{base}/safe_risky_choice_rates_from_saved_outputs.png")
+
+    expected_conditions = {
+        "baseline",
+        "barely_prompting",
+        "slightly_prompting",
+        "lite_steering",
+        "steering",
+    }
+    if len(units) != 7000:
+        raise AssertionError(f"Expected 7,000 five-condition safe-risk units, found {len(units)}")
+    if set(units["condition"]) != expected_conditions:
+        raise AssertionError("Five-condition safe-risk units have unexpected conditions")
+    if behavior.groupby(["condition", "reward"]).ngroups != 175:
+        raise AssertionError("Five-condition safe-risk behavior-cell count mismatch")
+    if meta.get("processed_response_task_units") != 7000:
+        raise AssertionError("Five-condition safe-risk source-audit unit count mismatch")
+    if meta.get("mode") != "audit_only":
+        raise AssertionError("Five-condition safe-risk fixture should be an audit-only output")
+    runpod_script = require("runpod/run_safe_risky_five_condition_open_sae.sh").read_text()
+    if "--expected-units 7000" not in runpod_script or "RUN_FULL" not in runpod_script:
+        raise AssertionError("Five-condition safe-risk GPU helper should include dry-run and full paths")
+    check_open_sae_output(
+        base="data/processed/games/safe_risky/open_sae_five_condition_full",
+        expected_rows=70000,
+        expected_units=7000,
+        expected_condition_cells=5,
+        expected_reward_cells=175,
+        condition_keys=["task", "condition"],
+        reward_keys=["task", "condition", "reward"],
+        plots=[
+            "safe_risky_choice_rates_from_saved_outputs.png",
+            "safe_risky_open_sae_top_feature_by_reward.png",
+            "open_sae_per_response_top_activation_diagnostics.png",
+        ],
+    )
+
+
 def check_remaining_game_source_audits() -> None:
     ultimatum = "data/processed/games/ultimatum/source_audit"
     ultimatum_units = pd.read_csv(require(f"{ultimatum}/open_sae_response_units.csv"))
@@ -235,8 +291,9 @@ def check_steering_provenance() -> None:
     require_nonempty(f"{base}/STEERING_PROVENANCE.md")
     require_nonempty(f"{base}/open_sae_steering_smoke_plan/open_sae_steering_smoke_plan.json")
     require_nonempty(f"{base}/open_sae_steering_smoke_plan/open_sae_steering_smoke_units.csv")
+    require_nonempty(f"{base}/open_sae_steering_smoke_plan/open_sae_steering_feature_metadata.csv")
     require_nonempty("docs/STEERING.md")
-    require_nonempty("reports/slack_drafts/gaveal_label_steering_reply.md")
+    require_nonempty("reports/public_notes/label_steering_note.md")
     found = set(steering["feature_index"].astype(int))
     if found != EXPECTED_STEERING_FEATURES:
         raise AssertionError(f"Unexpected steering features: {sorted(found)}")
@@ -253,6 +310,53 @@ def check_steering_provenance() -> None:
         raise AssertionError("Steering smoke plan status mismatch")
     if set(plan.get("feature_indices", [])) != EXPECTED_STEERING_FEATURES:
         raise AssertionError("Steering smoke plan feature indices mismatch")
+    if plan.get("implementation_status", "").find("--execute") == -1:
+        raise AssertionError("Steering smoke plan should point to executable generation")
+    smoke_units = pd.read_csv(
+        require(f"{base}/open_sae_steering_smoke_plan/open_sae_steering_smoke_units.csv")
+    )
+    if set(smoke_units["condition"]) != {"high_steering"}:
+        raise AssertionError("Steering smoke units should come from the high_steering condition")
+    metadata = pd.read_csv(
+        require(f"{base}/open_sae_steering_smoke_plan/open_sae_steering_feature_metadata.csv")
+    )
+    if set(metadata["feature_index"].astype(int)) != EXPECTED_STEERING_FEATURES:
+        raise AssertionError("Steering feature metadata indices mismatch")
+    if metadata["feature_label"].fillna("").str.strip().eq("").any():
+        raise AssertionError("Steering feature metadata contains empty labels")
+    if not metadata["neuronpedia_api_url"].str.startswith(
+        "https://www.neuronpedia.org/api/feature/"
+    ).all():
+        raise AssertionError("Steering feature metadata contains invalid Neuronpedia URLs")
+    steering_script = require("scripts/run_open_sae_steering_generation.py").read_text()
+    if "Full open-SAE steering generation is intentionally not implemented" in steering_script:
+        raise AssertionError("Steering runner still refuses executable generation")
+    if "apply_sae_feature_edits" not in steering_script or "register_forward_hook" not in steering_script:
+        raise AssertionError("Steering runner is missing the activation-patching implementation")
+    steering_doc = require("docs/STEERING.md").read_text()
+    steering_doc_flat = " ".join(steering_doc.split())
+    if "Live Open-SAE Generation" not in steering_doc:
+        raise AssertionError("STEERING.md should document live open-SAE generation")
+    if "not guaranteed to match deprecated hosted Goodfire controller" not in steering_doc_flat:
+        raise AssertionError("STEERING.md should document the Goodfire calibration boundary")
+    runpod_script = require("runpod/run_creativity_open_sae_steering.sh").read_text()
+    if "--execute" not in runpod_script or "RUN_FULL" not in runpod_script:
+        raise AssertionError("RunPod steering script should include smoke and full execution paths")
+    live_units = pd.read_csv(require("runs/creativity_open_sae_steering_40agent/response_units.csv"))
+    if len(live_units) != 80:
+        raise AssertionError("Live creativity steering output should contain 80 generated units")
+    check_open_sae_output(
+        base="runs/creativity_open_sae_steering_40agent/open_sae",
+        expected_rows=800,
+        expected_units=80,
+        expected_condition_cells=2,
+        expected_reward_cells=None,
+        condition_keys=["task", "condition"],
+        plots=[
+            "open_sae_figure4_replacement_top_features.png",
+            "open_sae_per_response_top_activation_diagnostics.png",
+        ],
+    )
 
 
 def check_platform_layer() -> None:
@@ -261,6 +365,8 @@ def check_platform_layer() -> None:
     readme = require("README.md").read_text(encoding="utf-8")
     if "building EDSL social simulations" not in readme:
         raise AssertionError("README should foreground the EDSL platform workflow")
+    if "scripts/check_environment.py" not in readme:
+        raise AssertionError("README should include the environment check command")
     if "Compute, Cost, and Scope" not in readme:
         raise AssertionError("README should document compute and cost expectations")
     if "Current steering status" not in readme:
@@ -272,15 +378,54 @@ def check_platform_layer() -> None:
         raise AssertionError("BUILD_A_GAME.md is missing the Open-SAE run-dir path")
 
 
+def check_release_audit_and_manifest() -> None:
+    audit_json = json.loads(require("reports/RELEASE_COMPLETION_AUDIT.json").read_text())
+    require_nonempty("reports/RELEASE_COMPLETION_AUDIT.md")
+    require_nonempty("DATA_MANIFEST.tsv")
+    if audit_json.get("completion_status") != "release_ready":
+        raise AssertionError("Release completion audit status mismatch")
+    statuses = {item["id"]: item["status"] for item in audit_json.get("items", [])}
+    expected_statuses = {
+        "platform_new_games": "complete",
+        "creativity_torrance_gpt5": "complete",
+        "creativity_open_sae": "complete",
+        "safe_risky_open_sae_calibration": "complete",
+        "safe_risky_five_condition_fixture": "complete",
+        "ultimatum_open_sae": "complete",
+        "trust_open_sae": "complete",
+        "feature_description_bundle": "complete",
+        "creativity_steering": "complete",
+        "release_safety": "complete",
+    }
+    missing = sorted(set(expected_statuses) - set(statuses))
+    if missing:
+        raise AssertionError(f"Release audit missing items: {missing}")
+    for item_id, status in expected_statuses.items():
+        if statuses[item_id] != status:
+            raise AssertionError(f"Release audit status mismatch for {item_id}: {statuses[item_id]}")
+    manifest_text = require("DATA_MANIFEST.tsv").read_text()
+    for path in [
+        "reports/RELEASE_COMPLETION_AUDIT.json",
+        "scripts/build_release_completion_audit.py",
+        "runs/creativity_open_sae_steering_40agent/response_units.csv",
+        "runs/creativity_open_sae_steering_40agent/open_sae/open_sae_feature_activations.csv",
+        "runpod/run_safe_risky_five_condition_open_sae.sh",
+    ]:
+        if path not in manifest_text:
+            raise AssertionError(f"DATA_MANIFEST.tsv missing {path}")
+
+
 def main() -> None:
     check_platform_layer()
     check_creativity_torrance()
     check_creativity_open_sae()
     check_safe_risky()
+    check_safe_risky_five_condition_source_audit()
     check_remaining_game_source_audits()
     check_remaining_game_open_sae()
     check_feature_description_lookup()
     check_steering_provenance()
+    check_release_audit_and_manifest()
     print("release artifact verification passed")
 
 

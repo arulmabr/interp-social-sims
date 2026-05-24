@@ -1,48 +1,48 @@
 {
   "created_at_utc": "2026-05-21T20:05:01.652341+00:00",
-  "source_dir": "/Users/arul/Desktop/my_repos/edsl/creativity_experiment/product_innovation_20251102_202650",
-  "output_dir": "/Users/arul/Desktop/my_repos/edsl/creativity_experiment/product_innovation_20251102_202650_torrance_gpt5_eval",
-  "notebook_copy": "/Users/arul/Desktop/my_repos/edsl/creativity_torrance_test_gpt5_torrance_eval.ipynb",
-  "requested_model": "gpt-5",
-  "fallback_models": [],
+  "eval_prompt_version": "torrance_four_dimension_v1",
   "evaluator_model": "gpt-5",
+  "fallback_models": [],
+  "final_score_formula": "mean(fluency, flexibility, originality, elaboration)",
   "model_attempts": [
     {
       "model": "gpt-5",
       "status": "ok"
     }
   ],
-  "eval_prompt_version": "torrance_four_dimension_v1",
-  "torrance_system_prompt": "You are an expert evaluator of creative responses, trained in the Torrance Tests of Creative Thinking framework. You will score a single response on four dimensions, each as an integer from 1 to 10.\n\nDimensions:\n1. Fluency — the number of relevant, non-redundant ideas produced.\n2. Flexibility — the number of distinct conceptual categories the ideas span.\n3. Originality — how unusual or non-obvious the ideas are relative to common responses.\n4. Elaboration — the level of detail, refinement, and specificity per idea.\n\nCalibration anchors (apply to each dimension independently):\n- 1–2: dimension is essentially absent or actively poor.\n- 3–4: dimension is present but weak / minimal.\n- 5–6: average; competent but unremarkable.\n- 7–8: strong on this dimension.\n- 9–10: exceptional; near the top of what a human creative could produce.\n\nRules:\n- Score each dimension independently. Do not let one dimension anchor another.\n- Use the full 1–10 range; do not default to the middle.\n- Return integer scores only (no halves, no decimals).\n- Do not penalize a response for being a list; the task asks for one.\n- Do not reward verbosity that adds no new ideas or no new detail.\n- Output strict JSON only. No prose, no markdown, no code fences.",
+  "n_eval_rows": 320,
+  "n_summary_rows": 8,
+  "notebook_copy": "<external>/creativity_torrance_test_gpt5_torrance_eval.ipynb",
+  "openai_api": {
+    "endpoint": "https://api.openai.com/v1/responses",
+    "response_format": "text.format.json_schema"
+  },
+  "output_dir": "data/processed/creativity/torrance_gpt5_eval",
+  "outputs": {
+    "csv": "data/processed/creativity/torrance_gpt5_eval/torrance_gpt_evals.csv",
+    "jsonl": "data/processed/creativity/torrance_gpt5_eval/torrance_gpt_evals.jsonl",
+    "plots": [
+      "data/processed/creativity/torrance_gpt5_eval/torrance_final_score_detailed_ways_to_use_a_brick.png",
+      "data/processed/creativity/torrance_gpt5_eval/torrance_dimensions_detailed_ways_to_use_a_brick.png",
+      "data/processed/creativity/torrance_gpt5_eval/torrance_final_score_improve_the_stapler_with_many_specific_enhancements.png",
+      "data/processed/creativity/torrance_gpt5_eval/torrance_dimensions_improve_the_stapler_with_many_specific_enhancements.png"
+    ],
+    "summary_csv": "data/processed/creativity/torrance_gpt5_eval/torrance_eval_summary.csv"
+  },
+  "requested_model": "gpt-5",
   "score_keys": [
     "fluency",
     "flexibility",
     "originality",
     "elaboration"
   ],
-  "final_score_formula": "mean(fluency, flexibility, originality, elaboration)",
-  "n_eval_rows": 320,
-  "n_summary_rows": 8,
+  "source_dir": "data/raw/creativity/product_innovation_20251102_202650",
   "source_input_sha256": {
     "baseline.csv": "ab0193a114e03ebfe2b2756233c4457ba1303a0856ec63f4d558bdb9d2da8c89",
-    "prompting.csv": "a162534eda44ddb9ac65173ceee3d71c3a3c72fa2f0039f5ea67d172d16e6188",
+    "high_steering.csv": "bc0bf9479730245a9025e75013a1963138a7a98a9cb081b645e601b3350748d1",
     "high_temperature.csv": "f08d2be2a21eea60846439924ffd26ddf98c92f0aefd92a946b7a45b322bfabc",
-    "high_steering.csv": "bc0bf9479730245a9025e75013a1963138a7a98a9cb081b645e601b3350748d1"
+    "prompting.csv": "a162534eda44ddb9ac65173ceee3d71c3a3c72fa2f0039f5ea67d172d16e6188"
   },
   "source_inputs_unchanged": true,
-  "outputs": {
-    "csv": "/Users/arul/Desktop/my_repos/edsl/creativity_experiment/product_innovation_20251102_202650_torrance_gpt5_eval/torrance_gpt_evals.csv",
-    "jsonl": "/Users/arul/Desktop/my_repos/edsl/creativity_experiment/product_innovation_20251102_202650_torrance_gpt5_eval/torrance_gpt_evals.jsonl",
-    "summary_csv": "/Users/arul/Desktop/my_repos/edsl/creativity_experiment/product_innovation_20251102_202650_torrance_gpt5_eval/torrance_eval_summary.csv",
-    "plots": [
-      "/Users/arul/Desktop/my_repos/edsl/creativity_experiment/product_innovation_20251102_202650_torrance_gpt5_eval/torrance_final_score_detailed_ways_to_use_a_brick.png",
-      "/Users/arul/Desktop/my_repos/edsl/creativity_experiment/product_innovation_20251102_202650_torrance_gpt5_eval/torrance_dimensions_detailed_ways_to_use_a_brick.png",
-      "/Users/arul/Desktop/my_repos/edsl/creativity_experiment/product_innovation_20251102_202650_torrance_gpt5_eval/torrance_final_score_improve_the_stapler_with_many_specific_enhancements.png",
-      "/Users/arul/Desktop/my_repos/edsl/creativity_experiment/product_innovation_20251102_202650_torrance_gpt5_eval/torrance_dimensions_improve_the_stapler_with_many_specific_enhancements.png"
-    ]
-  },
-  "openai_api": {
-    "endpoint": "https://api.openai.com/v1/responses",
-    "response_format": "text.format.json_schema"
-  }
+  "torrance_system_prompt": "You are an expert evaluator of creative responses, trained in the Torrance Tests of Creative Thinking framework. You will score a single response on four dimensions, each as an integer from 1 to 10.\n\nDimensions:\n1. Fluency \u2014 the number of relevant, non-redundant ideas produced.\n2. Flexibility \u2014 the number of distinct conceptual categories the ideas span.\n3. Originality \u2014 how unusual or non-obvious the ideas are relative to common responses.\n4. Elaboration \u2014 the level of detail, refinement, and specificity per idea.\n\nCalibration anchors (apply to each dimension independently):\n- 1\u20132: dimension is essentially absent or actively poor.\n- 3\u20134: dimension is present but weak / minimal.\n- 5\u20136: average; competent but unremarkable.\n- 7\u20138: strong on this dimension.\n- 9\u201310: exceptional; near the top of what a human creative could produce.\n\nRules:\n- Score each dimension independently. Do not let one dimension anchor another.\n- Use the full 1\u201310 range; do not default to the middle.\n- Return integer scores only (no halves, no decimals).\n- Do not penalize a response for being a list; the task asks for one.\n- Do not reward verbosity that adds no new ideas or no new detail.\n- Output strict JSON only. No prose, no markdown, no code fences."
 }

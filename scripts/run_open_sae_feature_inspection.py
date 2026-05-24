@@ -134,6 +134,20 @@ DATASET_CONDITION_ORDERS = {
 }
 
 
+def release_path(path: Path | str | None) -> str | None:
+    """Return a reproducible metadata path without local user directories."""
+
+    if path is None:
+        return None
+    path = Path(path)
+    try:
+        return path.resolve().relative_to(REPO_ROOT).as_posix()
+    except ValueError:
+        if path.is_absolute():
+            return f"<external>/{path.name}"
+        return path.as_posix()
+
+
 @dataclass(frozen=True)
 class WorkUnit:
     """One saved response transcript to inspect."""
@@ -403,7 +417,7 @@ def load_creativity_units(
     units: list[WorkUnit] = []
     validation: dict[str, Any] = {
         "dataset_kind": "creativity",
-        "source_dir": str(source_dir),
+        "source_dir": release_path(source_dir),
         "condition_files": {},
         "tasks": CREATIVITY_TASKS,
         "expected_rows_per_condition": 40,
@@ -428,7 +442,7 @@ def load_creativity_units(
             raise FileNotFoundError(f"Missing condition CSV: {csv_path}")
         frame = pd.read_csv(csv_path)
         validation["condition_files"][condition] = {
-            "path": str(csv_path),
+            "path": release_path(csv_path),
             "rows": int(len(frame)),
             "columns": list(frame.columns),
             "sha256": file_sha256(csv_path),
@@ -560,10 +574,10 @@ def load_run_dir_units(args: argparse.Namespace) -> tuple[list[WorkUnit], dict[s
 
     validation = {
         "dataset_kind": args.dataset_kind,
-        "source_dir": str(run_dir),
-        "run_dir": str(run_dir),
-        "response_units_csv": str(response_units_path),
-        "run_manifest": str(manifest_path) if manifest_path.exists() else None,
+        "source_dir": release_path(run_dir),
+        "run_dir": release_path(run_dir),
+        "response_units_csv": release_path(response_units_path),
+        "run_manifest": release_path(manifest_path) if manifest_path.exists() else None,
         "manifest": manifest,
         "csv_rows": int(len(frame)),
         "csv_columns": list(frame.columns),
@@ -613,7 +627,7 @@ def load_safe_risky_units(
     units: list[WorkUnit] = []
     validation: dict[str, Any] = {
         "dataset_kind": "safe_risky",
-        "source_dir": str(source_dir),
+        "source_dir": release_path(source_dir),
         "csv_files": {},
         "task": SAFE_RISKY_TASK,
         "expected_rows_per_condition_reward": 40,
@@ -644,7 +658,7 @@ def load_safe_risky_units(
 
         frame = pd.read_csv(csv_path)
         validation["csv_files"][csv_path.name] = {
-            "path": str(csv_path),
+            "path": release_path(csv_path),
             "condition": condition,
             "reward": reward,
             "rows": int(len(frame)),
@@ -749,7 +763,7 @@ def load_ultimatum_units(
     units: list[WorkUnit] = []
     validation: dict[str, Any] = {
         "dataset_kind": "ultimatum",
-        "source_dir": str(source_dir),
+        "source_dir": release_path(source_dir),
         "csv_files": {},
         "task": ULTIMATUM_TASK,
         "expected_rows_per_condition_offer": 40,
@@ -788,7 +802,7 @@ def load_ultimatum_units(
 
         frame = pd.read_csv(csv_path)
         validation["csv_files"][csv_path.name] = {
-            "path": str(csv_path),
+            "path": release_path(csv_path),
             "condition": condition,
             "offer": offer,
             "rows": int(len(frame)),
@@ -870,7 +884,7 @@ def load_trust_units(
     units: list[WorkUnit] = []
     validation: dict[str, Any] = {
         "dataset_kind": "trust",
-        "source_dir": str(source_dir),
+        "source_dir": release_path(source_dir),
         "csv_files": {},
         "task": TRUST_TASK,
         "expected_rows_per_condition_sent_amount": 10,
@@ -909,7 +923,7 @@ def load_trust_units(
 
         frame = pd.read_csv(csv_path)
         validation["csv_files"][csv_path.name] = {
-            "path": str(csv_path),
+            "path": release_path(csv_path),
             "condition": condition,
             "sent_amount": sent_amount,
             "rows": int(len(frame)),
@@ -2634,9 +2648,9 @@ def run_inference(args: argparse.Namespace, units: list[WorkUnit], validation: d
 
     metadata = {
         "dataset_kind": args.dataset_kind,
-        "source_dir": str(args.source_dir),
-        "output_dir": str(args.output_dir),
-        "script_path": str(Path(__file__).resolve()),
+        "source_dir": release_path(args.source_dir),
+        "output_dir": release_path(args.output_dir),
+        "script_path": release_path(Path(__file__)),
         "timestamp_utc": dt.datetime.now(dt.timezone.utc).isoformat(),
         "model_id": args.model_id,
         "sae_repo": args.sae_repo,
@@ -2673,8 +2687,8 @@ def run_inference(args: argparse.Namespace, units: list[WorkUnit], validation: d
         "condition_reward_summary_cells": len(
             {(row["task"], row["condition"], row.get("reward")) for row in condition_reward_top_rows}
         ),
-        "plots": plot_paths,
-        "goodfire_log": str(args.goodfire_log) if args.goodfire_log else None,
+        "plots": [release_path(path) for path in plot_paths],
+        "goodfire_log": release_path(args.goodfire_log),
         "goodfire_parsed_rows": len(goodfire_rows),
         "goodfire_overlap_rows": len(overlap_rows),
         "behavior_summary_rows": len(behavior_rows),
@@ -2682,7 +2696,7 @@ def run_inference(args: argparse.Namespace, units: list[WorkUnit], validation: d
         "dependencies": dependency_versions(),
         "gpu": gpu_metadata(torch_module),
         "platform": {
-            "hostname": platform.node(),
+            "hostname": "<redacted>",
             "system": platform.system(),
             "release": platform.release(),
             "python": sys.version,
@@ -2727,19 +2741,19 @@ def run_dataset_audit(args: argparse.Namespace, units: list[WorkUnit], validatio
     metadata = {
         "mode": "audit_only",
         "dataset_kind": args.dataset_kind,
-        "source_dir": str(args.source_dir),
-        "output_dir": str(args.output_dir),
-        "script_path": str(Path(__file__).resolve()),
+        "source_dir": release_path(args.source_dir),
+        "output_dir": release_path(args.output_dir),
+        "script_path": release_path(Path(__file__)),
         "timestamp_utc": dt.datetime.now(dt.timezone.utc).isoformat(),
         "processed_response_task_units": len(units),
         "behavior_summary_rows": len(behavior_rows),
-        "goodfire_log": str(args.goodfire_log) if args.goodfire_log else None,
+        "goodfire_log": release_path(args.goodfire_log),
         "goodfire_parsed_rows": len(goodfire_rows),
-        "plots": plot_paths,
+        "plots": [release_path(path) for path in plot_paths],
         "validation": validation,
         "dependencies": dependency_versions(),
         "platform": {
-            "hostname": platform.node(),
+            "hostname": "<redacted>",
             "system": platform.system(),
             "release": platform.release(),
             "python": sys.version,

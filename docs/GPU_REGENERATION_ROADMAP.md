@@ -13,6 +13,11 @@ needed to regenerate it.
 - Units: 320
 - Top-k rows: 3,200
 - GPU rerun command: `docs/REPRODUCTION.md`
+- Live open-SAE steering generation: implemented in
+  `scripts/run_open_sae_steering_generation.py`.
+- Live steering output: `runs/creativity_open_sae_steering_40agent/`
+- Live steering units: 80 generated creativity high-steering response-task units
+- Live steering post-hoc Open-SAE rows: 800
 
 ### Safe-Risk Choice
 
@@ -21,6 +26,19 @@ needed to regenerate it.
 - Units: 4,200
 - Top-k rows: 42,000
 - Behavior match against old saved summary: exact, max absolute difference 0.0
+
+Paper five-condition fixture:
+
+- Raw saved data: `data/raw/games/safe_risky/results_20251008_225522/`
+- Source audit: `data/processed/games/safe_risky/source_audit_five_condition/`
+- Conditions: baseline, barely_prompting, slightly_prompting, lite_steering,
+  steering
+- Units: 7,000
+- Behavior cells: 175
+- Open-SAE full rerun:
+  `data/processed/games/safe_risky/open_sae_five_condition_full/`
+- Open-SAE top-k rows with `--top-k 10`: 70,000
+- GPU helper: `runpod/run_safe_risky_five_condition_open_sae.sh`.
 
 ### Ultimatum Game
 
@@ -113,4 +131,68 @@ trust smoke tests plus full jobs:
 
 ```bash
 bash ./runpod/run_remaining_games_open_sae.sh
+```
+
+## Five-Condition Safe-Risk Open-SAE Refresh
+
+The five-condition safe-risk source audit is already included. To generate the
+optional 70,000-row Open-SAE feature table for that exact fixture, run:
+
+```bash
+bash ./runpod/run_safe_risky_five_condition_open_sae.sh
+```
+
+That command dry-runs the 7,000 source units and then processes an 8-unit GPU smoke
+test into `runs/safe_risky_five_condition_open_sae_smoke`.
+
+If the smoke output is sane:
+
+```bash
+RUN_FULL=1 bash ./runpod/run_safe_risky_five_condition_open_sae.sh
+```
+
+The full output path is:
+
+`data/processed/games/safe_risky/open_sae_five_condition_full/`
+
+## Steering GPU Smoke
+
+Before claiming new open-source steering regeneration, run a small generation job
+and then inspect its generated responses:
+
+```bash
+bash ./runpod/run_creativity_open_sae_steering.sh
+```
+
+The script expands to:
+
+```bash
+python scripts/run_open_sae_steering_generation.py \
+  --dataset-kind creativity \
+  --conditions high_steering \
+  --source-dir data/raw/creativity/product_innovation_20251102_202650 \
+  --output-dir runs/creativity_open_sae_steering_smoke \
+  --feature-indices 13142,20117,4992 \
+  --strengths 0.3,0.3,0.3 \
+  --steering-mode clamp_min \
+  --patch-scope last_token \
+  --limit-units 4 \
+  --max-new-tokens 256 \
+  --load-in-4bit \
+  --execute
+
+python scripts/run_open_sae_feature_inspection.py \
+  --run-dir runs/creativity_open_sae_steering_smoke \
+  --output-dir runs/creativity_open_sae_steering_smoke/open_sae \
+  --activation-scope assistant_response \
+  --feature-aggregation frequency \
+  --activation-threshold 0.1 \
+  --top-k 10 \
+  --load-in-4bit
+```
+
+For the full 80-response-task creativity high-steering prompt regeneration:
+
+```bash
+RUN_FULL=1 bash ./runpod/run_creativity_open_sae_steering.sh
 ```

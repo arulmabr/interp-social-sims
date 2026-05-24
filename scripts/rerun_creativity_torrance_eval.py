@@ -38,6 +38,20 @@ DEFAULT_OUTPUT_DIR = (
     / "torrance_gpt_eval"
 )
 
+
+def release_path(path: Path | str | None) -> str | None:
+    """Return a metadata path without leaking local user directories."""
+
+    if path is None:
+        return None
+    path = Path(path)
+    try:
+        return path.resolve().relative_to(REPO_ROOT).as_posix()
+    except ValueError:
+        if path.is_absolute():
+            return f"<external>/{path.name}"
+        return path.as_posix()
+
 CONDITIONS = {
     "baseline": "Baseline",
     "prompting": "Prompting",
@@ -742,9 +756,9 @@ def main() -> None:
 
     metadata = {
         "created_at_utc": datetime.now(timezone.utc).isoformat(),
-        "source_dir": str(source_dir),
-        "output_dir": str(output_dir),
-        "notebook_copy": str(args.notebook_copy.resolve()),
+        "source_dir": release_path(source_dir),
+        "output_dir": release_path(output_dir),
+        "notebook_copy": release_path(args.notebook_copy),
         "requested_model": args.requested_model,
         "fallback_models": fallback_models,
         "evaluator_model": selected_model,
@@ -758,10 +772,10 @@ def main() -> None:
         "source_input_sha256": input_hashes_after,
         "source_inputs_unchanged": source_unchanged,
         "outputs": {
-            "csv": str(csv_path),
-            "jsonl": str(jsonl_path),
-            "summary_csv": str(summary_path),
-            "plots": [str(path) for path in plot_paths],
+            "csv": release_path(csv_path),
+            "jsonl": release_path(jsonl_path),
+            "summary_csv": release_path(summary_path),
+            "plots": [release_path(path) for path in plot_paths],
         },
         "openai_api": {
             "endpoint": "https://api.openai.com/v1/responses",

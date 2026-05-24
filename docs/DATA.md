@@ -43,7 +43,7 @@ Derived outputs:
 
 ## Safe-Risk Choice
 
-Raw source:
+Primary Open-SAE calibration raw source:
 
 `data/raw/games/safe_risky/results_20251018_205613/`
 
@@ -58,6 +58,44 @@ Verification:
 - 4,200 response units
 - 42,000 top-k feature rows
 - behavior matches the old `reward_experiment_summary.csv` exactly
+
+Paper five-condition source fixture:
+
+`data/raw/games/safe_risky/results_20251008_225522/`
+
+Source scale:
+
+- 5 conditions: baseline, barely_prompting, slightly_prompting, lite_steering,
+  steering
+- 35 risky rewards: 10 through 180 by 5
+- 40 agents per condition-reward cell
+- 7,000 saved response units
+
+Derived source audit:
+
+`data/processed/games/safe_risky/source_audit_five_condition/`
+
+This source audit reconstructs response units and behavior plots for the paper
+Figure 6-style five-condition safe-risk run. It does not load the model or SAE.
+The full Open-SAE feature rerun over all 7,000 units is also included:
+
+`data/processed/games/safe_risky/open_sae_five_condition_full/`
+
+The GPU helper used for that refresh is:
+
+`runpod/run_safe_risky_five_condition_open_sae.sh`
+
+Full-refresh scale with `--top-k 10`: 70,000 top-k feature rows.
+
+## Release Manifests
+
+- `DATA_MANIFEST.tsv`: file sizes and SHA-256 hashes for release files.
+- `reports/RELEASE_COMPLETION_AUDIT.json`: machine-readable requirement audit.
+- `reports/RELEASE_COMPLETION_AUDIT.md`: human-readable version of the same audit.
+
+`DATA_MANIFEST.tsv` includes the selected completed `runs/` evidence folders used
+by the release audit, but excludes ad hoc future runs, Python caches, local model
+caches, logs, and prior archives.
 
 ## Ultimatum Game
 

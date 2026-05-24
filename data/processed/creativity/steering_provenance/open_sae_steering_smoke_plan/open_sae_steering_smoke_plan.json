@@ -3,21 +3,30 @@
   "dataset_kind": "creativity",
   "selected_prompt_units": 4,
   "prompt_units_csv": "data/processed/creativity/steering_provenance/open_sae_steering_smoke_plan/open_sae_steering_smoke_units.csv",
+  "feature_metadata_csv": "data/processed/creativity/steering_provenance/open_sae_steering_smoke_plan/open_sae_steering_feature_metadata.csv",
   "model_id": "meta-llama/Llama-3.3-70B-Instruct",
   "sae_repo": "Goodfire/Llama-3.3-70B-Instruct-SAE-l50",
   "hook": "model.layers.50",
-  "steering_mode": "nudge",
+  "steering_mode": "clamp_min",
+  "patch_scope": "last_token",
   "feature_indices": [
     13142,
     20117,
     4992
   ],
-  "strengths": [
+  "input_strengths": [
     0.3,
     0.3,
     0.3
   ],
-  "source_dir": "data/raw/creativity/product_innovation_20251102_202650",
-  "prompt_file": "",
-  "implementation_status": "The v1 public repo validates steering inputs and selected prompts. Full activation-patching generation is phase 2."
+  "strength_calibration": "raw",
+  "actual_strengths": [
+    0.3,
+    0.3,
+    0.3
+  ],
+  "source": "data/raw/creativity/product_innovation_20251102_202650",
+  "conditions": "high_steering",
+  "rewards": null,
+  "implementation_status": "Smoke mode validates selected prompts and feature metadata. Pass --execute on a GPU machine to generate steered responses."
 }
