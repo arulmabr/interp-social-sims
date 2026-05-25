@@ -1,0 +1,46 @@
+{
+  "status": "open_sae_steering_generated",
+  "timestamp_utc": "2026-05-25T02:54:52.270798+00:00",
+  "script_path": "scripts/run_open_sae_steering_generation.py",
+  "dataset_kind": "ultimatum",
+  "source": "data/raw/games/ultimatum/results_20251008_201139",
+  "output_dir": "runs/ultimatum_open_sae_steering_full",
+  "conditions": "steering",
+  "rewards": null,
+  "selected_prompt_units": 680,
+  "generated_response_units": 680,
+  "model_id": "meta-llama/Llama-3.3-70B-Instruct",
+  "sae_repo": "Goodfire/Llama-3.3-70B-Instruct-SAE-l50",
+  "sae_path": "/workspace/.cache/huggingface/hub/models--Goodfire--Llama-3.3-70B-Instruct-SAE-l50/snapshots/128ee921ecd1b8b3a87d776cbcc357c0855da134/Llama-3.3-70B-Instruct-SAE-l50.pt",
+  "sae_device": "cuda:0",
+  "hook": "model.layers.50",
+  "steering_mode": "clamp_min",
+  "normalized_steering_mode": "clamp_min",
+  "patch_scope": "last_token",
+  "feature_indices": [
+    31935
+  ],
+  "input_strengths": [
+    0.5
+  ],
+  "strength_calibration": "raw",
+  "actual_strengths": [
+    0.5
+  ],
+  "generation": {
+    "max_new_tokens": 256,
+    "do_sample": false,
+    "temperature": null,
+    "top_p": null,
+    "seed": null
+  },
+  "environment": {
+    "platform": "Linux-6.8.0-106-generic-x86_64-with-glibc2.35",
+    "python": "3.11.10",
+    "torch_dtype": "bfloat16",
+    "device_map": "auto",
+    "load_in_4bit": true,
+    "load_in_8bit": false
+  },
+  "caveat": "This is live open-SAE activation patching with Goodfire's released SAE. It is not guaranteed to match deprecated hosted Goodfire controller nudge calibration exactly."
+}

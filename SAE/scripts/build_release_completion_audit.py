@@ -454,6 +454,149 @@ def build_steering_item() -> AuditItem:
     )
 
 
+def build_live_game_steering_item() -> AuditItem:
+    """Audit live Open-SAE steering generation for non-creativity games."""
+
+    specs = [
+        (
+            "safe_risky_lite",
+            "runs/safe_risky_open_sae_steering_lite_full",
+            {"response_units": 1400, "activation_rows": 14000, "condition_cells": 1, "reward_cells": 35},
+        ),
+        (
+            "safe_risky_strong",
+            "runs/safe_risky_open_sae_steering_full",
+            {"response_units": 1400, "activation_rows": 14000, "condition_cells": 1, "reward_cells": 35},
+        ),
+        (
+            "ultimatum",
+            "runs/ultimatum_open_sae_steering_full",
+            {"response_units": 680, "activation_rows": 6800, "condition_cells": 1, "reward_cells": 17},
+        ),
+        (
+            "trust",
+            "runs/trust_open_sae_steering_full",
+            {"response_units": 200, "activation_rows": 2000, "condition_cells": 2, "reward_cells": 20},
+        ),
+    ]
+    verification: dict[str, Any] = {}
+    done = True
+    evidence = [
+        "scripts/run_open_sae_steering_generation.py",
+        "runpod/run_game_open_sae_steering.sh",
+        "scripts/verify_live_steering_outputs.py",
+    ]
+    for name, run_dir, expected in specs:
+        base = ROOT / run_dir
+        response_units = pd.read_csv(base / "response_units.csv")
+        activations = pd.read_csv(base / "open_sae/open_sae_feature_activations.csv")
+        top = pd.read_csv(base / "open_sae/open_sae_condition_top_features.csv")
+        reward_top = pd.read_csv(base / "open_sae/open_sae_condition_reward_top_features.csv")
+        metadata = json.loads((base / "open_sae/open_sae_metadata.json").read_text(encoding="utf-8"))
+        plots = sorted(path.name for path in (base / "open_sae").glob("*.png"))
+        actual = {
+            "response_units": int(len(response_units)),
+            "processed_response_task_units": int(metadata.get("processed_response_task_units", -1)),
+            "activation_rows": int(len(activations)),
+            "expected_top_feature_rows": int(metadata.get("expected_top_feature_rows", -1)),
+            "actual_top_feature_rows": int(metadata.get("actual_top_feature_rows", -1)),
+            "condition_cells": int(top.groupby(["task", "condition"]).ngroups),
+            "reward_cells": int(reward_top.groupby(["task", "condition", "reward"]).ngroups),
+            "special_or_control_token_topk_hits": int(
+                metadata.get("special_or_control_token_topk_hits", -1)
+            ),
+            "conditions": sorted(response_units["condition"].dropna().unique().tolist()),
+            "plots": plots,
+            "expected": expected,
+        }
+        verification[name] = actual
+        done = done and (
+            actual["response_units"] == expected["response_units"]
+            and actual["processed_response_task_units"] == expected["response_units"]
+            and actual["activation_rows"] == expected["activation_rows"]
+            and actual["actual_top_feature_rows"] == expected["activation_rows"]
+            and actual["condition_cells"] == expected["condition_cells"]
+            and actual["reward_cells"] == expected["reward_cells"]
+            and actual["special_or_control_token_topk_hits"] == 0
+            and all((base / "open_sae" / plot).stat().st_size > 0 for plot in plots)
+        )
+        evidence.extend(
+            [
+                f"{run_dir}/response_units.csv",
+                f"{run_dir}/open_sae/open_sae_feature_activations.csv",
+                f"{run_dir}/open_sae/open_sae_metadata.json",
+            ]
+        )
+    return AuditItem(
+        id="live_game_steering",
+        requirement=(
+            "Safe-risk, ultimatum, and trust games have fresh live Open-SAE "
+            "steered generations plus post-hoc Open-SAE inspections."
+        ),
+        status=status_from_bool(done),
+        evidence=evidence,
+        verification=verification,
+    )
+
+
+def build_dose_sweep_item() -> AuditItem:
+    """Audit five-level dose-sensitive live Open-SAE steering sweeps."""
+
+    base = ROOT / "runs/open_sae_dose_sweeps/summary"
+    verification: dict[str, Any] = {}
+    done = False
+    if base.exists():
+        index = pd.read_csv(base / "dose_sweep_run_index.csv")
+        behavior = pd.read_csv(base / "dose_sweep_behavior_summary.csv")
+        features = pd.read_csv(base / "dose_sweep_feature_summary.csv")
+        metadata = json.loads((base / "dose_sweep_metadata.json").read_text(encoding="utf-8"))
+        plots = sorted(path.name for path in base.glob("*.png"))
+        by_dataset = {
+            key: int(value) for key, value in index.groupby("dataset_kind")["response_units"].sum().items()
+        }
+        verification = {
+            "dose_count": int(len(index)),
+            "response_units": int(index["response_units"].sum()),
+            "topk_rows": int(index["topk_rows"].sum()),
+            "response_units_by_dataset": by_dataset,
+            "behavior_rows": int(len(behavior)),
+            "feature_summary_rows": int(len(features)),
+            "plots": plots,
+            "metadata_status": metadata.get("status"),
+        }
+        done = (
+            verification["dose_count"] == 15
+            and verification["response_units"] == 11400
+            and verification["topk_rows"] == 114000
+            and by_dataset == {"safe_risky": 7000, "trust": 1000, "ultimatum": 3400}
+            and verification["metadata_status"] == "complete"
+            and len(plots) >= 6
+            and all((base / plot).stat().st_size > 0 for plot in plots)
+        )
+    return AuditItem(
+        id="dose_sensitive_steering_sweeps",
+        requirement=(
+            "Safe-risk, ultimatum, and trust have five-level live Open-SAE "
+            "dose-response steering sweeps with combined summaries and plots."
+        ),
+        status=status_from_bool(done),
+        evidence=[
+            "scripts/run_open_sae_dose_sweep.py",
+            "scripts/verify_live_dose_sweep_outputs.py",
+            "runpod/run_game_open_sae_dose_sweep.sh",
+            "runs/open_sae_dose_sweeps/summary/dose_sweep_run_index.csv",
+            "runs/open_sae_dose_sweeps/summary/dose_sweep_behavior_summary.csv",
+            "runs/open_sae_dose_sweeps/summary/dose_sweep_feature_summary.csv",
+        ],
+        verification=verification,
+        next_step=(
+            "Run `RUN_FULL=1 bash ./runpod/run_game_open_sae_dose_sweep.sh` on an H100."
+            if not done
+            else ""
+        ),
+    )
+
+
 def build_release_safety_item() -> AuditItem:
     """Audit public-release safety scaffolding."""
 
@@ -500,6 +643,8 @@ def build_audit() -> dict[str, Any]:
         *build_source_audit_items(),
         build_label_item(),
         build_steering_item(),
+        build_live_game_steering_item(),
+        build_dose_sweep_item(),
         build_release_safety_item(),
     ]
     counts: dict[str, int] = {}

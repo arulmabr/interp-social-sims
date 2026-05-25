@@ -52,5 +52,18 @@ regeneration and post-hoc Open-SAE inspection:
 RUN_FULL=1 bash ./runpod/run_creativity_open_sae_steering.sh
 ```
 
+Run the remaining live game steering smoke tests:
+
+```bash
+bash ./runpod/run_game_open_sae_steering.sh
+```
+
+If the smoke outputs verify, run the full safe-risk, ultimatum, and trust live
+steering jobs:
+
+```bash
+RUN_FULL=1 bash ./runpod/run_game_open_sae_steering.sh
+```
+
 Stop the pod immediately after outputs are synced back. If the volume is retained, it
 continues to accrue idle storage cost.

@@ -1,0 +1,29 @@
+{
+  "status": "smoke_plan_only",
+  "dataset_kind": "safe_risky",
+  "selected_prompt_units": 8,
+  "prompt_units_csv": "runs/safe_risky_open_sae_steering_full_smoke/smoke_plan/open_sae_steering_smoke_units.csv",
+  "feature_metadata_csv": "runs/safe_risky_open_sae_steering_full_smoke/smoke_plan/open_sae_steering_feature_metadata.csv",
+  "model_id": "meta-llama/Llama-3.3-70B-Instruct",
+  "sae_repo": "Goodfire/Llama-3.3-70B-Instruct-SAE-l50",
+  "hook": "model.layers.50",
+  "steering_mode": "clamp_min",
+  "patch_scope": "last_token",
+  "feature_indices": [
+    184,
+    4237
+  ],
+  "input_strengths": [
+    0.7,
+    0.5
+  ],
+  "strength_calibration": "raw",
+  "actual_strengths": [
+    0.7,
+    0.5
+  ],
+  "source": "data/raw/games/safe_risky/results_20251008_225522",
+  "conditions": "steering",
+  "rewards": "",
+  "implementation_status": "Smoke mode validates selected prompts and feature metadata. Pass --execute on a GPU machine to generate steered responses."
+}

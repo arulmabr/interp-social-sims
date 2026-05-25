@@ -12,6 +12,7 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 EXPECTED_STEERING_FEATURES = {13142, 20117, 4992}
+EXPECTED_CROSSWALK_FEATURES = {13142, 20117, 4992, 184, 4237, 31935}
 FEATURE_FALLBACK_RE = re.compile(r"^feature_\d+$")
 PLATFORM_FILES = [
     "social_sim_open_sae/__init__.py",
@@ -22,8 +23,17 @@ PLATFORM_FILES = [
     "scripts/run_edsl_social_simulation.py",
     "scripts/build_data_manifest.py",
     "scripts/build_release_completion_audit.py",
+    "scripts/build_paper_activation_label_crosswalk.py",
+    "scripts/audit_paper_activation_index_sources.py",
+    "scripts/audit_paper_activation_git_history.py",
+    "scripts/build_approximate_neuronpedia_label_matches.py",
     "scripts/run_open_sae_steering_generation.py",
+    "scripts/run_open_sae_dose_sweep.py",
+    "scripts/verify_live_steering_outputs.py",
+    "scripts/verify_live_dose_sweep_outputs.py",
     "runpod/run_creativity_open_sae_steering.sh",
+    "runpod/run_game_open_sae_steering.sh",
+    "runpod/run_game_open_sae_dose_sweep.sh",
     "runpod/run_safe_risky_five_condition_open_sae.sh",
     "tests/verify_release_anonymity.py",
     "examples/games/creativity.py",
@@ -31,6 +41,7 @@ PLATFORM_FILES = [
     "examples/games/ultimatum.py",
     "examples/games/trust.py",
     "docs/BUILD_A_GAME.md",
+    "docs/OPEN_SAE_PARAGRAPH_ACTIVATIONS.md",
     "tests/verify_platform_smoke.py",
 ]
 
@@ -285,6 +296,121 @@ def check_feature_description_lookup() -> None:
         raise AssertionError("Feature-description lookup should use cached Neuronpedia labels")
 
 
+def check_paper_activation_label_crosswalk() -> None:
+    paper = pd.read_csv(require("data/processed/paper_activation_label_crosswalk.csv"))
+    steering = pd.read_csv(require("data/processed/steering_feature_label_crosswalk.csv"))
+    audit = pd.read_csv(require("data/processed/paper_activation_index_search_audit.csv"))
+    history_audit = pd.read_csv(require("data/processed/paper_activation_git_history_audit.csv"))
+    approx = pd.read_csv(require("data/processed/paper_activation_neuronpedia_approx_matches.csv"))
+    require_nonempty("reports/PAPER_ACTIVATION_LABEL_CROSSWALK.md")
+    require_nonempty("reports/PAPER_ACTIVATION_INDEX_SEARCH_AUDIT.md")
+    require_nonempty("reports/PAPER_ACTIVATION_GIT_HISTORY_AUDIT.md")
+    require_nonempty("reports/PAPER_ACTIVATION_NEURONPEDIA_APPROX_MATCHES.md")
+    require_nonempty("data/processed/paper_activation_neuronpedia_approx_search_cache.jsonl")
+    method_doc = require("docs/OPEN_SAE_PARAGRAPH_ACTIVATIONS.md").read_text(encoding="utf-8")
+
+    if len(paper) != 62340:
+        raise AssertionError(f"Expected 62,340 paper activation rows, found {len(paper):,}")
+    if paper["old_goodfire_label"].nunique() != 106:
+        raise AssertionError("Paper crosswalk unique old-label count mismatch")
+    status_counts = paper["mapping_status"].value_counts().to_dict()
+    expected_status_counts = {
+        "old_label_only_no_feature_index": 58862,
+        "exact_feature_index_match": 3478,
+    }
+    if status_counts != expected_status_counts:
+        raise AssertionError(f"Unexpected paper crosswalk status counts: {status_counts}")
+    exact = paper[paper["mapping_status"] == "exact_feature_index_match"]
+    if exact["feature_index"].isna().any():
+        raise AssertionError("Exact paper crosswalk rows must have feature_index")
+    if exact["neuronpedia_label"].fillna("").str.strip().eq("").any():
+        raise AssertionError("Exact paper crosswalk rows must have Neuronpedia labels")
+    if not exact["neuronpedia_api_url"].str.startswith(
+        "https://www.neuronpedia.org/api/feature/"
+    ).all():
+        raise AssertionError("Exact paper crosswalk rows contain invalid Neuronpedia URLs")
+    old_only = paper[paper["mapping_status"] == "old_label_only_no_feature_index"]
+    if old_only["feature_index"].notna().any():
+        raise AssertionError("Old-label-only rows should not have feature_index")
+
+    found = set(steering["feature_index"].astype(int))
+    if not EXPECTED_CROSSWALK_FEATURES.issubset(found):
+        missing = sorted(EXPECTED_CROSSWALK_FEATURES - found)
+        raise AssertionError(f"Steering crosswalk missing expected features: {missing}")
+    if steering["old_goodfire_label"].fillna("").str.strip().eq("").any():
+        raise AssertionError("Steering crosswalk contains empty Goodfire labels")
+    if steering["neuronpedia_label"].fillna("").str.strip().eq("").any():
+        raise AssertionError("Steering crosswalk contains empty Neuronpedia labels")
+    if not steering["neuronpedia_api_url"].str.startswith(
+        "https://www.neuronpedia.org/api/feature/"
+    ).all():
+        raise AssertionError("Steering crosswalk contains invalid Neuronpedia URLs")
+    for expected in [
+        "assistant_response",
+        "all_content",
+        "frequency",
+        "max",
+        "feature_index",
+        "model.layers.50",
+    ]:
+        if expected not in method_doc:
+            raise AssertionError(f"Open-SAE paragraph activation doc is missing {expected}")
+
+    exact_audit = audit[audit["mapping_status"] == "exact_feature_index_match"]
+    rejected_audit = audit[audit["mapping_status"] == "candidate_rejected_no_same_object_mapping"]
+    expected_exact = {
+        "Altruistic and selfless behavior or intentions": 31935,
+        "Descriptions of creative unconventional thinking, especially 'thinking outside the box'": 20117,
+        "Executing potentially risky operations that require caution": 4237,
+        "Professional innovation and creative problem-solving": 4992,
+        "Willing to take risks or make sacrifices for a goal": 184,
+    }
+    found_exact = {
+        label: set(group["feature_index"].astype(int))
+        for label, group in exact_audit.groupby("old_goodfire_label")
+    }
+    if found_exact != {label: {index} for label, index in expected_exact.items()}:
+        raise AssertionError(f"Unexpected index-source audit exact mappings: {found_exact}")
+    if rejected_audit.empty:
+        raise AssertionError("Index-source audit should include rejected co-location candidates")
+    if rejected_audit["feature_index"].notna().any():
+        raise AssertionError("Rejected index-source audit rows should not have feature_index")
+
+    exact_history = history_audit[history_audit["mapping_status"] == "exact_feature_index_match"]
+    found_history = {
+        label: set(group["feature_index"].astype(int))
+        for label, group in exact_history.groupby("old_goodfire_label")
+    }
+    if found_history != {label: {index} for label, index in expected_exact.items()}:
+        raise AssertionError(f"Unexpected git-history audit exact mappings: {found_history}")
+    if exact_history["source_commit"].fillna("").str.strip().eq("").any():
+        raise AssertionError("Exact git-history audit rows should have example commits")
+    rejected_history = history_audit[
+        history_audit["mapping_status"] == "candidate_rejected_no_same_object_mapping"
+    ]
+    if rejected_history.empty:
+        raise AssertionError("Git-history audit should include rejected co-location candidates")
+
+    old_only_labels = set(old_only["old_goodfire_label"])
+    if set(approx["old_goodfire_label"]) != old_only_labels:
+        raise AssertionError("Approximate Neuronpedia matches should cover every old-only label")
+    if len(approx) != len(old_only_labels) * 5:
+        raise AssertionError("Approximate Neuronpedia matches should contain top-5 rows per old-only label")
+    if set(approx["match_status"]) != {"approximate_neuronpedia_explanation_search"}:
+        raise AssertionError("Approximate Neuronpedia matches should be marked approximate")
+    if approx["candidate_feature_index"].isna().any():
+        raise AssertionError("Approximate Neuronpedia matches should have candidate feature indices")
+    if approx["candidate_neuronpedia_label"].fillna("").str.strip().eq("").any():
+        raise AssertionError("Approximate Neuronpedia matches should have candidate labels")
+    if not approx["candidate_neuronpedia_api_url"].str.startswith(
+        "https://www.neuronpedia.org/api/feature/"
+    ).all():
+        raise AssertionError("Approximate Neuronpedia matches contain invalid feature URLs")
+    top1 = approx[approx["candidate_rank"] == 1]
+    if top1["candidate_confidence_bucket"].nunique() < 2:
+        raise AssertionError("Approximate Neuronpedia matches should preserve confidence variation")
+
+
 def check_steering_provenance() -> None:
     base = "data/processed/creativity/steering_provenance"
     steering = pd.read_csv(require(f"{base}/steering_features.csv"))
@@ -359,6 +485,119 @@ def check_steering_provenance() -> None:
     )
 
 
+def check_live_game_steering() -> None:
+    """Check fresh live Open-SAE steering runs for non-creativity games."""
+
+    runpod_script = require("runpod/run_game_open_sae_steering.sh").read_text()
+    if "RUN_FULL" not in runpod_script or "--execute" not in runpod_script:
+        raise AssertionError("Game steering RunPod script should include smoke/full execution paths")
+    verifier = require("scripts/verify_live_steering_outputs.py").read_text()
+    if "safe_risky_open_sae_steering_full" not in verifier:
+        raise AssertionError("Live steering verifier should cover safe-risk full runs")
+
+    live_specs = [
+        (
+            "runs/safe_risky_open_sae_steering_lite_full",
+            1400,
+            14000,
+            1,
+            35,
+            {"lite_steering"},
+            [
+                "safe_risky_choice_rates_from_saved_outputs.png",
+                "safe_risky_open_sae_top_feature_by_reward.png",
+                "open_sae_per_response_top_activation_diagnostics.png",
+            ],
+        ),
+        (
+            "runs/safe_risky_open_sae_steering_full",
+            1400,
+            14000,
+            1,
+            35,
+            {"steering"},
+            [
+                "safe_risky_choice_rates_from_saved_outputs.png",
+                "safe_risky_open_sae_top_feature_by_reward.png",
+                "open_sae_per_response_top_activation_diagnostics.png",
+            ],
+        ),
+        (
+            "runs/ultimatum_open_sae_steering_full",
+            680,
+            6800,
+            1,
+            17,
+            {"steering"},
+            [
+                "ultimatum_acceptance_rates_from_saved_outputs.png",
+                "ultimatum_open_sae_top_features_by_condition.png",
+                "open_sae_per_response_top_activation_diagnostics.png",
+            ],
+        ),
+        (
+            "runs/trust_open_sae_steering_full",
+            200,
+            2000,
+            2,
+            20,
+            {"baseline", "intervention"},
+            [
+                "trust_mean_returns_from_saved_outputs.png",
+                "trust_open_sae_top_features_by_condition.png",
+                "open_sae_per_response_top_activation_diagnostics.png",
+            ],
+        ),
+    ]
+    for run_dir, units, rows, condition_cells, reward_cells, conditions, plots in live_specs:
+        response_units = pd.read_csv(require(f"{run_dir}/response_units.csv"))
+        if len(response_units) != units:
+            raise AssertionError(f"Live steering unit count mismatch in {run_dir}")
+        if set(response_units["condition"]) != conditions:
+            raise AssertionError(f"Live steering conditions mismatch in {run_dir}")
+        check_open_sae_output(
+            base=f"{run_dir}/open_sae",
+            expected_rows=rows,
+            expected_units=units,
+            expected_condition_cells=condition_cells,
+            expected_reward_cells=reward_cells,
+            condition_keys=["task", "condition"],
+            reward_keys=["task", "condition", "reward"],
+            plots=plots,
+        )
+
+
+def check_dose_sensitive_steering_sweeps() -> None:
+    require_nonempty("scripts/run_open_sae_dose_sweep.py")
+    require_nonempty("scripts/verify_live_dose_sweep_outputs.py")
+    runpod_script = require("runpod/run_game_open_sae_dose_sweep.sh").read_text()
+    if "RUN_FULL" not in runpod_script or "--execute-missing" not in runpod_script:
+        raise AssertionError("Dose-sweep RunPod script should include smoke/full execution paths")
+
+    base = "runs/open_sae_dose_sweeps/summary"
+    index = pd.read_csv(require(f"{base}/dose_sweep_run_index.csv"))
+    behavior = pd.read_csv(require(f"{base}/dose_sweep_behavior_summary.csv"))
+    features = pd.read_csv(require(f"{base}/dose_sweep_feature_summary.csv"))
+    metadata = json.loads(require(f"{base}/dose_sweep_metadata.json").read_text())
+    if len(index) != 15:
+        raise AssertionError("Dose-sweep run index should contain 15 dose rows")
+    if int(index["response_units"].sum()) != 11400:
+        raise AssertionError("Dose-sweep response-unit total mismatch")
+    if int(index["topk_rows"].sum()) != 114000:
+        raise AssertionError("Dose-sweep top-k total mismatch")
+    expected_by_dataset = {"safe_risky": 7000, "ultimatum": 3400, "trust": 1000}
+    found_by_dataset = index.groupby("dataset_kind")["response_units"].sum().astype(int).to_dict()
+    if found_by_dataset != expected_by_dataset:
+        raise AssertionError(f"Dose-sweep dataset totals mismatch: {found_by_dataset}")
+    if metadata.get("status") != "complete":
+        raise AssertionError("Dose-sweep metadata status mismatch")
+    if behavior.empty or features.empty:
+        raise AssertionError("Dose-sweep summary tables must be nonempty")
+    for dataset_kind in ["safe_risky", "ultimatum", "trust"]:
+        require_nonempty(f"{base}/{dataset_kind}_dose_response_behavior.png")
+        require_nonempty(f"{base}/{dataset_kind}_dose_feature_activation_diagnostics.png")
+
+
 def check_platform_layer() -> None:
     for path in PLATFORM_FILES:
         require_nonempty(path)
@@ -395,6 +634,8 @@ def check_release_audit_and_manifest() -> None:
         "trust_open_sae": "complete",
         "feature_description_bundle": "complete",
         "creativity_steering": "complete",
+        "live_game_steering": "complete",
+        "dose_sensitive_steering_sweeps": "complete",
         "release_safety": "complete",
     }
     missing = sorted(set(expected_statuses) - set(statuses))
@@ -407,8 +648,32 @@ def check_release_audit_and_manifest() -> None:
     for path in [
         "reports/RELEASE_COMPLETION_AUDIT.json",
         "scripts/build_release_completion_audit.py",
+        "scripts/build_paper_activation_label_crosswalk.py",
+        "scripts/audit_paper_activation_index_sources.py",
+        "scripts/audit_paper_activation_git_history.py",
+        "scripts/build_approximate_neuronpedia_label_matches.py",
+        "data/processed/paper_activation_label_crosswalk.csv",
+        "data/processed/steering_feature_label_crosswalk.csv",
+        "data/processed/paper_activation_index_search_audit.csv",
+        "data/processed/paper_activation_git_history_audit.csv",
+        "data/processed/paper_activation_neuronpedia_approx_matches.csv",
+        "data/processed/paper_activation_neuronpedia_approx_search_cache.jsonl",
+        "docs/OPEN_SAE_PARAGRAPH_ACTIVATIONS.md",
+        "reports/PAPER_ACTIVATION_LABEL_CROSSWALK.md",
+        "reports/PAPER_ACTIVATION_INDEX_SEARCH_AUDIT.md",
+        "reports/PAPER_ACTIVATION_GIT_HISTORY_AUDIT.md",
+        "reports/PAPER_ACTIVATION_NEURONPEDIA_APPROX_MATCHES.md",
         "runs/creativity_open_sae_steering_40agent/response_units.csv",
         "runs/creativity_open_sae_steering_40agent/open_sae/open_sae_feature_activations.csv",
+        "runs/safe_risky_open_sae_steering_full/open_sae/open_sae_feature_activations.csv",
+        "runs/safe_risky_open_sae_steering_lite_full/open_sae/open_sae_feature_activations.csv",
+        "runs/ultimatum_open_sae_steering_full/open_sae/open_sae_feature_activations.csv",
+        "runs/trust_open_sae_steering_full/open_sae/open_sae_feature_activations.csv",
+        "runs/open_sae_dose_sweeps/summary/dose_sweep_run_index.csv",
+        "runs/open_sae_dose_sweeps/summary/dose_sweep_behavior_summary.csv",
+        "runs/open_sae_dose_sweeps/summary/dose_sweep_feature_summary.csv",
+        "runpod/run_game_open_sae_dose_sweep.sh",
+        "runpod/run_game_open_sae_steering.sh",
         "runpod/run_safe_risky_five_condition_open_sae.sh",
     ]:
         if path not in manifest_text:
@@ -424,7 +689,10 @@ def main() -> None:
     check_remaining_game_source_audits()
     check_remaining_game_open_sae()
     check_feature_description_lookup()
+    check_paper_activation_label_crosswalk()
     check_steering_provenance()
+    check_live_game_steering()
+    check_dose_sensitive_steering_sweeps()
     check_release_audit_and_manifest()
     print("release artifact verification passed")
 

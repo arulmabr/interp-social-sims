@@ -149,7 +149,7 @@ def load_units(args: argparse.Namespace) -> list[Any]:
             source_dir,
             strict=True,
             conditions=conditions,
-            limit_units=args.limit_units,
+            limit_units=None,
         )
     elif dataset_kind == "safe_risky":
         units, _ = load_safe_risky_units(
@@ -158,7 +158,7 @@ def load_units(args: argparse.Namespace) -> list[Any]:
             conditions=conditions,
             rewards=rewards,
             max_agents_per_cell=args.max_agents_per_cell,
-            limit_units=args.limit_units,
+            limit_units=None,
         )
     elif dataset_kind == "ultimatum":
         units, _ = load_ultimatum_units(
@@ -167,7 +167,7 @@ def load_units(args: argparse.Namespace) -> list[Any]:
             conditions=conditions,
             offers=rewards,
             max_agents_per_cell=args.max_agents_per_cell,
-            limit_units=args.limit_units,
+            limit_units=None,
         )
     elif dataset_kind == "trust":
         units, _ = load_trust_units(
@@ -176,7 +176,7 @@ def load_units(args: argparse.Namespace) -> list[Any]:
             conditions=conditions,
             sent_amounts=rewards,
             max_agents_per_cell=args.max_agents_per_cell,
-            limit_units=args.limit_units,
+            limit_units=None,
         )
     else:
         raise ValueError(f"Unknown dataset kind: {dataset_kind}")
@@ -184,6 +184,32 @@ def load_units(args: argparse.Namespace) -> list[Any]:
     if not units:
         raise ValueError("No source units selected for steering")
     return units
+
+
+def limit_records_by_condition(
+    records: list[dict[str, Any]], limit: int | None
+) -> list[dict[str, Any]]:
+    """Select a deterministic condition-balanced prefix for smoke jobs."""
+    if limit is None or len(records) <= limit:
+        return records
+
+    conditions = sorted({safe_text(record.get("condition")) for record in records})
+    if len(conditions) <= 1:
+        return records[:limit]
+
+    buckets: dict[str, list[dict[str, Any]]] = {condition: [] for condition in conditions}
+    for record in records:
+        buckets[safe_text(record.get("condition"))].append(record)
+
+    selected: list[dict[str, Any]] = []
+    while len(selected) < limit and any(buckets.values()):
+        for condition in conditions:
+            bucket = buckets[condition]
+            if bucket:
+                selected.append(bucket.pop(0))
+                if len(selected) >= limit:
+                    break
+    return selected
 
 
 def prompt_record_from_unit(unit: Any) -> dict[str, Any]:
@@ -246,6 +272,7 @@ def selected_prompt_records(args: argparse.Namespace) -> list[dict[str, Any]]:
         records = load_prompt_file(args.prompt_file, args.limit_units, dataset_kind)
     else:
         records = [prompt_record_from_unit(unit) for unit in load_units(args)]
+        records = limit_records_by_condition(records, args.limit_units)
     if args.expected_units is not None and len(records) != args.expected_units:
         raise ValueError(f"Found {len(records)} prompt units, expected {args.expected_units}")
     return records
@@ -681,6 +708,90 @@ def generate_one_response(
     return response_text, trace_payload
 
 
+def first_nonempty_line(text: str) -> str:
+    """Return the first substantive generated line after light answer-prefix cleanup."""
+
+    for line in safe_text(text).splitlines():
+        stripped = line.strip()
+        if stripped:
+            return stripped
+    return ""
+
+
+def strip_answer_prefix(text: str) -> str:
+    lowered = text.lower()
+    for prefix in ("answer:", "choice:", "decision:", "return:", "response:"):
+        if lowered.startswith(prefix):
+            return text[len(prefix) :].strip()
+    return text.strip()
+
+
+def earliest_label_match(text: str, labels: list[tuple[str, list[str]]]) -> str | None:
+    lowered = safe_text(text).lower()
+    matches: list[tuple[int, str]] = []
+    for normalized, needles in labels:
+        for needle in needles:
+            index = lowered.find(needle)
+            if index >= 0:
+                matches.append((index, normalized))
+    if not matches:
+        return None
+    matches.sort(key=lambda item: item[0])
+    return matches[0][1]
+
+
+def split_generated_answer(dataset_kind: str, response_text: str) -> tuple[str, str, str]:
+    """Extract the behavior answer column from free-form generated text.
+
+    Open-SAE steering uses normal generation, not EDSL's multiple-choice parser.
+    The full text remains in ``response_text`` for SAE inspection, while these
+    normalized answer/comment fields keep downstream behavior plots honest.
+    """
+
+    text = safe_text(response_text).strip()
+    first_line = strip_answer_prefix(first_nonempty_line(text))
+
+    if dataset_kind == "safe_risky":
+        label = earliest_label_match(
+            first_line,
+            [
+                ("Risky Option", ["risky option", "risky"]),
+                ("Safe Option", ["safe option", "safe"]),
+            ],
+        ) or earliest_label_match(
+            text[:500],
+            [
+                ("Risky Option", ["risky option", "choose risky", "choose the risky"]),
+                ("Safe Option", ["safe option", "choose safe", "choose the safe"]),
+            ],
+        )
+        if label:
+            return label, text, "parsed_safe_risky_label"
+
+    if dataset_kind == "ultimatum":
+        label = earliest_label_match(
+            first_line,
+            [("Accept", ["accept"]), ("Reject", ["reject"])],
+        ) or earliest_label_match(
+            text[:500],
+            [
+                ("Accept", ["i accept", "would accept", "choose accept"]),
+                ("Reject", ["i reject", "would reject", "choose reject"]),
+            ],
+        )
+        if label:
+            return label, text, "parsed_ultimatum_label"
+
+    if dataset_kind == "trust":
+        import re
+
+        match = re.search(r"-?\d+(?:\.\d+)?", first_line or text)
+        if match:
+            return match.group(0), text, "parsed_trust_numeric"
+
+    return text, "", "unparsed_full_response_as_answer"
+
+
 def response_unit_row(
     record: dict[str, Any],
     *,
@@ -690,10 +801,12 @@ def response_unit_row(
     model_id: str,
 ) -> dict[str, Any]:
     unit_id = safe_text(record.get("unit_id"))
+    answer_text, comment_text, parse_status = split_generated_answer(dataset_kind, response_text)
     return {
         "unit_id": f"open_sae_steered:{unit_id}",
         "game_id": safe_text(record.get("game_id")) or dataset_kind,
         "condition": safe_text(record.get("condition")),
+        "source_condition": safe_text(record.get("source_condition")),
         "task": safe_text(record.get("task")),
         "scenario_id": safe_text(record.get("scenario_id")),
         "reward": safe_text(record.get("reward")),
@@ -702,14 +815,15 @@ def response_unit_row(
         "response_index": safe_text(record.get("response_index")),
         "agent_index": safe_text(record.get("agent_index")),
         "agent_subject_id": safe_text(record.get("agent_subject_id")),
-        "answer_text": response_text,
-        "comment_text": "",
+        "answer_text": answer_text,
+        "comment_text": comment_text,
         "system_prompt": safe_text(record.get("system_prompt")),
         "user_prompt": safe_text(record.get("user_prompt")),
         "response_text": response_text,
         "source_response_text": safe_text(record.get("source_response_text")),
         "generation_model": model_id,
         "generation_output_dir": relative_path(output_dir),
+        "generated_answer_parse_status": parse_status,
     }
 
 

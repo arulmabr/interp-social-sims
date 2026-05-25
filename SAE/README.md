@@ -78,6 +78,23 @@ interpretability aids, not exact historical Goodfire Ember label strings.
 
 The offline lookup is `data/processed/feature_description_lookup.csv`. It stores the
 stable `feature_index`, cached `feature_label`, and corresponding Neuronpedia API URL.
+For paper-facing historical Goodfire labels, use
+`data/processed/paper_activation_label_crosswalk.csv`,
+`data/processed/steering_feature_label_crosswalk.csv`, and
+`reports/PAPER_ACTIVATION_LABEL_CROSSWALK.md`. Rows marked
+`old_label_only_no_feature_index` preserve old Goodfire labels but are not exact
+Neuronpedia feature-identity mappings.
+`reports/PAPER_ACTIVATION_INDEX_SEARCH_AUDIT.md` documents the strict metadata
+search used to decide which historical labels have recoverable feature indices.
+`reports/PAPER_ACTIVATION_GIT_HISTORY_AUDIT.md` extends the same check across
+reachable git history in the release and companion EDSL/Goodfire checkouts.
+For old labels with no exact index, use
+`data/processed/paper_activation_neuronpedia_approx_matches.csv` and
+`reports/PAPER_ACTIVATION_NEURONPEDIA_APPROX_MATCHES.md` as approximate
+Neuronpedia explanation-search candidates only.
+
+For how token-level Open-SAE activations are aggregated into paragraph-level
+response features, see `docs/OPEN_SAE_PARAGRAPH_ACTIVATIONS.md`.
 
 ## Compute, Cost, and Scope
 

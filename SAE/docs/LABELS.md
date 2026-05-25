@@ -31,6 +31,24 @@ safe-risk/lottery, ultimatum, creativity, and trust top-feature descriptions wit
 The short answer is: the SAE is still Goodfire; the replacement descriptions are cached
 Neuronpedia labels attached to the same feature indices.
 
+For paper-facing historical Goodfire activation labels, use:
+
+- `data/processed/paper_activation_label_crosswalk.csv`
+- `data/processed/steering_feature_label_crosswalk.csv`
+- `reports/PAPER_ACTIVATION_LABEL_CROSSWALK.md`
+- `reports/PAPER_ACTIVATION_INDEX_SEARCH_AUDIT.md`
+- `reports/PAPER_ACTIVATION_GIT_HISTORY_AUDIT.md`
+- `data/processed/paper_activation_neuronpedia_approx_matches.csv`
+- `reports/PAPER_ACTIVATION_NEURONPEDIA_APPROX_MATCHES.md`
+
+These files separate exact `feature_index` matches from historical rows that only
+preserve the old Goodfire label. Do not treat old-label-only rows as exact
+Neuronpedia feature identity matches.
+
+The approximate-match table is a human-readable bridge for old labels that lack a
+recoverable index. It uses Neuronpedia explanation search and should be described
+as semantic label replacement, not as feature identity.
+
 Recommended language:
 
 > Behavior and saved-response data are reproduced exactly where stated. Feature

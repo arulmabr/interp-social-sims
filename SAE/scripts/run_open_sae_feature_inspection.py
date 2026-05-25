@@ -2438,10 +2438,20 @@ def gpu_metadata(torch_module: Any | None) -> dict[str, Any]:
     }
 
 
-def run_inference(args: argparse.Namespace, units: list[WorkUnit], validation: dict[str, Any]) -> None:
+def run_inference(
+    args: argparse.Namespace,
+    units: list[WorkUnit],
+    validation: dict[str, Any],
+    loaded_model_bundle: tuple[Any, Any, Any, Any, Any, str, str] | None = None,
+) -> None:
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
-    torch_module, tokenizer, model, hook_module, sae, sae_path, sae_device = load_model_and_sae(args)
+    if loaded_model_bundle is None:
+        torch_module, tokenizer, model, hook_module, sae, sae_path, sae_device = load_model_and_sae(
+            args
+        )
+    else:
+        torch_module, tokenizer, model, hook_module, sae, sae_path, sae_device = loaded_model_bundle
     d_in = int(sae.d_in)
     d_hidden = int(sae.d_hidden)
     condition_aggs, reward_aggs = initialize_aggregates(units, d_hidden)

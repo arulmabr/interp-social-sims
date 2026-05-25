@@ -74,6 +74,18 @@ python scripts/run_open_sae_feature_inspection.py \
 
 python scripts/build_feature_description_bundle.py --check
 python scripts/extract_steering_provenance.py --check
+python scripts/build_paper_activation_label_crosswalk.py \
+  --paper-activations <paper_activation_csv> \
+  --check
+python scripts/audit_paper_activation_index_sources.py \
+  --paper-activations <paper_activation_csv> \
+  --metadata-root release_repo=. \
+  --check
+python scripts/audit_paper_activation_git_history.py \
+  --paper-activations <paper_activation_csv> \
+  --git-root release_repo=. \
+  --check
+python scripts/build_approximate_neuronpedia_label_matches.py --check
 python scripts/build_release_completion_audit.py --check
 python scripts/build_data_manifest.py --check
 python tests/verify_release_artifacts.py
@@ -89,6 +101,48 @@ python scripts/build_feature_description_bundle.py --check
 ```
 
 The main output is `data/processed/feature_description_lookup.csv`.
+
+## Paper Activation Label Crosswalk
+
+This rebuilds the paper-facing crosswalk between historical Goodfire activation
+labels and current Neuronpedia descriptions where a stable `feature_index` can be
+recovered from saved controller metadata.
+
+```bash
+python scripts/build_paper_activation_label_crosswalk.py \
+  --paper-activations <paper_activation_csv> \
+  --check
+```
+
+The main outputs are:
+
+- `data/processed/paper_activation_label_crosswalk.csv`
+- `data/processed/steering_feature_label_crosswalk.csv`
+- `reports/PAPER_ACTIVATION_LABEL_CROSSWALK.md`
+- `data/processed/paper_activation_index_search_audit.csv`
+- `reports/PAPER_ACTIVATION_INDEX_SEARCH_AUDIT.md`
+- `data/processed/paper_activation_git_history_audit.csv`
+- `reports/PAPER_ACTIVATION_GIT_HISTORY_AUDIT.md`
+- `data/processed/paper_activation_neuronpedia_approx_matches.csv`
+- `data/processed/paper_activation_neuronpedia_approx_search_cache.jsonl`
+- `reports/PAPER_ACTIVATION_NEURONPEDIA_APPROX_MATCHES.md`
+
+Rows marked `old_label_only_no_feature_index` preserve historical Goodfire labels
+but are not exact Neuronpedia feature-identity mappings.
+
+To reproduce the broader development-time audit across companion EDSL/Goodfire
+checkouts, pass additional named roots, for example
+`--metadata-root edsl=/path/to/edsl --metadata-root edsl_goodfire=/path/to/edsl_goodfire`.
+The public release report stores only root aliases and relative source paths.
+For the corresponding git-history audit, use `--git-root` with the same named
+checkouts.
+
+The approximate Neuronpedia match table is generated from cached compact
+explanation-search responses by default. Add `--refresh-neuronpedia` to query
+Neuronpedia live again.
+
+For the paragraph-level Open-SAE scoring method, see
+`docs/OPEN_SAE_PARAGRAPH_ACTIVATIONS.md`.
 
 ## Creativity Steering Provenance
 

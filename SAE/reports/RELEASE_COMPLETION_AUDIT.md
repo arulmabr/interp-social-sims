@@ -5,7 +5,7 @@ Scope: Reusable EDSL social-simulation platform plus Goodfire Open-SAE inspectio
 Overall status: `release_ready`
 
 Status counts:
-- `complete`: 11
+- `complete`: 13
 
 ## Requirements
 
@@ -262,6 +262,165 @@ Status counts:
   ],
   "selected_prompt_units": 4,
   "smoke_plan_status": "smoke_plan_only"
+}
+```
+
+### live_game_steering
+
+- Status: `complete`
+- Requirement: Safe-risk, ultimatum, and trust games have fresh live Open-SAE steered generations plus post-hoc Open-SAE inspections.
+- Evidence:
+  - `scripts/run_open_sae_steering_generation.py`
+  - `runpod/run_game_open_sae_steering.sh`
+  - `scripts/verify_live_steering_outputs.py`
+  - `runs/safe_risky_open_sae_steering_lite_full/response_units.csv`
+  - `runs/safe_risky_open_sae_steering_lite_full/open_sae/open_sae_feature_activations.csv`
+  - `runs/safe_risky_open_sae_steering_lite_full/open_sae/open_sae_metadata.json`
+  - `runs/safe_risky_open_sae_steering_full/response_units.csv`
+  - `runs/safe_risky_open_sae_steering_full/open_sae/open_sae_feature_activations.csv`
+  - `runs/safe_risky_open_sae_steering_full/open_sae/open_sae_metadata.json`
+  - `runs/ultimatum_open_sae_steering_full/response_units.csv`
+  - `runs/ultimatum_open_sae_steering_full/open_sae/open_sae_feature_activations.csv`
+  - `runs/ultimatum_open_sae_steering_full/open_sae/open_sae_metadata.json`
+  - `runs/trust_open_sae_steering_full/response_units.csv`
+  - `runs/trust_open_sae_steering_full/open_sae/open_sae_feature_activations.csv`
+  - `runs/trust_open_sae_steering_full/open_sae/open_sae_metadata.json`
+- Verification:
+```json
+{
+  "safe_risky_lite": {
+    "activation_rows": 14000,
+    "actual_top_feature_rows": 14000,
+    "condition_cells": 1,
+    "conditions": [
+      "lite_steering"
+    ],
+    "expected": {
+      "activation_rows": 14000,
+      "condition_cells": 1,
+      "response_units": 1400,
+      "reward_cells": 35
+    },
+    "expected_top_feature_rows": 14000,
+    "plots": [
+      "open_sae_per_response_top_activation_diagnostics.png",
+      "safe_risky_choice_rates_from_saved_outputs.png",
+      "safe_risky_open_sae_top_feature_by_reward.png"
+    ],
+    "processed_response_task_units": 1400,
+    "response_units": 1400,
+    "reward_cells": 35,
+    "special_or_control_token_topk_hits": 0
+  },
+  "safe_risky_strong": {
+    "activation_rows": 14000,
+    "actual_top_feature_rows": 14000,
+    "condition_cells": 1,
+    "conditions": [
+      "steering"
+    ],
+    "expected": {
+      "activation_rows": 14000,
+      "condition_cells": 1,
+      "response_units": 1400,
+      "reward_cells": 35
+    },
+    "expected_top_feature_rows": 14000,
+    "plots": [
+      "open_sae_per_response_top_activation_diagnostics.png",
+      "safe_risky_choice_rates_from_saved_outputs.png",
+      "safe_risky_open_sae_top_feature_by_reward.png"
+    ],
+    "processed_response_task_units": 1400,
+    "response_units": 1400,
+    "reward_cells": 35,
+    "special_or_control_token_topk_hits": 0
+  },
+  "trust": {
+    "activation_rows": 2000,
+    "actual_top_feature_rows": 2000,
+    "condition_cells": 2,
+    "conditions": [
+      "baseline",
+      "intervention"
+    ],
+    "expected": {
+      "activation_rows": 2000,
+      "condition_cells": 2,
+      "response_units": 200,
+      "reward_cells": 20
+    },
+    "expected_top_feature_rows": 2000,
+    "plots": [
+      "open_sae_per_response_top_activation_diagnostics.png",
+      "trust_mean_returns_from_saved_outputs.png",
+      "trust_open_sae_top_features_by_condition.png"
+    ],
+    "processed_response_task_units": 200,
+    "response_units": 200,
+    "reward_cells": 20,
+    "special_or_control_token_topk_hits": 0
+  },
+  "ultimatum": {
+    "activation_rows": 6800,
+    "actual_top_feature_rows": 6800,
+    "condition_cells": 1,
+    "conditions": [
+      "steering"
+    ],
+    "expected": {
+      "activation_rows": 6800,
+      "condition_cells": 1,
+      "response_units": 680,
+      "reward_cells": 17
+    },
+    "expected_top_feature_rows": 6800,
+    "plots": [
+      "open_sae_per_response_top_activation_diagnostics.png",
+      "ultimatum_acceptance_rates_from_saved_outputs.png",
+      "ultimatum_open_sae_top_features_by_condition.png"
+    ],
+    "processed_response_task_units": 680,
+    "response_units": 680,
+    "reward_cells": 17,
+    "special_or_control_token_topk_hits": 0
+  }
+}
+```
+
+### dose_sensitive_steering_sweeps
+
+- Status: `complete`
+- Requirement: Safe-risk, ultimatum, and trust have five-level live Open-SAE dose-response steering sweeps with combined summaries and plots.
+- Evidence:
+  - `scripts/run_open_sae_dose_sweep.py`
+  - `scripts/verify_live_dose_sweep_outputs.py`
+  - `runpod/run_game_open_sae_dose_sweep.sh`
+  - `runs/open_sae_dose_sweeps/summary/dose_sweep_run_index.csv`
+  - `runs/open_sae_dose_sweeps/summary/dose_sweep_behavior_summary.csv`
+  - `runs/open_sae_dose_sweeps/summary/dose_sweep_feature_summary.csv`
+- Verification:
+```json
+{
+  "behavior_rows": 360,
+  "dose_count": 15,
+  "feature_summary_rows": 3600,
+  "metadata_status": "complete",
+  "plots": [
+    "safe_risky_dose_feature_activation_diagnostics.png",
+    "safe_risky_dose_response_behavior.png",
+    "trust_dose_feature_activation_diagnostics.png",
+    "trust_dose_response_behavior.png",
+    "ultimatum_dose_feature_activation_diagnostics.png",
+    "ultimatum_dose_response_behavior.png"
+  ],
+  "response_units": 11400,
+  "response_units_by_dataset": {
+    "safe_risky": 7000,
+    "trust": 1000,
+    "ultimatum": 3400
+  },
+  "topk_rows": 114000
 }
 ```
 

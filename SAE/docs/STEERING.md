@@ -12,6 +12,10 @@ The extracted file is:
 
 `data/processed/creativity/steering_provenance/steering_features.csv`
 
+The broader label crosswalk for indexed controller features is:
+
+`data/processed/steering_feature_label_crosswalk.csv`
+
 It contains the three Goodfire controller features used in the saved run:
 
 | Feature index | Historical Goodfire label | Nudge |
@@ -167,3 +171,6 @@ SAE repo ID, the steering mode, and the recorded `actual_strengths`.
 The generated behavior is not guaranteed to match deprecated hosted Goodfire
 controller calibration, because the old service did not expose its private nudge
 normalization.
+
+For post-hoc paragraph-level feature inspection over generated or saved
+responses, see `docs/OPEN_SAE_PARAGRAPH_ACTIVATIONS.md`.

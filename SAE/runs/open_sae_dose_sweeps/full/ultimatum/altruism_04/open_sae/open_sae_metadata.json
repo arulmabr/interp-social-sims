@@ -1,0 +1,142 @@
+{
+  "activation_scope": "all_content",
+  "activation_threshold": 0.1,
+  "actual_top_feature_rows": 6800,
+  "aggregation_rule": "For each response unit, compute a feature score over only the selected content-token scope, after excluding chat-template special/control tokens. feature_aggregation=max uses the max SAE activation per feature; frequency counts tokens with activation greater than activation_threshold; sum and mean use thresholded active tokens. Aggregate rows rank features by the mean of those per-response scores.",
+  "behavior_summary_rows": 17,
+  "condition_reward_summary_cells": 17,
+  "condition_summary_cells": 1,
+  "condition_top_k": 10,
+  "dataset_kind": "ultimatum",
+  "dependencies": {
+    "huggingface_hub": "0.36.2",
+    "matplotlib": "3.10.9",
+    "numpy": "1.26.3",
+    "pandas": "3.0.3",
+    "torch": "2.4.1+cu124",
+    "transformers": "4.57.6"
+  },
+  "elapsed_seconds": 155.311,
+  "expected_top_feature_rows": 6800,
+  "feature_aggregation": "max",
+  "goodfire_log": null,
+  "goodfire_overlap_rows": 0,
+  "goodfire_parsed_rows": 0,
+  "gpu": {
+    "cuda_available": true,
+    "device_count": 1,
+    "devices": [
+      {
+        "capability": [
+          9,
+          0
+        ],
+        "index": 0,
+        "name": "NVIDIA H100 80GB HBM3",
+        "total_memory_gb": 79.18
+      }
+    ]
+  },
+  "hook": "model.layers.50",
+  "include_system_in_all_content": false,
+  "include_system_message": false,
+  "model_id": "meta-llama/Llama-3.3-70B-Instruct",
+  "output_dir": "runs/open_sae_dose_sweeps/full/ultimatum/altruism_04/open_sae",
+  "platform": {
+    "hostname": "<redacted>",
+    "python": "3.11.10 (main, Sep  7 2024, 18:35:41) [GCC 11.4.0]",
+    "release": "6.8.0-106-generic",
+    "system": "Linux"
+  },
+  "plots": [
+    "runs/open_sae_dose_sweeps/full/ultimatum/altruism_04/open_sae/ultimatum_open_sae_top_features_by_condition.png",
+    "runs/open_sae_dose_sweeps/full/ultimatum/altruism_04/open_sae/open_sae_per_response_top_activation_diagnostics.png",
+    "runs/open_sae_dose_sweeps/full/ultimatum/altruism_04/open_sae/ultimatum_acceptance_rates_from_saved_outputs.png"
+  ],
+  "processed_response_task_units": 680,
+  "sae_device": "cuda:0",
+  "sae_hidden_size": 65536,
+  "sae_input_size": 8192,
+  "sae_path": "/workspace/.cache/huggingface/hub/models--Goodfire--Llama-3.3-70B-Instruct-SAE-l50/snapshots/128ee921ecd1b8b3a87d776cbcc357c0855da134/Llama-3.3-70B-Instruct-SAE-l50.pt",
+  "sae_repo": "Goodfire/Llama-3.3-70B-Instruct-SAE-l50",
+  "script_path": "scripts/run_open_sae_feature_inspection.py",
+  "source_dir": "runs/open_sae_dose_sweeps/full/ultimatum/altruism_04",
+  "special_or_control_token_topk_hits": 0,
+  "summary_top_n_per_cell": 200,
+  "timestamp_utc": "2026-05-25T10:56:52.157814+00:00",
+  "top_k": 10,
+  "unit_status_counts": {
+    "ok": 680
+  },
+  "validation": {
+    "actual_response_task_units": 680,
+    "actual_response_task_units_unfiltered": 680,
+    "available_conditions": [
+      "dose_altruism_04"
+    ],
+    "available_rewards": [
+      10,
+      15,
+      20,
+      25,
+      30,
+      35,
+      40,
+      45,
+      50,
+      55,
+      60,
+      65,
+      70,
+      75,
+      80,
+      85,
+      90
+    ],
+    "csv_columns": [
+      "unit_id",
+      "game_id",
+      "condition",
+      "source_condition",
+      "task",
+      "scenario_id",
+      "reward",
+      "source_file",
+      "source_row_index",
+      "response_index",
+      "agent_index",
+      "agent_subject_id",
+      "answer_text",
+      "comment_text",
+      "system_prompt",
+      "user_prompt",
+      "response_text",
+      "source_response_text",
+      "generation_model",
+      "generation_output_dir",
+      "generated_answer_parse_status"
+    ],
+    "csv_rows": 680,
+    "dataset_kind": "ultimatum",
+    "manifest": {
+      "created_at_utc": "2026-05-25T10:54:16.757570+00:00",
+      "game_id": "ultimatum",
+      "model_id": "meta-llama/Llama-3.3-70B-Instruct",
+      "response_units": 680,
+      "response_units_csv": "response_units.csv",
+      "response_units_jsonl": "response_units.jsonl",
+      "run_type": "open_sae_steering_generation",
+      "steering_metadata": "open_sae_steering_metadata.json",
+      "steering_trace": "open_sae_steering_trace.jsonl"
+    },
+    "response_units_csv": "runs/open_sae_dose_sweeps/full/ultimatum/altruism_04/response_units.csv",
+    "run_dir": "runs/open_sae_dose_sweeps/full/ultimatum/altruism_04",
+    "run_manifest": "runs/open_sae_dose_sweeps/full/ultimatum/altruism_04/run_manifest.json",
+    "selected_conditions": null,
+    "selected_csv_file_count": 1,
+    "selected_rewards": null,
+    "sha256": "66a50909798f887199e9269546f1f62ba0ada35bd19d492fad1e16d4c2023ad5",
+    "source_dir": "runs/open_sae_dose_sweeps/full/ultimatum/altruism_04"
+  },
+  "write_full_summary": false
+}

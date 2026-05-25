@@ -33,6 +33,15 @@ RELEASE_RUN_DIRS = {
     "creativity_open_sae_steering_smoke",
     "creativity_open_sae_steering_40agent",
     "safe_risky_five_condition_open_sae_smoke",
+    "safe_risky_open_sae_steering_lite_smoke",
+    "safe_risky_open_sae_steering_lite_full",
+    "safe_risky_open_sae_steering_full_smoke",
+    "safe_risky_open_sae_steering_full",
+    "ultimatum_open_sae_steering_smoke",
+    "ultimatum_open_sae_steering_full",
+    "trust_open_sae_steering_smoke",
+    "trust_open_sae_steering_full",
+    "open_sae_dose_sweeps",
 }
 
 
