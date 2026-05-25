@@ -1,12 +1,14 @@
-# LLM Steering Pipeline
+# Interpretable Social Simulations
 
-This repository contains the two complementary steering pipelines described in
-the paper: **SAE-based steering** (Sparse Autoencoder feature editing) and
-**Probe-based steering** (linear-probe activation steering). Each lives in its
-own subdirectory with its own dependencies and GPU requirements.
+This repository contains the interpretability and control tooling for
+EDSL-style LLM social simulations. It packages two complementary approaches
+from the paper: **SAE-based interpretation/steering** (Sparse Autoencoder
+feature inspection and editing) and **probe-based steering** (linear-probe
+activation steering). Each lives in its own subdirectory with its own
+dependencies and GPU requirements.
 
 ```
-llm-steering-pipeline/
+interp-social-sims/
 ├── SAE/       # EDSL social-simulation platform + Goodfire Open-SAE feature inspection & steering
 └── Probes/    # Probe training, calibration, steered experiments, and figure generation
 ```
