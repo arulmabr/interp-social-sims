@@ -1,0 +1,265 @@
+unit_id,game_id,condition,task,scenario_id,reward,source_file,source_row_index,response_index,agent_index,agent_subject_id,answer_text,comment_text,system_prompt,user_prompt,response_text,choice_risky,parse_ok
+safe_risky_strong_prompting:baseline:0:0:safe_risky_choice,safe_risky_strong_prompting,baseline,safe_risky_choice,0,10,edsl_results/baseline.csv,0,1,0,L1,"To make a decision, let's analyze the expected value of each option. The expected value is calculated by multiplying each outcome by its probability and then summing those values.
+
+For the safe option, you get 50 tokens for sure. So, the expected value is 50 tokens * 1 (since it's a certainty) = 50 tokens.
+
+For the risky option, you have a 50% chance of getting 10 tokens and a 50% chance of getting 0 tokens. So, the expected value is (10 tokens * 0.5) + (0 tokens * 0.5) = 5 tokens.
+
+Since 50 tokens (the safe option) is greater than 5 tokens (the risky option), the safe option provides a higher expected value.
+
+Final answer: safe",,"Your traits: {'agent_index': 1, 'subject_id': 'L1'}","You are playing a lottery game. Option safe gives 50 tokens for sure. Option risky gives 10 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.
+
+End your response with exactly ""Final answer: safe"" or ""Final answer: risky"".","To make a decision, let's analyze the expected value of each option. The expected value is calculated by multiplying each outcome by its probability and then summing those values.
+
+For the safe option, you get 50 tokens for sure. So, the expected value is 50 tokens * 1 (since it's a certainty) = 50 tokens.
+
+For the risky option, you have a 50% chance of getting 10 tokens and a 50% chance of getting 0 tokens. So, the expected value is (10 tokens * 0.5) + (0 tokens * 0.5) = 5 tokens.
+
+Since 50 tokens (the safe option) is greater than 5 tokens (the risky option), the safe option provides a higher expected value.
+
+Final answer: safe",0,1
+safe_risky_strong_prompting:baseline:1:0:safe_risky_choice,safe_risky_strong_prompting,baseline,safe_risky_choice,1,15,edsl_results/baseline.csv,1,2,0,L1,"To make a decision, let's calculate the expected value of each option. The expected value is a measure of the center of the distribution, and it can help us decide which option is better in terms of average outcome.
+
+For the safe option, the expected value (EV) is straightforward since it's a guaranteed outcome:
+- EV(safe) = 50 tokens
+
+For the risky option, we calculate the expected value by multiplying each outcome by its probability and then summing these products:
+- Outcome 1: 15 tokens with a probability of 50% (or 0.5)
+- Outcome 2: 0 tokens with a probability of 50% (or 0.5)
+- EV(risky) = (15 tokens * 0.5) + (0 tokens * 0.5) = 7.5 tokens
+
+Comparing the expected values:
+- EV(safe) = 50 tokens
+- EV(risky) = 7.5 tokens
+
+The safe option has a significantly higher expected value than the risky option. Therefore, based on the expected value calculation, the safe option is the better choice.
+
+Final answer: safe",,"Your traits: {'agent_index': 1, 'subject_id': 'L1'}","You are playing a lottery game. Option safe gives 50 tokens for sure. Option risky gives 15 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.
+
+End your response with exactly ""Final answer: safe"" or ""Final answer: risky"".","To make a decision, let's calculate the expected value of each option. The expected value is a measure of the center of the distribution, and it can help us decide which option is better in terms of average outcome.
+
+For the safe option, the expected value (EV) is straightforward since it's a guaranteed outcome:
+- EV(safe) = 50 tokens
+
+For the risky option, we calculate the expected value by multiplying each outcome by its probability and then summing these products:
+- Outcome 1: 15 tokens with a probability of 50% (or 0.5)
+- Outcome 2: 0 tokens with a probability of 50% (or 0.5)
+- EV(risky) = (15 tokens * 0.5) + (0 tokens * 0.5) = 7.5 tokens
+
+Comparing the expected values:
+- EV(safe) = 50 tokens
+- EV(risky) = 7.5 tokens
+
+The safe option has a significantly higher expected value than the risky option. Therefore, based on the expected value calculation, the safe option is the better choice.
+
+Final answer: safe",0,1
+safe_risky_strong_prompting:baseline:0:1:safe_risky_choice,safe_risky_strong_prompting,baseline,safe_risky_choice,0,10,edsl_results/baseline.csv,2,3,1,L2,"To make a decision, let's evaluate the expected value of each option.
+
+Option safe gives 50 tokens for sure. So, its expected value is 50 tokens.
+
+Option risky gives 10 tokens with 50 percent probability and 0 tokens otherwise. The expected value can be calculated as follows: (10 tokens * 0.5) + (0 tokens * 0.5) = 5 tokens.
+
+Since the expected value of the safe option (50 tokens) is greater than the expected value of the risky option (5 tokens), the safe option is preferable in terms of expected gain.
+
+Final answer: safe",,"Your traits: {'agent_index': 2, 'subject_id': 'L2'}","You are playing a lottery game. Option safe gives 50 tokens for sure. Option risky gives 10 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.
+
+End your response with exactly ""Final answer: safe"" or ""Final answer: risky"".","To make a decision, let's evaluate the expected value of each option.
+
+Option safe gives 50 tokens for sure. So, its expected value is 50 tokens.
+
+Option risky gives 10 tokens with 50 percent probability and 0 tokens otherwise. The expected value can be calculated as follows: (10 tokens * 0.5) + (0 tokens * 0.5) = 5 tokens.
+
+Since the expected value of the safe option (50 tokens) is greater than the expected value of the risky option (5 tokens), the safe option is preferable in terms of expected gain.
+
+Final answer: safe",0,1
+safe_risky_strong_prompting:baseline:1:1:safe_risky_choice,safe_risky_strong_prompting,baseline,safe_risky_choice,1,15,edsl_results/baseline.csv,3,4,1,L2,"To make a decision, let's calculate the expected value of each option.
+
+Option safe gives 50 tokens for sure, so its expected value is 50 tokens.
+
+Option risky gives 15 tokens with 50 percent probability and 0 tokens otherwise. The expected value can be calculated as follows: (15 tokens * 0.5) + (0 tokens * 0.5) = 7.5 tokens.
+
+Since 50 tokens (the value of the safe option) is greater than 7.5 tokens (the expected value of the risky option), the safe option provides a higher guaranteed return.
+
+Final answer: safe",,"Your traits: {'agent_index': 2, 'subject_id': 'L2'}","You are playing a lottery game. Option safe gives 50 tokens for sure. Option risky gives 15 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.
+
+End your response with exactly ""Final answer: safe"" or ""Final answer: risky"".","To make a decision, let's calculate the expected value of each option.
+
+Option safe gives 50 tokens for sure, so its expected value is 50 tokens.
+
+Option risky gives 15 tokens with 50 percent probability and 0 tokens otherwise. The expected value can be calculated as follows: (15 tokens * 0.5) + (0 tokens * 0.5) = 7.5 tokens.
+
+Since 50 tokens (the value of the safe option) is greater than 7.5 tokens (the expected value of the risky option), the safe option provides a higher guaranteed return.
+
+Final answer: safe",0,1
+safe_risky_strong_prompting:fewshot_cot_dose100:0:0:safe_risky_choice,safe_risky_strong_prompting,fewshot_cot_dose100,safe_risky_choice,0,10,edsl_results/fewshot_cot_dose100.csv,0,1,0,L1,"To decide between the safe and risky options, let's calculate the expected value of each.
+
+The safe option gives 50 tokens for sure, so its expected value is 50 tokens.
+
+The risky option gives 10 tokens with a 50% probability and 0 tokens with a 50% probability. To calculate its expected value, we multiply the value of the outcome by its probability and sum these products. So, the expected value of the risky option is (10 tokens * 0.5) + (0 tokens * 0.5) = 5 tokens.
+
+Given that the expected value of the safe option (50 tokens) is greater than the expected value of the risky option (5 tokens), and considering the significant difference in the guaranteed outcome versus the uncertain one, the logical choice based on expected value and risk aversion would be the safe option.
+
+Final answer: safe",,"Your traits: {'agent_index': 1, 'subject_id': 'L1'}","Here are example responses:
+
+Q: Option safe gives 50 tokens for sure. Option risky gives 132 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.
+A: A guaranteed 50 is fine, but a 50/50 shot at 132 has enough upside that I'd rather take the chance. Final answer: risky
+
+Q: Option safe gives 50 tokens for sure. Option risky gives 33 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.
+A: A guaranteed 50 is fine, but a 50/50 shot at 33 has enough upside that I'd rather take the chance. Final answer: risky
+
+Q: Option safe gives 50 tokens for sure. Option risky gives 166 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.
+A: A guaranteed 50 is fine, but a 50/50 shot at 166 has enough upside that I'd rather take the chance. Final answer: risky
+
+Q: Option safe gives 50 tokens for sure. Option risky gives 99 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.
+A: A guaranteed 50 is fine, but a 50/50 shot at 99 has enough upside that I'd rather take the chance. Final answer: risky
+
+Q: Option safe gives 50 tokens for sure. Option risky gives 51 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.
+A: A guaranteed 50 is fine, but a 50/50 shot at 51 has enough upside that I'd rather take the chance. Final answer: risky
+
+Q: Option safe gives 50 tokens for sure. Option risky gives 67 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.
+A: A guaranteed 50 is fine, but a 50/50 shot at 67 has enough upside that I'd rather take the chance. Final answer: risky
+
+You are playing a lottery game. Option safe gives 50 tokens for sure. Option risky gives 10 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.
+Think step by step about the expected value of each option and your own attitude toward risk, then decide.
+End your response with exactly ""Final answer: safe"" or ""Final answer: risky"".","To decide between the safe and risky options, let's calculate the expected value of each.
+
+The safe option gives 50 tokens for sure, so its expected value is 50 tokens.
+
+The risky option gives 10 tokens with a 50% probability and 0 tokens with a 50% probability. To calculate its expected value, we multiply the value of the outcome by its probability and sum these products. So, the expected value of the risky option is (10 tokens * 0.5) + (0 tokens * 0.5) = 5 tokens.
+
+Given that the expected value of the safe option (50 tokens) is greater than the expected value of the risky option (5 tokens), and considering the significant difference in the guaranteed outcome versus the uncertain one, the logical choice based on expected value and risk aversion would be the safe option.
+
+Final answer: safe",0,1
+safe_risky_strong_prompting:fewshot_cot_dose100:1:0:safe_risky_choice,safe_risky_strong_prompting,fewshot_cot_dose100,safe_risky_choice,1,15,edsl_results/fewshot_cot_dose100.csv,1,2,0,L1,"To make a decision, let's calculate the expected value of each option and consider our attitude toward risk.
+
+1. **Option Safe**: This option gives 50 tokens for sure. The expected value (EV) of this option is simply 50 tokens because it's a guaranteed outcome.
+
+2. **Option Risky**: This option gives 15 tokens with a 50% probability and 0 tokens with a 50% probability. The expected value of this option can be calculated as follows:
+   - EV = (Probability of winning * Amount won) + (Probability of losing * Amount lost)
+   - EV = (0.5 * 15) + (0.5 * 0)
+   - EV = 7.5 + 0
+   - EV = 7.5 tokens
+
+Given that the expected value of Option Risky (7.5 tokens) is less than that of Option Safe (50 tokens), and considering the description provided in the examples where the decision seems to lean towards the risky option when its expected value is higher or sufficiently close to make the risk worthwhile, in this case, the expected value of the risky option is significantly lower than the safe option. Therefore, the rational choice based on expected value and the examples provided would be to choose the safe option, as it guarantees a higher outcome than the expected value of the risky option.
+
+Final answer: safe",,"Your traits: {'agent_index': 1, 'subject_id': 'L1'}","Here are example responses:
+
+Q: Option safe gives 50 tokens for sure. Option risky gives 132 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.
+A: A guaranteed 50 is fine, but a 50/50 shot at 132 has enough upside that I'd rather take the chance. Final answer: risky
+
+Q: Option safe gives 50 tokens for sure. Option risky gives 33 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.
+A: A guaranteed 50 is fine, but a 50/50 shot at 33 has enough upside that I'd rather take the chance. Final answer: risky
+
+Q: Option safe gives 50 tokens for sure. Option risky gives 166 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.
+A: A guaranteed 50 is fine, but a 50/50 shot at 166 has enough upside that I'd rather take the chance. Final answer: risky
+
+Q: Option safe gives 50 tokens for sure. Option risky gives 99 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.
+A: A guaranteed 50 is fine, but a 50/50 shot at 99 has enough upside that I'd rather take the chance. Final answer: risky
+
+Q: Option safe gives 50 tokens for sure. Option risky gives 51 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.
+A: A guaranteed 50 is fine, but a 50/50 shot at 51 has enough upside that I'd rather take the chance. Final answer: risky
+
+Q: Option safe gives 50 tokens for sure. Option risky gives 67 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.
+A: A guaranteed 50 is fine, but a 50/50 shot at 67 has enough upside that I'd rather take the chance. Final answer: risky
+
+You are playing a lottery game. Option safe gives 50 tokens for sure. Option risky gives 15 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.
+Think step by step about the expected value of each option and your own attitude toward risk, then decide.
+End your response with exactly ""Final answer: safe"" or ""Final answer: risky"".","To make a decision, let's calculate the expected value of each option and consider our attitude toward risk.
+
+1. **Option Safe**: This option gives 50 tokens for sure. The expected value (EV) of this option is simply 50 tokens because it's a guaranteed outcome.
+
+2. **Option Risky**: This option gives 15 tokens with a 50% probability and 0 tokens with a 50% probability. The expected value of this option can be calculated as follows:
+   - EV = (Probability of winning * Amount won) + (Probability of losing * Amount lost)
+   - EV = (0.5 * 15) + (0.5 * 0)
+   - EV = 7.5 + 0
+   - EV = 7.5 tokens
+
+Given that the expected value of Option Risky (7.5 tokens) is less than that of Option Safe (50 tokens), and considering the description provided in the examples where the decision seems to lean towards the risky option when its expected value is higher or sufficiently close to make the risk worthwhile, in this case, the expected value of the risky option is significantly lower than the safe option. Therefore, the rational choice based on expected value and the examples provided would be to choose the safe option, as it guarantees a higher outcome than the expected value of the risky option.
+
+Final answer: safe",0,1
+safe_risky_strong_prompting:fewshot_cot_dose100:0:1:safe_risky_choice,safe_risky_strong_prompting,fewshot_cot_dose100,safe_risky_choice,0,10,edsl_results/fewshot_cot_dose100.csv,2,3,1,L2,"To make a decision, let's calculate the expected value of each option and consider our attitude towards risk.
+
+1. **Option Safe**: This option gives 50 tokens for sure. The expected value (EV) of this option is simply 50 tokens because it's a guaranteed outcome.
+
+2. **Option Risky**: This option gives 10 tokens with a 50% probability and 0 tokens with a 50% probability. The expected value of this option can be calculated as follows:
+   - EV = (Probability of winning * Amount won) + (Probability of losing * Amount lost)
+   - EV = (0.5 * 10) + (0.5 * 0)
+   - EV = 5 + 0
+   - EV = 5 tokens
+
+Given these calculations, the expected value of Option Safe (50 tokens) is higher than that of Option Risky (5 tokens). Considering risk attitude, Option Safe provides a guaranteed outcome, which is attractive if one is risk-averse, especially since the expected value of Option Risky is significantly lower than the guaranteed amount of Option Safe.
+
+Final answer: safe",,"Your traits: {'agent_index': 2, 'subject_id': 'L2'}","Here are example responses:
+
+Q: Option safe gives 50 tokens for sure. Option risky gives 132 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.
+A: A guaranteed 50 is fine, but a 50/50 shot at 132 has enough upside that I'd rather take the chance. Final answer: risky
+
+Q: Option safe gives 50 tokens for sure. Option risky gives 33 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.
+A: A guaranteed 50 is fine, but a 50/50 shot at 33 has enough upside that I'd rather take the chance. Final answer: risky
+
+Q: Option safe gives 50 tokens for sure. Option risky gives 166 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.
+A: A guaranteed 50 is fine, but a 50/50 shot at 166 has enough upside that I'd rather take the chance. Final answer: risky
+
+Q: Option safe gives 50 tokens for sure. Option risky gives 99 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.
+A: A guaranteed 50 is fine, but a 50/50 shot at 99 has enough upside that I'd rather take the chance. Final answer: risky
+
+Q: Option safe gives 50 tokens for sure. Option risky gives 51 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.
+A: A guaranteed 50 is fine, but a 50/50 shot at 51 has enough upside that I'd rather take the chance. Final answer: risky
+
+Q: Option safe gives 50 tokens for sure. Option risky gives 67 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.
+A: A guaranteed 50 is fine, but a 50/50 shot at 67 has enough upside that I'd rather take the chance. Final answer: risky
+
+You are playing a lottery game. Option safe gives 50 tokens for sure. Option risky gives 10 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.
+Think step by step about the expected value of each option and your own attitude toward risk, then decide.
+End your response with exactly ""Final answer: safe"" or ""Final answer: risky"".","To make a decision, let's calculate the expected value of each option and consider our attitude towards risk.
+
+1. **Option Safe**: This option gives 50 tokens for sure. The expected value (EV) of this option is simply 50 tokens because it's a guaranteed outcome.
+
+2. **Option Risky**: This option gives 10 tokens with a 50% probability and 0 tokens with a 50% probability. The expected value of this option can be calculated as follows:
+   - EV = (Probability of winning * Amount won) + (Probability of losing * Amount lost)
+   - EV = (0.5 * 10) + (0.5 * 0)
+   - EV = 5 + 0
+   - EV = 5 tokens
+
+Given these calculations, the expected value of Option Safe (50 tokens) is higher than that of Option Risky (5 tokens). Considering risk attitude, Option Safe provides a guaranteed outcome, which is attractive if one is risk-averse, especially since the expected value of Option Risky is significantly lower than the guaranteed amount of Option Safe.
+
+Final answer: safe",0,1
+safe_risky_strong_prompting:fewshot_cot_dose100:1:1:safe_risky_choice,safe_risky_strong_prompting,fewshot_cot_dose100,safe_risky_choice,1,15,edsl_results/fewshot_cot_dose100.csv,3,4,1,L2,"To make a decision, let's calculate the expected value of each option and consider the risk involved.
+
+Option safe gives 50 tokens for sure. The expected value (EV) of this option is simply 50 tokens because it's a guaranteed outcome.
+
+Option risky gives 15 tokens with 50 percent probability and 0 tokens otherwise. To calculate the expected value of this option, we use the formula EV = (probability of winning * amount won) + (probability of losing * amount lost). For option risky, this would be EV = (0.5 * 15) + (0.5 * 0) = 7.5 tokens.
+
+Given that the expected value of option safe (50 tokens) is higher than that of option risky (7.5 tokens), and considering the risk involved in option risky where there's a 50% chance of getting nothing, the safer choice is option safe.
+
+Final answer: safe",,"Your traits: {'agent_index': 2, 'subject_id': 'L2'}","Here are example responses:
+
+Q: Option safe gives 50 tokens for sure. Option risky gives 132 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.
+A: A guaranteed 50 is fine, but a 50/50 shot at 132 has enough upside that I'd rather take the chance. Final answer: risky
+
+Q: Option safe gives 50 tokens for sure. Option risky gives 33 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.
+A: A guaranteed 50 is fine, but a 50/50 shot at 33 has enough upside that I'd rather take the chance. Final answer: risky
+
+Q: Option safe gives 50 tokens for sure. Option risky gives 166 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.
+A: A guaranteed 50 is fine, but a 50/50 shot at 166 has enough upside that I'd rather take the chance. Final answer: risky
+
+Q: Option safe gives 50 tokens for sure. Option risky gives 99 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.
+A: A guaranteed 50 is fine, but a 50/50 shot at 99 has enough upside that I'd rather take the chance. Final answer: risky
+
+Q: Option safe gives 50 tokens for sure. Option risky gives 51 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.
+A: A guaranteed 50 is fine, but a 50/50 shot at 51 has enough upside that I'd rather take the chance. Final answer: risky
+
+Q: Option safe gives 50 tokens for sure. Option risky gives 67 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.
+A: A guaranteed 50 is fine, but a 50/50 shot at 67 has enough upside that I'd rather take the chance. Final answer: risky
+
+You are playing a lottery game. Option safe gives 50 tokens for sure. Option risky gives 15 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.
+Think step by step about the expected value of each option and your own attitude toward risk, then decide.
+End your response with exactly ""Final answer: safe"" or ""Final answer: risky"".","To make a decision, let's calculate the expected value of each option and consider the risk involved.
+
+Option safe gives 50 tokens for sure. The expected value (EV) of this option is simply 50 tokens because it's a guaranteed outcome.
+
+Option risky gives 15 tokens with 50 percent probability and 0 tokens otherwise. To calculate the expected value of this option, we use the formula EV = (probability of winning * amount won) + (probability of losing * amount lost). For option risky, this would be EV = (0.5 * 15) + (0.5 * 0) = 7.5 tokens.
+
+Given that the expected value of option safe (50 tokens) is higher than that of option risky (7.5 tokens), and considering the risk involved in option risky where there's a 50% chance of getting nothing, the safer choice is option safe.
+
+Final answer: safe",0,1

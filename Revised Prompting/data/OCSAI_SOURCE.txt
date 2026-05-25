@@ -1,0 +1,31 @@
+Ocsai Alternative Uses Task data -- provenance and attribution
+==============================================================
+
+Files in this directory derived from the Ocsai project:
+  - ocsai_brick_aut.jsonl : brick-only subset of the Ocsai training data
+  - brick_exemplars.json  : top human-originality brick responses used as
+                            few-shot exemplars by
+                            games/creativity_brick_strong_prompting.py
+
+Source repository : https://github.com/massivetexts/ocsai  (branch: main)
+Source file       : data/ocsai1/finetune-gt_main2_prepared_train.jsonl
+License           : MIT (full text in OCSAI_LICENSE.txt) --
+                    Copyright (c) 2023 DU Massive Texts Lab
+Citation          : Organisciak, P., Acar, S., Dumas, D., & Berthiaume, K.
+                    (2023). Beyond semantic distance: Automated scoring of
+                    divergent thinking greatly improves with large language
+                    models. Thinking Skills and Creativity, 49, 101356.
+
+Notes
+-----
+* Responses are HUMAN-generated; the originality score is a HUMAN rating (the
+  ground truth used to train Ocsai), on a 10-50 scale.
+* Exemplars are selected by this human originality score -- independent of the
+  downstream GPT judge -- which avoids selection/evaluation circularity for the
+  creativity task.
+* Selection (see scripts/build_brick_exemplars.py): object == "brick", deduped,
+  whitespace-normalized, >= 5 words, dropping entries where the dataset's
+  object-anonymization left ungrammatical text; then top-N by originality.
+
+Regenerate with:
+    python scripts/build_brick_exemplars.py

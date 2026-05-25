@@ -1,0 +1,418 @@
+{
+  "schema_version": 1,
+  "run_type": "edsl_social_simulation",
+  "game_id": "safe_risky_strong_prompting",
+  "title": "Safe-Risk Lottery Game (Strong Prompting Baselines)",
+  "description": "Safe-risk lottery with strengthened prompting baselines: few-shot and chain-of-thought, plus a bidirectional few-shot-CoT dose-response.",
+  "game_module": "/Users/gavealfan/Desktop/Haas/Projects/1 Mech Interp/Conferences/EMNLP 2026/social-sim-strong-prompting/games/safe_risky_strong_prompting.py",
+  "timestamp_utc": "2026-05-25T06:59:09.309766+00:00",
+  "model_id": "meta-llama/Llama-3.3-70B-Instruct",
+  "service_name": "deep_infra",
+  "mock_model": false,
+  "agent_count": 2,
+  "limit_scenarios": 2,
+  "conditions": [
+    {
+      "name": "baseline",
+      "description": "Free-text elicitation, no demonstrations, no CoT.",
+      "instruction": "",
+      "traits": {},
+      "model_parameters": {},
+      "scenarios": [
+        {
+          "risky_reward": 10,
+          "fewshot_block": "",
+          "cot_instruction": ""
+        },
+        {
+          "risky_reward": 15,
+          "fewshot_block": "",
+          "cot_instruction": ""
+        },
+        {
+          "risky_reward": 20,
+          "fewshot_block": "",
+          "cot_instruction": ""
+        },
+        {
+          "risky_reward": 25,
+          "fewshot_block": "",
+          "cot_instruction": ""
+        },
+        {
+          "risky_reward": 30,
+          "fewshot_block": "",
+          "cot_instruction": ""
+        },
+        {
+          "risky_reward": 35,
+          "fewshot_block": "",
+          "cot_instruction": ""
+        },
+        {
+          "risky_reward": 40,
+          "fewshot_block": "",
+          "cot_instruction": ""
+        },
+        {
+          "risky_reward": 45,
+          "fewshot_block": "",
+          "cot_instruction": ""
+        },
+        {
+          "risky_reward": 50,
+          "fewshot_block": "",
+          "cot_instruction": ""
+        },
+        {
+          "risky_reward": 55,
+          "fewshot_block": "",
+          "cot_instruction": ""
+        },
+        {
+          "risky_reward": 60,
+          "fewshot_block": "",
+          "cot_instruction": ""
+        },
+        {
+          "risky_reward": 65,
+          "fewshot_block": "",
+          "cot_instruction": ""
+        },
+        {
+          "risky_reward": 70,
+          "fewshot_block": "",
+          "cot_instruction": ""
+        },
+        {
+          "risky_reward": 75,
+          "fewshot_block": "",
+          "cot_instruction": ""
+        },
+        {
+          "risky_reward": 80,
+          "fewshot_block": "",
+          "cot_instruction": ""
+        },
+        {
+          "risky_reward": 85,
+          "fewshot_block": "",
+          "cot_instruction": ""
+        },
+        {
+          "risky_reward": 90,
+          "fewshot_block": "",
+          "cot_instruction": ""
+        },
+        {
+          "risky_reward": 95,
+          "fewshot_block": "",
+          "cot_instruction": ""
+        },
+        {
+          "risky_reward": 100,
+          "fewshot_block": "",
+          "cot_instruction": ""
+        },
+        {
+          "risky_reward": 105,
+          "fewshot_block": "",
+          "cot_instruction": ""
+        },
+        {
+          "risky_reward": 110,
+          "fewshot_block": "",
+          "cot_instruction": ""
+        },
+        {
+          "risky_reward": 115,
+          "fewshot_block": "",
+          "cot_instruction": ""
+        },
+        {
+          "risky_reward": 120,
+          "fewshot_block": "",
+          "cot_instruction": ""
+        },
+        {
+          "risky_reward": 125,
+          "fewshot_block": "",
+          "cot_instruction": ""
+        },
+        {
+          "risky_reward": 130,
+          "fewshot_block": "",
+          "cot_instruction": ""
+        },
+        {
+          "risky_reward": 135,
+          "fewshot_block": "",
+          "cot_instruction": ""
+        },
+        {
+          "risky_reward": 140,
+          "fewshot_block": "",
+          "cot_instruction": ""
+        },
+        {
+          "risky_reward": 145,
+          "fewshot_block": "",
+          "cot_instruction": ""
+        },
+        {
+          "risky_reward": 150,
+          "fewshot_block": "",
+          "cot_instruction": ""
+        },
+        {
+          "risky_reward": 155,
+          "fewshot_block": "",
+          "cot_instruction": ""
+        },
+        {
+          "risky_reward": 160,
+          "fewshot_block": "",
+          "cot_instruction": ""
+        },
+        {
+          "risky_reward": 165,
+          "fewshot_block": "",
+          "cot_instruction": ""
+        },
+        {
+          "risky_reward": 170,
+          "fewshot_block": "",
+          "cot_instruction": ""
+        },
+        {
+          "risky_reward": 175,
+          "fewshot_block": "",
+          "cot_instruction": ""
+        },
+        {
+          "risky_reward": 180,
+          "fewshot_block": "",
+          "cot_instruction": ""
+        }
+      ],
+      "value_field": "risky_reward"
+    },
+    {
+      "name": "fewshot_cot_dose100",
+      "description": "Few-shot CoT with 100% risk-seeking exemplars.",
+      "instruction": "",
+      "traits": {},
+      "model_parameters": {},
+      "scenarios": [
+        {
+          "risky_reward": 10,
+          "fewshot_block": "Here are example responses:\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 132 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 132 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 33 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 33 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 166 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 166 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 99 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 99 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 51 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 51 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 67 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 67 has enough upside that I'd rather take the chance. Final answer: risky\n\n",
+          "cot_instruction": "Think step by step about the expected value of each option and your own attitude toward risk, then decide."
+        },
+        {
+          "risky_reward": 15,
+          "fewshot_block": "Here are example responses:\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 132 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 132 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 33 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 33 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 166 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 166 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 99 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 99 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 51 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 51 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 67 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 67 has enough upside that I'd rather take the chance. Final answer: risky\n\n",
+          "cot_instruction": "Think step by step about the expected value of each option and your own attitude toward risk, then decide."
+        },
+        {
+          "risky_reward": 20,
+          "fewshot_block": "Here are example responses:\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 132 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 132 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 33 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 33 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 166 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 166 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 99 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 99 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 51 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 51 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 67 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 67 has enough upside that I'd rather take the chance. Final answer: risky\n\n",
+          "cot_instruction": "Think step by step about the expected value of each option and your own attitude toward risk, then decide."
+        },
+        {
+          "risky_reward": 25,
+          "fewshot_block": "Here are example responses:\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 132 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 132 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 33 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 33 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 166 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 166 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 99 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 99 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 51 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 51 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 67 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 67 has enough upside that I'd rather take the chance. Final answer: risky\n\n",
+          "cot_instruction": "Think step by step about the expected value of each option and your own attitude toward risk, then decide."
+        },
+        {
+          "risky_reward": 30,
+          "fewshot_block": "Here are example responses:\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 132 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 132 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 33 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 33 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 166 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 166 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 99 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 99 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 51 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 51 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 67 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 67 has enough upside that I'd rather take the chance. Final answer: risky\n\n",
+          "cot_instruction": "Think step by step about the expected value of each option and your own attitude toward risk, then decide."
+        },
+        {
+          "risky_reward": 35,
+          "fewshot_block": "Here are example responses:\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 132 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 132 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 33 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 33 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 166 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 166 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 99 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 99 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 51 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 51 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 67 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 67 has enough upside that I'd rather take the chance. Final answer: risky\n\n",
+          "cot_instruction": "Think step by step about the expected value of each option and your own attitude toward risk, then decide."
+        },
+        {
+          "risky_reward": 40,
+          "fewshot_block": "Here are example responses:\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 132 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 132 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 33 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 33 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 166 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 166 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 99 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 99 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 51 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 51 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 67 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 67 has enough upside that I'd rather take the chance. Final answer: risky\n\n",
+          "cot_instruction": "Think step by step about the expected value of each option and your own attitude toward risk, then decide."
+        },
+        {
+          "risky_reward": 45,
+          "fewshot_block": "Here are example responses:\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 132 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 132 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 33 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 33 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 166 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 166 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 99 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 99 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 51 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 51 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 67 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 67 has enough upside that I'd rather take the chance. Final answer: risky\n\n",
+          "cot_instruction": "Think step by step about the expected value of each option and your own attitude toward risk, then decide."
+        },
+        {
+          "risky_reward": 50,
+          "fewshot_block": "Here are example responses:\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 132 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 132 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 33 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 33 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 166 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 166 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 99 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 99 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 51 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 51 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 67 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 67 has enough upside that I'd rather take the chance. Final answer: risky\n\n",
+          "cot_instruction": "Think step by step about the expected value of each option and your own attitude toward risk, then decide."
+        },
+        {
+          "risky_reward": 55,
+          "fewshot_block": "Here are example responses:\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 132 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 132 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 33 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 33 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 166 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 166 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 99 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 99 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 51 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 51 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 67 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 67 has enough upside that I'd rather take the chance. Final answer: risky\n\n",
+          "cot_instruction": "Think step by step about the expected value of each option and your own attitude toward risk, then decide."
+        },
+        {
+          "risky_reward": 60,
+          "fewshot_block": "Here are example responses:\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 132 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 132 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 33 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 33 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 166 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 166 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 99 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 99 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 51 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 51 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 67 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 67 has enough upside that I'd rather take the chance. Final answer: risky\n\n",
+          "cot_instruction": "Think step by step about the expected value of each option and your own attitude toward risk, then decide."
+        },
+        {
+          "risky_reward": 65,
+          "fewshot_block": "Here are example responses:\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 132 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 132 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 33 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 33 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 166 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 166 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 99 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 99 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 51 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 51 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 67 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 67 has enough upside that I'd rather take the chance. Final answer: risky\n\n",
+          "cot_instruction": "Think step by step about the expected value of each option and your own attitude toward risk, then decide."
+        },
+        {
+          "risky_reward": 70,
+          "fewshot_block": "Here are example responses:\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 132 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 132 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 33 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 33 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 166 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 166 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 99 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 99 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 51 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 51 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 67 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 67 has enough upside that I'd rather take the chance. Final answer: risky\n\n",
+          "cot_instruction": "Think step by step about the expected value of each option and your own attitude toward risk, then decide."
+        },
+        {
+          "risky_reward": 75,
+          "fewshot_block": "Here are example responses:\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 132 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 132 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 33 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 33 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 166 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 166 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 99 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 99 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 51 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 51 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 67 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 67 has enough upside that I'd rather take the chance. Final answer: risky\n\n",
+          "cot_instruction": "Think step by step about the expected value of each option and your own attitude toward risk, then decide."
+        },
+        {
+          "risky_reward": 80,
+          "fewshot_block": "Here are example responses:\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 132 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 132 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 33 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 33 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 166 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 166 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 99 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 99 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 51 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 51 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 67 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 67 has enough upside that I'd rather take the chance. Final answer: risky\n\n",
+          "cot_instruction": "Think step by step about the expected value of each option and your own attitude toward risk, then decide."
+        },
+        {
+          "risky_reward": 85,
+          "fewshot_block": "Here are example responses:\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 132 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 132 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 33 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 33 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 166 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 166 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 99 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 99 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 51 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 51 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 67 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 67 has enough upside that I'd rather take the chance. Final answer: risky\n\n",
+          "cot_instruction": "Think step by step about the expected value of each option and your own attitude toward risk, then decide."
+        },
+        {
+          "risky_reward": 90,
+          "fewshot_block": "Here are example responses:\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 132 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 132 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 33 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 33 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 166 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 166 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 99 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 99 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 51 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 51 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 67 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 67 has enough upside that I'd rather take the chance. Final answer: risky\n\n",
+          "cot_instruction": "Think step by step about the expected value of each option and your own attitude toward risk, then decide."
+        },
+        {
+          "risky_reward": 95,
+          "fewshot_block": "Here are example responses:\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 132 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 132 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 33 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 33 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 166 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 166 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 99 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 99 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 51 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 51 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 67 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 67 has enough upside that I'd rather take the chance. Final answer: risky\n\n",
+          "cot_instruction": "Think step by step about the expected value of each option and your own attitude toward risk, then decide."
+        },
+        {
+          "risky_reward": 100,
+          "fewshot_block": "Here are example responses:\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 132 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 132 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 33 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 33 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 166 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 166 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 99 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 99 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 51 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 51 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 67 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 67 has enough upside that I'd rather take the chance. Final answer: risky\n\n",
+          "cot_instruction": "Think step by step about the expected value of each option and your own attitude toward risk, then decide."
+        },
+        {
+          "risky_reward": 105,
+          "fewshot_block": "Here are example responses:\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 132 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 132 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 33 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 33 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 166 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 166 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 99 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 99 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 51 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 51 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 67 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 67 has enough upside that I'd rather take the chance. Final answer: risky\n\n",
+          "cot_instruction": "Think step by step about the expected value of each option and your own attitude toward risk, then decide."
+        },
+        {
+          "risky_reward": 110,
+          "fewshot_block": "Here are example responses:\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 132 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 132 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 33 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 33 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 166 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 166 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 99 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 99 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 51 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 51 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 67 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 67 has enough upside that I'd rather take the chance. Final answer: risky\n\n",
+          "cot_instruction": "Think step by step about the expected value of each option and your own attitude toward risk, then decide."
+        },
+        {
+          "risky_reward": 115,
+          "fewshot_block": "Here are example responses:\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 132 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 132 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 33 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 33 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 166 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 166 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 99 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 99 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 51 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 51 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 67 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 67 has enough upside that I'd rather take the chance. Final answer: risky\n\n",
+          "cot_instruction": "Think step by step about the expected value of each option and your own attitude toward risk, then decide."
+        },
+        {
+          "risky_reward": 120,
+          "fewshot_block": "Here are example responses:\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 132 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 132 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 33 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 33 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 166 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 166 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 99 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 99 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 51 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 51 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 67 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 67 has enough upside that I'd rather take the chance. Final answer: risky\n\n",
+          "cot_instruction": "Think step by step about the expected value of each option and your own attitude toward risk, then decide."
+        },
+        {
+          "risky_reward": 125,
+          "fewshot_block": "Here are example responses:\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 132 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 132 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 33 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 33 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 166 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 166 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 99 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 99 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 51 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 51 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 67 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 67 has enough upside that I'd rather take the chance. Final answer: risky\n\n",
+          "cot_instruction": "Think step by step about the expected value of each option and your own attitude toward risk, then decide."
+        },
+        {
+          "risky_reward": 130,
+          "fewshot_block": "Here are example responses:\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 132 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 132 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 33 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 33 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 166 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 166 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 99 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 99 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 51 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 51 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 67 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 67 has enough upside that I'd rather take the chance. Final answer: risky\n\n",
+          "cot_instruction": "Think step by step about the expected value of each option and your own attitude toward risk, then decide."
+        },
+        {
+          "risky_reward": 135,
+          "fewshot_block": "Here are example responses:\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 132 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 132 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 33 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 33 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 166 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 166 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 99 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 99 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 51 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 51 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 67 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 67 has enough upside that I'd rather take the chance. Final answer: risky\n\n",
+          "cot_instruction": "Think step by step about the expected value of each option and your own attitude toward risk, then decide."
+        },
+        {
+          "risky_reward": 140,
+          "fewshot_block": "Here are example responses:\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 132 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 132 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 33 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 33 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 166 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 166 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 99 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 99 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 51 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 51 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 67 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 67 has enough upside that I'd rather take the chance. Final answer: risky\n\n",
+          "cot_instruction": "Think step by step about the expected value of each option and your own attitude toward risk, then decide."
+        },
+        {
+          "risky_reward": 145,
+          "fewshot_block": "Here are example responses:\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 132 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 132 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 33 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 33 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 166 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 166 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 99 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 99 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 51 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 51 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 67 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 67 has enough upside that I'd rather take the chance. Final answer: risky\n\n",
+          "cot_instruction": "Think step by step about the expected value of each option and your own attitude toward risk, then decide."
+        },
+        {
+          "risky_reward": 150,
+          "fewshot_block": "Here are example responses:\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 132 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 132 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 33 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 33 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 166 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 166 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 99 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 99 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 51 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 51 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 67 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 67 has enough upside that I'd rather take the chance. Final answer: risky\n\n",
+          "cot_instruction": "Think step by step about the expected value of each option and your own attitude toward risk, then decide."
+        },
+        {
+          "risky_reward": 155,
+          "fewshot_block": "Here are example responses:\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 132 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 132 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 33 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 33 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 166 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 166 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 99 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 99 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 51 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 51 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 67 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 67 has enough upside that I'd rather take the chance. Final answer: risky\n\n",
+          "cot_instruction": "Think step by step about the expected value of each option and your own attitude toward risk, then decide."
+        },
+        {
+          "risky_reward": 160,
+          "fewshot_block": "Here are example responses:\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 132 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 132 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 33 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 33 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 166 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 166 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 99 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 99 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 51 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 51 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 67 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 67 has enough upside that I'd rather take the chance. Final answer: risky\n\n",
+          "cot_instruction": "Think step by step about the expected value of each option and your own attitude toward risk, then decide."
+        },
+        {
+          "risky_reward": 165,
+          "fewshot_block": "Here are example responses:\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 132 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 132 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 33 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 33 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 166 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 166 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 99 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 99 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 51 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 51 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 67 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 67 has enough upside that I'd rather take the chance. Final answer: risky\n\n",
+          "cot_instruction": "Think step by step about the expected value of each option and your own attitude toward risk, then decide."
+        },
+        {
+          "risky_reward": 170,
+          "fewshot_block": "Here are example responses:\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 132 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 132 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 33 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 33 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 166 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 166 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 99 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 99 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 51 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 51 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 67 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 67 has enough upside that I'd rather take the chance. Final answer: risky\n\n",
+          "cot_instruction": "Think step by step about the expected value of each option and your own attitude toward risk, then decide."
+        },
+        {
+          "risky_reward": 175,
+          "fewshot_block": "Here are example responses:\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 132 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 132 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 33 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 33 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 166 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 166 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 99 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 99 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 51 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 51 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 67 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 67 has enough upside that I'd rather take the chance. Final answer: risky\n\n",
+          "cot_instruction": "Think step by step about the expected value of each option and your own attitude toward risk, then decide."
+        },
+        {
+          "risky_reward": 180,
+          "fewshot_block": "Here are example responses:\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 132 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 132 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 33 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 33 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 166 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 166 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 99 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 99 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 51 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 51 has enough upside that I'd rather take the chance. Final answer: risky\n\nQ: Option safe gives 50 tokens for sure. Option risky gives 67 tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\nA: A guaranteed 50 is fine, but a 50/50 shot at 67 has enough upside that I'd rather take the chance. Final answer: risky\n\n",
+          "cot_instruction": "Think step by step about the expected value of each option and your own attitude toward risk, then decide."
+        }
+      ],
+      "value_field": "risky_reward"
+    }
+  ],
+  "questions": [
+    {
+      "question_name": "safe_risky_choice",
+      "question_text": "{{ scenario.fewshot_block }}You are playing a lottery game. Option safe gives 50 tokens for sure. Option risky gives {{ scenario.risky_reward }} tokens with 50 percent probability and 0 tokens otherwise. Choose one option.\n{{ scenario.cot_instruction }}\nEnd your response with exactly \"Final answer: safe\" or \"Final answer: risky\".",
+      "question_type": "free_text",
+      "question_options": null,
+      "max_list_items": null,
+      "min_value": null,
+      "max_value": null,
+      "mock_response": "Reasoning: deterministic smoke response. Final answer: risky"
+    }
+  ],
+  "condition_outputs": [
+    {
+      "condition": "baseline",
+      "source_file": "edsl_results/baseline.csv",
+      "result_rows": 4,
+      "response_units": 4
+    },
+    {
+      "condition": "fewshot_cot_dose100",
+      "source_file": "edsl_results/fewshot_cot_dose100.csv",
+      "result_rows": 4,
+      "response_units": 4
+    }
+  ],
+  "response_units": 8,
+  "behavior_unit_rows": 8,
+  "behavior_summary_rows": 4,
+  "plots": [
+    "runs/srsp_deepinfra_smoke/behavior_summary.png"
+  ]
+}
