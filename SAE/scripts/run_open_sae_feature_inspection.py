@@ -2221,6 +2221,21 @@ def build_plots(
         task_titles = DATASET_TASK_TITLES.get(dataset_kind, {})
         conditions = condition_order(dataset_kind, [unit.condition for unit in units])
         tasks = task_order(dataset_kind, [unit.task for unit in units])
+        feature_aggregation = next(
+            (
+                row.get("feature_aggregation")
+                for row in top_feature_rows
+                if row.get("feature_aggregation")
+            ),
+            "max",
+        )
+        xlabel_by_aggregation = {
+            "frequency": "Mean active-token count",
+            "max": "Mean max SAE activation",
+            "sum": "Mean summed SAE activation",
+            "mean": "Mean active-token SAE activation",
+        }
+        x_label = xlabel_by_aggregation.get(feature_aggregation, "Mean response-level feature score")
         fig, axes = plt.subplots(len(tasks), len(conditions), figsize=(4.6 * len(conditions), 4.8 * len(tasks)))
         if len(tasks) == 1 and len(conditions) == 1:
             axes_grid = [[axes]]
@@ -2246,17 +2261,21 @@ def build_plots(
                 values = [row["mean_activation"] for row in panel_rows]
                 ax.barh(labels, values, color="#4C78A8" if row_idx == 0 else "#B75D8A")
                 ax.set_title(f"{task_titles.get(task, task)}\n{condition_titles.get(condition, condition)}", fontsize=9)
-                ax.set_xlabel("Mean max SAE activation")
+                ax.set_xlabel(x_label)
                 ax.tick_params(axis="y", labelsize=7)
-        fig.suptitle("Top 5 Activated Goodfire Open-SAE Features by Task and Condition", fontsize=14)
-        fig.tight_layout(rect=(0, 0, 1, 0.96))
+        fig.suptitle(
+            "Top 5 Activated Goodfire Open-SAE Features by Task and Condition",
+            fontsize=14,
+            y=0.995,
+        )
+        fig.tight_layout(rect=(0, 0, 1, 0.965))
         figure_name = (
             "open_sae_figure4_replacement_top_features.png"
             if dataset_kind == "creativity"
             else f"{dataset_kind}_open_sae_top_features_by_condition.png"
         )
         figure_path = output_dir / figure_name
-        fig.savefig(figure_path, dpi=220)
+        fig.savefig(figure_path, dpi=220, bbox_inches="tight", pad_inches=0.2)
         plt.close(fig)
         plot_paths.append(str(figure_path))
 
