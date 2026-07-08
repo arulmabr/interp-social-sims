@@ -47,7 +47,19 @@ def build_preference_probe(
 ) -> Probe:
     """Generate labeled trials, capture activations, train probe.
 
-    Labels: above-median switching-point trials -> 1, below-median -> 0.
+    Labels come from each agent's ACTUAL choice on the trial, not from a
+    median split of the stimulus parameter:
+
+      * lottery   -> Risky = 1 (high risk-taking),  Safe   = 0 (low)
+      * ultimatum -> Accept = 1 (high acceptance),  Reject = 0 (low)
+
+    Rationale: a risk-seeking agent takes the gamble even when the risky
+    reward is small -- i.e. it switches early, at a *low* switching point --
+    so its risky choices are the positive ("high risk-taking") class. The
+    previous implementation median-split the offered reward and labelled
+    above-median (large-reward, risk-averse-requiring) contexts as "high",
+    which inverted the trait *and* keyed the probe to reward magnitude rather
+    than the agent's disposition. Labelling by the observed choice fixes both.
     """
     if game == "lottery":
         params = config.LOTTERY["reward_grid_tokens"]
@@ -65,21 +77,40 @@ def build_preference_probe(
     else:
         candidate_layers = [model.cfg.probe_layer]
 
-    # Capture activations at every candidate layer for every (param, sample).
+    # Seed base kept distinct from the evaluation sweeps so probe-training
+    # trials never coincide with the calibration / psychometric trials.
+    seed_base = config.SEED.get("probe_data", 100_000)
+
+    # For every (param, sample): let the agent make its choice, then label the
+    # captured activations by that choice. Unparseable generations are skipped.
     activations: Dict[int, List[np.ndarray]] = {layer: [] for layer in candidate_layers}
     labels: List[int] = []
-    param_means: List[float] = []   # per-sample param value used for median split
 
     for param_idx, p in enumerate(tqdm(params, desc=f"Probe data ({game})")):
         prompt = prompt_fn(p)
         for sample in range(n_samples_per_param):
+            gen = model.generate(
+                prompt,
+                max_new_tokens=config.DECODING_DEFAULTS["max_new_tokens_choice"],
+                temperature=config.DECODING_DEFAULTS["temperature_choice"],
+                top_p=config.DECODING_DEFAULTS["top_p"],
+                seed=config.agent_seed(seed_base, param_idx, sample + 1),
+            )
+            choice = parse_fn(gen.text)
+            if choice is None:
+                continue  # unparseable -> no ground-truth label, drop the trial
             for layer in candidate_layers:
                 h = model.capture_activations(prompt, layer)
                 activations[layer].append(h)
-            param_means.append(float(p))
+            labels.append(int(choice))
 
-    # Median-split on param value. Above-median = "high-target" class (1).
-    y = median_split(param_means)
+    y = np.asarray(labels, dtype=int)
+    if y.size == 0 or np.unique(y).size < 2:
+        raise ValueError(
+            f"Preference probe ({game}) needs both choice classes present; got "
+            f"labels={np.unique(y).tolist()} from {y.size} parseable trials. "
+            "Increase n_samples_per_param or widen the reward/offer grid."
+        )
     acts_by_layer = {layer: np.stack(activations[layer], axis=0) for layer in candidate_layers}
     return train_probe(
         activations_by_layer=acts_by_layer,

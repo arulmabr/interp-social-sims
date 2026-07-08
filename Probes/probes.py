@@ -49,7 +49,16 @@ class Probe:
 
 
 def median_split(values: Sequence[float]) -> np.ndarray:
-    """Return binary labels (0/1) via median split. Above-median -> 1."""
+    """Return binary labels (0/1) via median split: above-median -> 1.
+
+    Use ONLY for metrics that increase with the target trait, so that the
+    positive class is the "high" one -- e.g. the capability probe's creativity
+    score (higher score = more creative). Do NOT feed a switching point here:
+    a lower switching point means *more* risk-taking, so an above-median split
+    would label the risk-averse trials as "high". Preference probes therefore
+    label by the agent's observed choice (see build_preference_probe), not this
+    helper.
+    """
     arr = np.asarray(values, dtype=float)
     median = np.median(arr)
     return (arr > median).astype(int)
