@@ -184,6 +184,43 @@ Outputs (under `runs/<outdir>/layer_comparison/`):
 The layer is pinned by rebuilding at a single fixed layer (no CV sweep), so
 training, activation capture, steering, and row metadata all share that layer.
 
+### Full layer-50 regeneration (all six affected figures)
+
+`run_layer_comparison` covers the two preference figures needed for the
+equivalence numbers. To regenerate **all six** Llama linear-probe figures at
+layer 50 (for a matched-layer appendix), use `run_layer50_full`. It is purely
+additive: it reuses the existing layer-48 production runners with the model
+pinned to layer 50 and writes to a separate output tree; no existing module is
+modified and a later layer-48 `run_all` is unaffected.
+
+```bash
+# all six (capability figures call the GPT-5 judge, as in the layer-48 run)
+export OPENAI_API_KEY=...
+python -m Probes.run_layer50_full --outdir runs/llama_layer50
+
+# preference-only (Fig 4/8, 10/18, 11/19; no judge / API key needed)
+python -m Probes.run_layer50_full --outdir runs/llama_layer50_pref --skip-capability
+```
+
+The six regenerated figures (May PDF / June PDF numbering) and their runner:
+
+| Content | May | June | Runner |
+|---|---|---|---|
+| Preference psychometric | 4 | 8 | `psychometric_llama` |
+| Probe lambda dose-response | 10 | 18 | `dose_response_llama` |
+| Probe-score tracking | 11 | 19 | `probe_tracking_llama` |
+| In-distribution capability control | 6 | 11 | `capability_llama` |
+| Cross-object creativity | 9 | 20 | `four_objects_llama` |
+| Cross-object generalization | 12 | 21 | `cross_object_llama` |
+
+Layer 50 is pinned by locally swapping the model config to
+`probe_layer=50, layer_sweep_range=(50, 50)` (the degenerate range makes the
+capability runners' CV layer sweep select only layer 50); the swap is restored
+in a `finally` block. Outputs use the same per-experiment subdirectories and
+JSONL schema as the layer-48 run, with every row's `probe_layer = 50`, so the
+existing aggregation / figure code plots the layer-50 counterparts directly.
+Only the Llama probe figures are regenerated; SAE and Qwen figures are unchanged.
+
 ## Invariants (asserted by aggregator)
 
 The aggregator enforces these on every run:
