@@ -233,12 +233,18 @@ figures, `aggregate_layer50_llama` folds just those into the raw-results schema
 `scores_*` and per-judge `mj_*` -- identical).
 
 **Primary mode -- both layers in the SAME raw-results files (`into-raw-data`).**
-Merges layer 50 into `probe_results_final.json` / `probe_results_combined.csv`
-so both layers coexist there:
+Merges layer 50 into the shipped `probe_results_final.json` /
+`probe_results_combined.csv` so both layers coexist there:
 
 ```bash
 python -m Probes.aggregate_layer50_llama into-raw-data --run-dir runs/llama_layer50
 ```
+
+It targets the raw-results files where they actually live: directly under
+`Probes/` in this repo (no `raw_data/` folder is created), or `Probes/raw_data/`
+in checkouts that keep that copy -- resolved automatically. Two one-time backups
+`probe_results_final.json.layer48_backup` / `probe_results_combined.csv.layer48_backup`
+are written alongside them.
 
 - **Distinguishable.** In the CSV, layer-48 and layer-50 rows share the same
   `source_figure` and are told apart by the `probe_layer` column (48/17 vs 50),

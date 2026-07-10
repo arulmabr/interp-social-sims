@@ -45,6 +45,19 @@ from .aggregator import FIGURE_BUILDERS
 # together make the single in-distribution capability figure).
 LLAMA_KEYS = [k for k in FIGURE_BUILDERS if "_qwen" not in k]
 
+
+def canonical_raw_path(name: str) -> Path:
+    """Resolve a raw-results file to wherever it actually lives.
+
+    The repo ships these files directly under Probes/ (no raw_data/ folder);
+    some checkouts also keep a raw_data/ copy. Prefer raw_data/ when it exists,
+    otherwise fall back to the top-level Probes/ file, so the merge targets the
+    real files in either layout instead of creating a phantom folder.
+    """
+    here = Path(__file__).resolve().parent
+    rd = here / "raw_data" / name
+    return rd if rd.exists() else here / name
+
 # Canonical leading columns of probe_results_combined.csv.
 PREFIX_COLS = [
     "probe_group", "source_figure", "figure_name", "experiment_type", "data_section",
@@ -229,9 +242,8 @@ def merge_into_raw_data(
     """
     import shutil
 
-    here = Path(__file__).resolve().parent
-    final_json = final_json or here / "raw_data" / "probe_results_final.json"
-    combined_csv = combined_csv or here / "raw_data" / "probe_results_combined.csv"
+    final_json = final_json or canonical_raw_path("probe_results_final.json")
+    combined_csv = combined_csv or canonical_raw_path("probe_results_combined.csv")
     suffix = f"_layer{layer}"
 
     # One-time pristine backup (never overwrite an existing backup).
@@ -289,20 +301,22 @@ def merge_into_raw_data(
 
 
 def main() -> None:
-    here = Path(__file__).resolve().parent
-    raw = here / "raw_data"
+    # Resolve to wherever the raw-results files actually live (Probes/ on the
+    # repo; Probes/raw_data/ in checkouts that keep that copy).
+    def_final = canonical_raw_path("probe_results_final.json")
+    def_csv = canonical_raw_path("probe_results_combined.csv")
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="mode", required=True)
 
-    # Default/primary mode: merge both layers INTO the raw_data files.
+    # Primary mode: merge both layers INTO the shipped raw-results files.
     m = sub.add_parser("into-raw-data",
                        help="Merge layer-50 into probe_results_final.json / _combined.csv "
                             "so both layers live in the same files (layer 48 preserved).")
     m.add_argument("--run-dir", required=True, type=Path,
                    help="Layer-50 run directory (from run_layer50_full).")
-    m.add_argument("--final-json", type=Path, default=raw / "probe_results_final.json")
-    m.add_argument("--combined-csv", type=Path, default=raw / "probe_results_combined.csv")
+    m.add_argument("--final-json", type=Path, default=def_final)
+    m.add_argument("--combined-csv", type=Path, default=def_csv)
     m.add_argument("--layer", type=int, default=50)
     m.add_argument("--no-backup", action="store_true",
                    help="Skip the one-time .layer48_backup of each raw-results file.")
@@ -310,12 +324,12 @@ def main() -> None:
     # Alternate mode: write the layer-50 figures to their OWN files (guarded).
     s = sub.add_parser("single",
                        help="Write the layer-50 figures to separate files (does not "
-                            "touch raw_data).")
+                            "touch the raw-results files).")
     s.add_argument("--run-dir", required=True, type=Path)
     s.add_argument("--out-json", required=True, type=Path)
     s.add_argument("--out-csv", required=True, type=Path)
     s.add_argument("--layer", type=int, default=50)
-    s.add_argument("--reference-csv", type=Path, default=raw / "probe_results_combined.csv",
+    s.add_argument("--reference-csv", type=Path, default=def_csv,
                    help="Header template so the output is schema-identical.")
     s.add_argument("--force", action="store_true",
                    help="Override the guard against overwriting the canonical layer-48 files.")
