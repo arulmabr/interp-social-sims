@@ -221,6 +221,29 @@ JSONL schema as the layer-48 run, with every row's `probe_layer = 50`, so the
 existing aggregation / figure code plots the layer-50 counterparts directly.
 Only the Llama probe figures are regenerated; SAE and Qwen figures are unchanged.
 
+### Aggregating the layer-50 run into the raw-results schema
+
+The stock `aggregator` requires both a Llama and a Qwen run and emits all 13
+figure keys. Since the layer-50 control only regenerates the six Llama-probe
+figures, use `aggregate_layer50_llama` to fold just those into the raw-results
+schema (reusing the aggregator's tested builders), rewrite the captions from
+"layer 48" to "layer 50", and flatten to a `probe_results_combined.csv`-schema
+CSV the figure scripts read:
+
+```bash
+python -m Probes.aggregate_layer50_llama \
+    --run-dir runs/llama_layer50 \
+    --out-json probe_results_layer50.json \
+    --out-csv  probe_results_layer50_combined.csv
+```
+
+The flatten is schema-identical to the shipped `probe_results_combined.csv`
+(verified by round-trip on the layer-48 data: same 71-column header, 22,651 rows,
+and every numeric column -- including the expanded `scores_*` and per-judge
+`mj_*` -- identical). Point the existing figure code at `--out-csv` to render the
+six layer-50 counterpart figures. Writes only to the given output paths, so
+`raw_data/` and the layer-48 artifacts are untouched.
+
 ## Invariants (asserted by aggregator)
 
 The aggregator enforces these on every run:
