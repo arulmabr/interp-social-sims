@@ -153,6 +153,37 @@ Outputs:
 
 The `--length-controlled` flag adds an explicit instruction to score on idea quality rather than length.
 
+## Layer-matched steering control (probe layer 48 vs SAE layer 50)
+
+The SAE interventions are applied at layer 50, but the probes are CV-selected to
+layer 48, so a probe-vs-SAE steering comparison mixes a *method* difference with
+a two-layer *depth* difference. `run_layer_comparison` isolates the layer: it
+rebuilds the preference probes at a *fixed* layer (48 and 50 by default) with an
+otherwise identical training / calibration / sweep procedure, and reports
+steering efficacy (how well the achieved switching point tracks the calibration
+target) for each. If the two layers steer equivalently, the head-to-head against
+the layer-50 SAE reflects the method, not the depth.
+
+```bash
+# full run (mirrors the paper's psychometric settings, 40 agents/cell)
+python -m Probes.run_layer_comparison --model llama --outdir runs/layer_cmp \
+    --layers 48 50 --n-agents 40
+
+# fast smoke run (few targets/agents; validates the pipeline end to end)
+python -m Probes.run_layer_comparison --model llama --outdir runs/layer_cmp_fast \
+    --layers 48 50 --n-agents 8 --n-agents-calib 6 \
+    --lottery-targets 68 124 181 --ultimatum-targets 40 60
+```
+
+Outputs (under `runs/<outdir>/layer_comparison/`):
+- `llama_layer{L}_{game}_per_agent.jsonl` / `_cells.jsonl` — per-trial + per-cell records at layer `L`
+- `llama_layer{L}_calibration.json` — lambda per target, achieved switching point, probe CV accuracy
+- `comparison.csv` — one row per (game, target, layer): target, calibrated lambda, achieved switching point, abs error
+- `comparison_summary.json` — per-layer efficacy (RMSE / MAE / correlation) plus the cross-layer difference and an `equivalent`/`verdict` flag
+
+The layer is pinned by rebuilding at a single fixed layer (no CV sweep), so
+training, activation capture, steering, and row metadata all share that layer.
+
 ## Invariants (asserted by aggregator)
 
 The aggregator enforces these on every run:
