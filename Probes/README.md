@@ -241,8 +241,17 @@ The flatten is schema-identical to the shipped `probe_results_combined.csv`
 (verified by round-trip on the layer-48 data: same 71-column header, 22,651 rows,
 and every numeric column -- including the expanded `scores_*` and per-judge
 `mj_*` -- identical). Point the existing figure code at `--out-csv` to render the
-six layer-50 counterpart figures. Writes only to the given output paths, so
-`raw_data/` and the layer-48 artifacts are untouched.
+six layer-50 counterpart figures.
+
+**Layer 48 and layer 50 never collide.** The two layers live in separate files
+(`raw_data/probe_results_*` stays layer-48-only; layer 50 lands in the
+`--out-json` / `--out-csv` you name), and within any file each row is tagged by
+its `probe_layer` column (48 vs 50), so the numbers are always distinguishable.
+As a hard guard, the aggregator **refuses to write over** the canonical layer-48
+files `probe_results_final.json` / `probe_results_combined.csv` (or the reference
+CSV) unless `--force` is passed, so a layer-50 run can never overwrite the
+layer-48 results. The run summary reports `probe_layers_present_in_output` so you
+can confirm a layer-50 file contains only layer 50.
 
 ## Invariants (asserted by aggregator)
 

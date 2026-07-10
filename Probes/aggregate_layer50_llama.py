@@ -143,20 +143,50 @@ def write_combined_csv(rows: List[Dict], out_csv: Path, reference_csv: Path | No
             w.writerow({k: ("" if v is None else v) for k, v in r.items()})
 
 
+# The canonical layer-48 raw-results artifacts. Writing layer-50 output over
+# these would destroy the layer-48 numbers, so it is refused by default.
+CANONICAL_LAYER48_FILES = {"probe_results_final.json", "probe_results_combined.csv"}
+
+
+def _assert_not_overwriting(paths, reference_csv: Path | None, force: bool) -> None:
+    """Refuse to clobber the layer-48 raw-results files (unless force=True).
+
+    The layer-50 run must land in its own files so both layers coexist and stay
+    distinguishable by the probe_layer column; it must never overwrite layer 48.
+    """
+    if force:
+        return
+    ref = reference_csv.resolve() if reference_csv else None
+    for p in paths:
+        rp = Path(p).resolve()
+        if rp.name in CANONICAL_LAYER48_FILES or (ref is not None and rp == ref):
+            raise ValueError(
+                f"Refusing to write layer-50 results to {rp}: that is a canonical "
+                f"layer-48 raw-results file and would overwrite the layer-48 numbers. "
+                f"Use a distinct path (e.g. probe_results_layer50.json / "
+                f"probe_results_layer50_combined.csv), or pass force=True to override."
+            )
+
+
 def run(run_dir: Path, out_json: Path, out_csv: Path,
-        layer: int = 50, reference_csv: Path | None = None) -> Dict:
+        layer: int = 50, reference_csv: Path | None = None, force: bool = False) -> Dict:
+    _assert_not_overwriting([out_json, out_csv], reference_csv, force)
     top = build_layer50_json(run_dir, layer=layer)
     out_json.parent.mkdir(parents=True, exist_ok=True)
     with open(out_json, "w") as f:
         json.dump(top, f, indent=2)
     rows = flatten(top)
     write_combined_csv(rows, out_csv, reference_csv)
+    # Distinguishability check: every row must carry the layer it was produced
+    # at, and this run must contain only `layer` (never mixed with layer 48).
+    layers_present = sorted({r.get("probe_layer") for r in rows if r.get("probe_layer") is not None})
     return {
         "figures": list(top),
         "n_rows": len(rows),
         "out_json": str(out_json),
         "out_csv": str(out_csv),
-        "probe_layer": int(layer),
+        "probe_layer_requested": int(layer),
+        "probe_layers_present_in_output": layers_present,
     }
 
 
@@ -173,9 +203,12 @@ def main() -> None:
                     default=here / "raw_data" / "probe_results_combined.csv",
                     help="Header template so the output is schema-identical "
                          "(default: raw_data/probe_results_combined.csv; ignored if absent).")
+    ap.add_argument("--force", action="store_true",
+                    help="Override the guard that refuses to overwrite the canonical "
+                         "layer-48 files (probe_results_final.json / _combined.csv).")
     args = ap.parse_args()
     summary = run(args.run_dir, args.out_json, args.out_csv,
-                  layer=args.layer, reference_csv=args.reference_csv)
+                  layer=args.layer, reference_csv=args.reference_csv, force=args.force)
     print(json.dumps(summary, indent=2))
 
 
