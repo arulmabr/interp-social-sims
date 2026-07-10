@@ -211,7 +211,8 @@ def panel_label(ax, text, x=-0.13, y=1.02):
 # Load data once
 # ----------------------------------------------------------------------------
 def _read(name):
-    return pd.read_csv(os.path.join(HERE, name), low_memory=False)
+    # The consolidated probe-results file lives under Probes/raw_data/.
+    return pd.read_csv(os.path.join(HERE, "raw_data", name), low_memory=False)
 
 
 def _read_optional(name, columns):
