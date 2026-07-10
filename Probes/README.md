@@ -225,33 +225,47 @@ Only the Llama probe figures are regenerated; SAE and Qwen figures are unchanged
 
 The stock `aggregator` requires both a Llama and a Qwen run and emits all 13
 figure keys. Since the layer-50 control only regenerates the six Llama-probe
-figures, use `aggregate_layer50_llama` to fold just those into the raw-results
-schema (reusing the aggregator's tested builders), rewrite the captions from
-"layer 48" to "layer 50", and flatten to a `probe_results_combined.csv`-schema
-CSV the figure scripts read:
+figures, `aggregate_layer50_llama` folds just those into the raw-results schema
+(reusing the aggregator's tested builders) and rewrites the captions from
+"layer 48" to "layer 50". Its flatten is schema-identical to the shipped
+`probe_results_combined.csv` (verified by round-trip on the layer-48 data: same
+71-column header, 22,651 rows, and every numeric column -- including the expanded
+`scores_*` and per-judge `mj_*` -- identical).
+
+**Primary mode -- both layers in the SAME raw-results files (`into-raw-data`).**
+Merges layer 50 into `probe_results_final.json` / `probe_results_combined.csv`
+so both layers coexist there:
 
 ```bash
-python -m Probes.aggregate_layer50_llama \
-    --run-dir runs/llama_layer50 \
-    --out-json probe_results_layer50.json \
-    --out-csv  probe_results_layer50_combined.csv
+python -m Probes.aggregate_layer50_llama into-raw-data --run-dir runs/llama_layer50
 ```
 
-The flatten is schema-identical to the shipped `probe_results_combined.csv`
-(verified by round-trip on the layer-48 data: same 71-column header, 22,651 rows,
-and every numeric column -- including the expanded `scores_*` and per-judge
-`mj_*` -- identical). Point the existing figure code at `--out-csv` to render the
-six layer-50 counterpart figures.
+- **Distinguishable.** In the CSV, layer-48 and layer-50 rows share the same
+  `source_figure` and are told apart by the `probe_layer` column (48/17 vs 50),
+  so a figure's two layers group-and-compare directly. In the JSON, the layer-50
+  figures use `<key>_layer50` keys (object keys must be unique); the layer-48
+  keys are untouched.
+- **Layer 48 is never overwritten.** The layer-48 rows/keys are carried over
+  unchanged (append-only for layer 50); a preservation check asserts their
+  count/keys are intact. The merge is **idempotent** (re-running replaces the
+  layer-50 rows/keys, never stacks duplicates), and on the first run it writes a
+  one-time `probe_results_final.json.layer48_backup` /
+  `probe_results_combined.csv.layer48_backup` so the pristine layer-48-only
+  version is always recoverable. Validated on a copy: 13 keys/33,598 rows ->
+  20 keys/56,249 rows (33,598 layer-48/17 preserved + 22,651 layer-50 added),
+  stable across re-runs.
 
-**Layer 48 and layer 50 never collide.** The two layers live in separate files
-(`raw_data/probe_results_*` stays layer-48-only; layer 50 lands in the
-`--out-json` / `--out-csv` you name), and within any file each row is tagged by
-its `probe_layer` column (48 vs 50), so the numbers are always distinguishable.
-As a hard guard, the aggregator **refuses to write over** the canonical layer-48
-files `probe_results_final.json` / `probe_results_combined.csv` (or the reference
-CSV) unless `--force` is passed, so a layer-50 run can never overwrite the
-layer-48 results. The run summary reports `probe_layers_present_in_output` so you
-can confirm a layer-50 file contains only layer 50.
+**Alternate mode -- separate files (`single`).** Writes the six layer-50 figures
+to their own files and does not touch `raw_data`; guarded so it refuses to
+clobber `probe_results_final.json` / `probe_results_combined.csv` unless
+`--force`:
+
+```bash
+python -m Probes.aggregate_layer50_llama single --run-dir runs/llama_layer50 \
+    --out-json probe_results_layer50.json --out-csv probe_results_layer50_combined.csv
+```
+
+Either way, select a layer downstream via the `probe_layer` column.
 
 ## Invariants (asserted by aggregator)
 
