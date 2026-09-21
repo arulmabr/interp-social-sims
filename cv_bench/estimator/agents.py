@@ -152,11 +152,28 @@ def utility(lot: Lottery, par: AgentParams) -> float:
     raise ValueError(f"unknown agent kind {par.kind!r}")
 
 
+def _to_utility_scale(amounts: np.ndarray, par: AgentParams) -> np.ndarray:
+    """Put raw amounts on the same scale as the family's utility.
+
+    The contextual-utility range has to be measured in the units the utility
+    difference is measured in, or the normalisation is a unit conversion rather
+    than a normalisation. The monotone family's utility is a tanh, bounded in
+    [-1, 1]; dividing its differences by a range in dollars crushed z by about
+    two orders of magnitude and left that agent indifferent on every trial
+    (z sd 0.0073, P(risky) spread 0.01), which made it useless as the
+    misspecified base it exists to be.
+    """
+    if par.kind == "cpt":
+        return value(amounts, par.alpha, par.lam)
+    if par.kind == "monotone":
+        return np.tanh(amounts / par.mono_scale)
+    return np.asarray(amounts, dtype=float)      # mean-variance is in amount units
+
+
 def utility_range(trial: Trial, par: AgentParams) -> float:
     """Contextual utility: the spread of value across everything on offer."""
     amounts = [a for lot in trial.canonical for _, a in _amounts(lot, par)]
-    vs = value(np.array(amounts), par.alpha, par.lam) if par.kind == "cpt" \
-        else np.array(amounts, dtype=float)
+    vs = _to_utility_scale(np.array(amounts, dtype=float), par)
     spread = float(vs.max() - vs.min())
     return spread if spread > 1e-9 else 1.0
 
@@ -426,10 +443,7 @@ def latent_z_packed(pk: Packed, par: AgentParams) -> np.ndarray:
     u_risky, r_hi, r_lo = _utility_vec(pk.risky_hi, pk.risky_lo, pk.risky_phi,
                                        pk.risky_sure, par)
     amounts = np.stack([s_hi, s_lo, r_hi, r_lo])
-    if par.kind == "cpt":
-        vals = value(amounts, par.alpha, par.lam)
-    else:
-        vals = amounts
+    vals = _to_utility_scale(amounts, par)
     spread = vals.max(axis=0) - vals.min(axis=0)
     spread = np.where(spread > 1e-9, spread, 1.0)
 

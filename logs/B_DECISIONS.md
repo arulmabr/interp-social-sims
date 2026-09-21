@@ -248,3 +248,24 @@ stage that already finished, so a requeue after fp32 does not pay 346 seconds to
 `recovery` array task whose output file exists returns immediately. Eight tests in
 `cv_bench/tests/test_checkpoint.py` cover resuming mid-pass, losing at most one chunk, refusing a
 foreign or corrupt checkpoint, and a heartbeat that cannot take the job down.
+
+**BD22. The monotone base agent was indifferent on every trial, and it is one of the two agents the
+plan relies on to test misspecification.** Found while matching the crossed zoo on effect size: three
+of the five monotone cells could not reach the target effect at any parameter value in their search
+range. The cause is a unit mismatch in the contextual-utility normalisation. The range was computed in
+**amount units for every family except CPT**, but the monotone family's utility is a tanh bounded in
+[-1, 1]; dividing a tanh-scale utility difference by a range in dollars crushed z by about two orders
+of magnitude. Measured on 200 sure-gain trials, the monotone base had **z sd 0.0073 and a P(risky)
+spread of 0.0105** — indifferent everywhere, so no intervention applied to it could be detected and
+the agent tested nothing at all. The range is now measured in each family's own units
+(`_to_utility_scale`): CPT's value function, mean-variance's amounts, monotone's tanh. The monotone
+base now has **z sd 1.3389 and a P(risky) spread of 0.8716**, against CPT's 1.2663 and 0.7937. The
+scalar and packed paths still agree to 0.00e+00 for all three bases. A test now asserts that no base
+agent is flat, because a degenerate base passes every specificity check for free and would have made
+the misspecification test look like it was working.
+
+**BD23. The effect-size matching was the slowest thing in the study and did not need to be.**
+`behavioural_effect` still used the readable scalar path at about 520 ms a call; the bisection calls it
+roughly 1,600 times, so building the crossed zoo alone would have taken about 850 seconds inside every
+one of the 18 array tasks. It now takes the packed path with the trials packed once, and the zoo builds
+in **1 second**. No result changes: the two paths are asserted equal.

@@ -360,3 +360,43 @@ def test_d2_scale_term_separates_a_temperature_change(trials):
     v = FP.d2_variance_decomposition(sub, dz, z_base=z0)
     assert v["scale_share"] > v["payoff_share"]
     assert v["scale_share"] > v["action_share"]
+
+
+def test_no_base_agent_is_degenerate(trials):
+    """A base that is indifferent everywhere tests nothing.
+
+    Regression: the contextual-utility range was measured in dollars for every
+    family, but the monotone family's utility is a bounded tanh, so its z had
+    an SD of 0.0073 and a P(risky) spread of 0.01 -- it could not express a
+    preference, let alone have one detected.
+    """
+    # Stride, not head: the first rows of the expanded grid are one content in
+    # many formats, which has almost no spread in z by construction.
+    sub = [t for t in trials if t.family == "sure_gain"][::17]
+    assert len({t.content_id for t in sub}) > 50
+    pk = A.pack(sub)
+    for base in A.BASES:
+        z = A.latent_z_packed(pk, A.base_params(base))
+        p = A.choice_prob(z)
+        assert z.std() > 0.5, f"{base} is nearly flat in z (sd {z.std():.4f})"
+        assert p.max() - p.min() > 0.5, f"{base} barely moves P(risky)"
+
+
+def test_utility_range_is_measured_in_each_family_own_units(trials):
+    t = next(x for x in trials if x.family == "sure_gain")
+    mono = A.base_params("monotone")
+    rng = A.utility_range(t, mono)
+    # a tanh-valued utility has a range inside [0, 2], never in dollars
+    assert 0.0 < rng <= 2.0
+
+
+def test_every_crossed_cell_matches_the_target_effect(trials):
+    """The matching is what makes Gate B2's rejection requirement fair."""
+    sub = trials[::5]
+    crossed, bases, effects = A.build_crossed_zoo(sub)
+    target = effects["_target"]
+    for (b, iv) in crossed:
+        if iv == "preference_lambda":
+            continue          # lambda is not identified on this grid (BD10)
+        got = effects[f"{b}/{iv}"]
+        assert got > 0.4 * target, f"{b}/{iv} effect {got:.4f} vs target {target:.4f}"
