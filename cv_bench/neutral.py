@@ -206,21 +206,111 @@ def phase_free(model_key: str, agents: int = 8, n_levels: int = 10,
     sink.close()
 
 
+def choose_framing(model_key: str) -> Optional[dict]:
+    """Pick the neutral framing, on valid mass first and agreement second.
+
+    Order fixed in advance (FRIDAY amendment item 4), and never on a steered
+    result: a framing must first occupy the answer position at all, and then
+    track what the model does when it is not forced. Agreement is the slope of
+    free-generation frequency on readout probability, which is exactly the
+    non-circular comparison item 2 asks for -- both columns here come from the
+    same prompts but only one of them is forced.
+    """
+    mass_p = OUT / f"mass_{model_key}.jsonl"
+    free_p = OUT / f"free_{model_key}.jsonl"
+    if not mass_p.exists():
+        return None
+    import collections
+    mass = collections.defaultdict(list)
+    readout = {}
+    for line in open(mass_p):
+        try:
+            r = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        mass[(r["framing"], r["game"])].append(r["valid_mass"])
+        readout[(r["framing"], r["game"], r["value"], r["flip"])] = r["p_positive"]
+    free = collections.defaultdict(lambda: [0, 0])
+    if free_p.exists():
+        for line in open(free_p):
+            try:
+                r = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if r["first_choice"] is None:
+                continue
+            k = (r["framing"], r["game"], r["value"], r["flip"])
+            free[k][0] += int(r["first_choice"])
+            free[k][1] += 1
+
+    rows = []
+    for f in FRAMINGS:
+        per_game = {}
+        for g in ("lottery", "ultimatum"):
+            ms = mass.get((f, g), [])
+            xs, ys = [], []
+            for (ff, gg, v, fl), n in free.items():
+                if ff != f or gg != g or n[1] == 0:
+                    continue
+                p = readout.get((ff, gg, v, fl))
+                if p is None:
+                    continue
+                xs.append(p)
+                ys.append(n[0] / n[1])
+            slope = r_ = float("nan")
+            if len(xs) >= 4 and np.std(xs) > 1e-6 and np.std(ys) > 1e-6:
+                A = np.vstack([np.asarray(xs), np.ones(len(xs))]).T
+                slope = float(np.linalg.lstsq(A, np.asarray(ys), rcond=None)[0][0])
+                r_ = float(np.corrcoef(xs, ys)[0, 1])
+            per_game[g] = dict(valid_mass=float(np.mean(ms)) if ms else float("nan"),
+                               n_free_levels=len(xs), slope=slope, r=r_,
+                               free_sd=float(np.std(ys)) if ys else 0.0)
+        rows.append(dict(framing=f, per_game=per_game,
+                         min_valid_mass=min(per_game[g]["valid_mass"]
+                                            for g in per_game),
+                         worst_slope_gap=max(
+                             abs((per_game[g]["slope"] if np.isfinite(per_game[g]["slope"])
+                                  else 0.0) - 1.0) for g in per_game)))
+    ok = [r for r in rows if r["min_valid_mass"] >= 0.98
+          and all(np.isfinite(r["per_game"][g]["slope"]) and
+                  0.8 <= r["per_game"][g]["slope"] <= 1.2 for g in r["per_game"])]
+    pick = (min(ok, key=lambda r: r["worst_slope_gap"]) if ok else
+            max(rows, key=lambda r: r["min_valid_mass"]))
+    doc = dict(framing=pick["framing"], passed=bool(ok),
+               rule=("valid mass >= 0.98 in both games, then the slope of free "
+                     "generation on the readout inside 0.8-1.2; ties by the "
+                     "smaller slope gap. Never chosen on a steered result."),
+               candidates=[{k: v for k, v in r.items()} for r in rows])
+    (OUT / "framing_choice.json").write_text(json.dumps(doc, default=float))
+    print(f"[neutral] framing: {pick['framing']} "
+          f"({'passes' if ok else 'NONE passes; best valid mass'})", flush=True)
+    for r in rows:
+        for g, d in r["per_game"].items():
+            print(f"  {r['framing']:16s} {g:9s} mass {d['valid_mass']:.4f} "
+                  f"slope {d['slope']:.3f} r {d['r']:.3f}", flush=True)
+    return doc
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default="llama", choices=list(MODELS))
-    ap.add_argument("--phase", default="all", choices=["mass", "free", "all"])
+    ap.add_argument("--phase", default="all",
+                    choices=["mass", "free", "all", "choose"])
     ap.add_argument("--agents", type=int, default=8)
     ap.add_argument("--levels", type=int, default=10)
     a = ap.parse_args()
     OUT.mkdir(parents=True, exist_ok=True)
     t0 = time.time()
+    if a.phase == "choose":          # CPU only: reads what the GPU job wrote
+        choose_framing(a.model)
+        return 0
     loaded = load(a.model, "bf16") if a.phase == "all" else None
     if a.phase in ("mass", "all"):
         phase_mass(a.model, loaded)
     if a.phase in ("free", "all"):
         phase_free(a.model, a.agents, a.levels, loaded)
     if a.phase == "all":
+        choose_framing(a.model)
         mark_done(OUT / f"done_neutral_{a.model}.json", framings=FRAMINGS)
     print(f"{a.phase} finished in {(time.time()-t0)/60:.1f} min", flush=True)
     return 0

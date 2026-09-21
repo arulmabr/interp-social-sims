@@ -84,16 +84,37 @@ because it opens with "To solve this, let's calculate the expected value" and th
 lands mid-sentence.
 
 **3. The chat64 arm's 0.0% no-answer rate is an artefact, and the number to distrust.**
-Raising the cap to 64 tokens does not make Llama state a decision more often. It makes
-the response long enough to mention both labels while restating the options, which is
-enough for both codings to assign a choice. Measured directly:
+Both codings assign a choice to every chat64 lottery trial. Fewer than half of those
+trials contain a decision:
 
 | | states a decision | codings assign a choice |
 |---|---|---|
-| Llama, chat, lottery | 32.0% | 32.0% |
-| Llama, chat64, lottery | **32.0%** | **100%** |
+| Llama, chat, lottery (12 tokens) | 32.0% | 32.0% |
+| Llama, chat64, lottery (64 tokens) | **41.3%** | **100%** |
 
-The decision rate is identical. The extra 52 tokens bought coverage, not answers.
+Raising the cap from 12 to 64 raises the share of responses that actually decide by
+9 points and the share that get coded by 68. The gap is the artefact.
+
+**The cap is the whole story, and 64 is the wrong value.** On the instrument check's
+free generations (`cv_bench/instr.py`, 7 levels per game, 20 agents, both games):
+
+| new-token cap | states a decision | truncated at the cap |
+|---|---|---|
+| 64 | 0.707 | 0.343 |
+| 128 | 0.821 | 0.264 |
+| **256** | **1.000** | **0.000** |
+
+At 256 tokens every response reaches a decision and none is cut off. G4's sampled arm
+therefore runs at 256 rather than inheriting 64 (`instr/cap_choice.json`).
+
+*Correction.* An earlier version of this section reported the decision rate as 32.0% at
+both caps, and the instrument check first reported 0.343 at a 256-token cap. Both came
+from a decision detector that recognised a bare label only when it was the entire
+response, and so missed this model's own convention -- reason first, then the answer
+alone on the last line. 92 of 280 responses at the 256-token cap ended exactly that way
+and none of them was truncated. The detector now reads a trailing bare label as the
+decision it is; every number above is recoded from the saved generations, with no
+model rerun (`logs/DEVIATIONS.md`).
 
 **4. The two codings disagree on 40.9% of that arm, always the same way.** On 737 of
 1800 chat64 lottery trials the legacy rule says risky and the strict rule says safe.

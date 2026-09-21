@@ -84,8 +84,16 @@ DECISION = re.compile(r"""(?:\b(?:I|I'd|I'll|we|you)\s+(?:would\s+|will\s+|shoul
                                accept|reject)\b
                          |\bmy\s+(?:choice|answer|decision)\s*(?:is|:)
                          |\bfinal\s+answer\b
-                         |\bthe\s+(?:better|best|rational|optimal)\s+(?:option|choice)\s+is\b)
+                         |\bthe\s+(?:\w+\s+){0,4}?(?:option|choice)\s+
+                            (?:based\s+on[^.]{0,40}?\s+)?is\b
+                         |\bis\s+the\s+(?:better|best|rational|optimal|logical|
+                                          safer|preferred)\s+(?:option|choice)\b)
                       """, re.I | re.X)
+
+
+def _bare_label_re(game: str):
+    neg, pos = LABELS[game]
+    return re.compile(r"[\s'\"*#>-]*(%s|%s)[\s.!'\"*]*" % (neg, pos), re.I)
 
 
 def decision_code(text: str, game: str) -> Dict[str, object]:
@@ -101,9 +109,19 @@ def decision_code(text: str, game: str) -> Dict[str, object]:
     """
     neg, pos = LABELS[game]
     t = (text or "").strip()
-    if re.fullmatch(r"[\s'\"*]*(%s|%s)[\s.!'\"*]*" % (neg, pos), t, re.I):
+    bare = _bare_label_re(game)
+    if bare.fullmatch(t):
         lab = re.search(r"(%s|%s)" % (neg, pos), t, re.I).group(1)
         return dict(kind="bare_label", choice=int(lab.lower() == pos.lower()))
+    # This model's own convention: reason, then put the answer alone on the last
+    # line. Measured on the instrument check's free generations, where 92 of 280
+    # responses at a 256-token cap ended exactly this way and none of them was
+    # truncated. Reading only the whole-response case missed every one of them.
+    lines = [l for l in t.splitlines() if l.strip()]
+    if lines and bare.fullmatch(lines[-1].strip()):
+        lab = re.search(r"(%s|%s)" % (neg, pos), lines[-1], re.I).group(1)
+        return dict(kind="trailing_label",
+                    choice=int(lab.lower() == pos.lower()))
     m = DECISION.search(t)
     if m:
         after = t[m.start():m.start() + 160]
@@ -252,7 +270,13 @@ def write_cap_choice(model_key: str) -> Optional[dict]:
         except json.JSONDecodeError:
             continue
         tot[(r["game"], r["cap"])] += 1
-        dec[(r["game"], r["cap"])] += int(r["decision_kind"] != "no_decision")
+        # Recode from the saved text rather than trusting the stored label: the
+        # raw generation is kept precisely so a coding rule can be corrected
+        # without rerunning the model (CLAUDE.md rule 4 allows recoding, not
+        # regenerating). The first version of decision_code missed this model's
+        # own convention -- reason, then the answer alone on the last line.
+        d = decision_code(r.get("raw_generation", ""), r["game"])
+        dec[(r["game"], r["cap"])] += int(d["kind"] != "no_decision")
     rates = {}
     for cap in CAPS:
         ns = [tot[(g, cap)] for g in ("lottery", "ultimatum")]

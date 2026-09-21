@@ -214,3 +214,49 @@ the signature of an added action bias. The data agrees with one and not the othe
 point, so it is meaningless where the measured curve never crosses 0.5 — the fit is then extrapolating.
 Unguarded, the vLLM persona reported an implied rate of 1.0 and an excess of −0.997. The excess is now
 computed only for curves with `crosses_half_on_grid = True`; the rest are blank.
+
+---
+
+## 2026-09-21 21:34 UTC — cvb_instr resubmitted automatically (attempt 1 of 2)
+
+**Cause:** state=COMPLETED exit=0:0 log=preempted. **Technical change:** none — the job is resubmitted unchanged and resumes from its own checkpoint. Seeds, prompts, doses, thresholds and metrics are untouched (CLAUDE.md rule 4).
+**New job id:** 23421227
+
+---
+
+## 2026-09-21 22:10 UTC — D-2026-09-21-09: the decision detector missed this model's own answer convention
+
+**What was wrong.** `cv_bench/instr.py::decision_code` recognised a bare label only when it was the
+*entire* response. Llama-3.3-70B, given room to reason, ends instead with the answer alone on the
+last line after a paragraph of expected-value arithmetic. Every one of those was coded
+`no_decision`.
+
+**How it was found.** The instrument check's cap chooser reported a decision rate of 0.3429 at a
+**256**-token cap and `reached_threshold: false`. A 70B model that fails to answer two thirds of the
+time when given 256 tokens is not plausible, so the generations were read: 92 of 280 at that cap
+ended with `Safe` or `Risky` alone on the final line, and **none of them was truncated**.
+
+**What changed.** `decision_code` gains a `trailing_label` outcome, and the decision-phrase pattern
+now covers "the logical choice based on expected value is …" and "is the better/safer/preferred
+option". `write_cap_choice` recodes from `raw_generation` rather than trusting the label stored at
+run time — which is why the raw text is saved.
+
+**Before and after, same generations, no model rerun:**
+
+| measurement | before | after |
+|---|---|---|
+| decision rate, free generation, cap 64 | 0.3143 | **0.4143** |
+| decision rate, free generation, cap 128 | 0.3429 | **0.6429** |
+| decision rate, free generation, cap 256 | 0.3429 | **1.0000** |
+| G2 chat64 Llama lottery, decision rate | 0.320 | **0.413** |
+| chosen token cap for G4 | 256, threshold not reached | 256, threshold reached |
+
+**What it corrects in a committed report.** `reports/G2_RESULTS.md` §3 said the decision rate was
+"identical" at 12 and 64 tokens, 32.0% both. It is 32.0% and **41.3%**. The section's conclusion is
+unchanged and in one respect strengthened: both codings still assign a choice to 100% of chat64
+trials while only 41.3% contain a decision, and the corrected table now also shows that a 256-token
+cap removes the problem entirely. The correction is noted in the report itself.
+
+**Rule 4.** No seed, prompt, dose, threshold or metric was changed because a result looked
+unhelpful. A coding rule was corrected because it was demonstrably wrong on inspected text, and
+every affected number was recomputed from generations already on disk.
