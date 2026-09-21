@@ -114,3 +114,23 @@ change" (0.15)** while alpha and gamma pass. Under Gate B2 the response to a fai
 grid and never the thresholds, so the remedy would be more mixed-frame trials, not a looser bound.
 This is written down now so that the grid change, if it happens, is visibly a response to a
 pre-stated structural fact rather than to an unwelcome number.
+
+**BD11. Template effects are drawn once and shared between conditions, not redrawn.** Found while
+testing the estimator, and it changed the answer. The recovery study's template-level noise is the
+plan's "SD of z across templates": it is a property of the *instruction template*, so a real experiment
+that runs the baseline and the intervention on the same prompts sees the same offset in both, and it
+cancels in the comparison. The first implementation redrew it per condition. The difference between two
+independent draws then entered every trial as a **constant shift** — which is exactly the signature of
+an action bias — so a genuine preference shift at the minimum detectable change was being attributed to
+action. The symptom was seed dependence that should not have existed: on one seed `pref_alpha` gave a
+preference share of 0.996, on another an action share of 0.89. With the draw shared, the true model
+wins in both. Only the numerical-noise component is redrawn per condition, which is correct: it stands
+for batch-composition non-determinism, which genuinely differs between runs.
+
+**BD12. "The action model is rejected" is operationalised as a cluster-bootstrap probability.** The
+decision rule requires preference share >= 0.8 **and** the action model rejected. The plan does not say
+how to reject it, so Track B reads it as: the preference model beats the action model on held-out
+reward levels in at least 95% of paired cluster-bootstrap draws, clustered on reward level x template
+as the plan specifies for that comparison, with the Vuong statistic reported beside it. The 0.95 is a
+threshold and therefore an **AUTHOR DECISION** frozen at B6; it is flagged here rather than quietly
+chosen, and `reports/B_B2.md` reports the rule's behaviour if it were dropped to 0.90.

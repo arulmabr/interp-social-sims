@@ -195,12 +195,27 @@ def choice_prob(z: np.ndarray, lapse: float = 0.0) -> np.ndarray:
     return p
 
 
+def draw_template_offsets(trials: Sequence[Trial], sd: float,
+                          rng: np.random.Generator) -> Dict[str, float]:
+    """One offset per instruction template.
+
+    A template effect is a property of the *template*, not of the run, so the
+    same draw must be used for the baseline and the intervention condition. If
+    it were redrawn, the difference between two independent draws would appear
+    in every trial as a constant shift -- which is precisely the signature of an
+    action bias, and would make a genuine preference shift look like one.
+    """
+    return {tid: rng.normal(0.0, sd)
+            for tid in sorted({t.fmt.template_id for t in trials})}
+
+
 def simulate(trials: Sequence[Trial],
              par: AgentParams,
              rng: np.random.Generator,
              template_noise_sd: float = 0.0,
              numerical_noise_sd: float = 0.0,
-             lapse: float = 0.0) -> Dict[str, np.ndarray]:
+             lapse: float = 0.0,
+             template_offsets: Optional[Dict[str, float]] = None) -> Dict[str, np.ndarray]:
     """Simulate one agent over a trial list.
 
     Two noise components, added independently to z:
@@ -213,11 +228,12 @@ def simulate(trials: Sequence[Trial],
       across batch compositions; amendment item 5). It is drawn per trial
       because reordering a batch perturbs each row on its own.
     """
-    z = latent_z_batch(trials, par)
+    z = latent_z_packed(pack(trials), par)
 
-    if template_noise_sd > 0:
-        templates = sorted({t.fmt.template_id for t in trials})
-        offsets = {tid: rng.normal(0.0, template_noise_sd) for tid in templates}
+    offsets = template_offsets
+    if offsets is None and template_noise_sd > 0:
+        offsets = draw_template_offsets(trials, template_noise_sd, rng)
+    if offsets:
         z = z + np.array([offsets[t.fmt.template_id] for t in trials])
 
     if numerical_noise_sd > 0:
@@ -225,7 +241,8 @@ def simulate(trials: Sequence[Trial],
 
     p = choice_prob(z, lapse=lapse)
     choice = (rng.random(len(trials)) < p).astype(int)
-    return {"z": z, "p_risky": p, "choice": choice}
+    return {"z": z, "p_risky": p, "choice": choice,
+            "template_offsets": offsets or {}}
 
 
 # --------------------------------------------------------------------------
@@ -315,3 +332,102 @@ def match_effect_sizes(trials: Sequence[Trial],
                 hi = mid
         out[name] = make(0.5 * (lo + hi))
     return out
+
+
+# --------------------------------------------------------------------------
+# vectorised path
+# --------------------------------------------------------------------------
+# The scalar `latent_z` above is the readable definition and the thing the tests
+# check against. Every B1 lottery has at most two outcomes, so the same
+# computation packs into flat arrays and runs about a hundred times faster,
+# which is what makes the full recovery study a minutes-long CPU job rather than
+# a day-long one. `latent_z_packed` is asserted to agree with `latent_z`.
+
+@dataclass(frozen=True)
+class Packed:
+    """Trials as flat arrays: for each option, the high and low outcome."""
+    safe_hi: np.ndarray
+    safe_lo: np.ndarray
+    safe_phi: np.ndarray
+    safe_sure: np.ndarray
+    risky_hi: np.ndarray
+    risky_lo: np.ndarray
+    risky_phi: np.ndarray
+    risky_sure: np.ndarray
+    order_sign: np.ndarray
+    legacy: np.ndarray
+    n: int
+
+
+def _pack_option(lot: Lottery) -> Tuple[float, float, float, bool]:
+    live = [(p, a) for p, a in lot.outcomes if p > 0]
+    if len(live) == 1:
+        a = live[0][1]
+        return a, a, 1.0, True
+    (p1, a1), (p2, a2) = sorted(live, key=lambda t: -t[1])
+    return a1, a2, p1, False
+
+
+def pack(trials: Sequence[Trial]) -> Packed:
+    s_hi, s_lo, s_p, s_sure = [], [], [], []
+    r_hi, r_lo, r_p, r_sure = [], [], [], []
+    order, legacy = [], []
+    for t in trials:
+        safe, risky = t.canonical
+        a, b, p, sure = _pack_option(safe)
+        s_hi.append(a); s_lo.append(b); s_p.append(p); s_sure.append(sure)
+        a, b, p, sure = _pack_option(risky)
+        r_hi.append(a); r_lo.append(b); r_p.append(p); r_sure.append(sure)
+        order.append(1.0 if t.fmt.option_order == 0 else -1.0)
+        legacy.append(1.0 if t.fmt.label_set == "legacy" else 0.0)
+    f = lambda v: np.asarray(v, dtype=float)
+    return Packed(f(s_hi), f(s_lo), f(s_p), np.asarray(s_sure, dtype=bool),
+                  f(r_hi), f(r_lo), f(r_p), np.asarray(r_sure, dtype=bool),
+                  f(order), f(legacy), len(trials))
+
+
+def _utility_vec(hi: np.ndarray, lo: np.ndarray, phi: np.ndarray,
+                 sure: np.ndarray, par: AgentParams) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Utility of each option, and the perceived amounts for the range."""
+    k = np.where(sure, 1.0, par.kappa)          # kappa spares the sure amount
+    a_hi, a_lo = hi * k, lo * k
+    plo = 1.0 - phi
+
+    if par.kind == "mean_variance":
+        mean = phi * a_hi + plo * a_lo
+        var = phi * (a_hi - mean) ** 2 + plo * (a_lo - mean) ** 2
+        return mean - par.mv_b * var, a_hi, a_lo
+    if par.kind == "monotone":
+        u = phi * np.tanh(a_hi / par.mono_scale) + plo * np.tanh(a_lo / par.mono_scale)
+        return u, a_hi, a_lo
+
+    v_hi = value(a_hi, par.alpha, par.lam)
+    v_lo = value(a_lo, par.alpha, par.lam)
+    w_hi = weight(phi, par.gamma)
+    w_lo = weight(plo, par.gamma)
+
+    all_gain = (a_hi >= 0) & (a_lo >= 0)
+    all_loss = (a_hi <= 0) & (a_lo <= 0)
+    u = np.where(
+        all_gain, w_hi * v_hi + (1.0 - w_hi) * v_lo,
+        np.where(all_loss, w_lo * v_lo + (1.0 - w_lo) * v_hi,
+                 w_hi * v_hi + w_lo * v_lo))
+    return u, a_hi, a_lo
+
+
+def latent_z_packed(pk: Packed, par: AgentParams) -> np.ndarray:
+    u_safe, s_hi, s_lo = _utility_vec(pk.safe_hi, pk.safe_lo, pk.safe_phi,
+                                      pk.safe_sure, par)
+    u_risky, r_hi, r_lo = _utility_vec(pk.risky_hi, pk.risky_lo, pk.risky_phi,
+                                       pk.risky_sure, par)
+    amounts = np.stack([s_hi, s_lo, r_hi, r_lo])
+    if par.kind == "cpt":
+        vals = value(amounts, par.alpha, par.lam)
+    else:
+        vals = amounts
+    spread = vals.max(axis=0) - vals.min(axis=0)
+    spread = np.where(spread > 1e-9, spread, 1.0)
+
+    z = (u_risky - u_safe) / spread / max(par.tau, 1e-9)
+    z = z + par.action + par.position * pk.order_sign + par.label * pk.legacy
+    return z

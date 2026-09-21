@@ -1,0 +1,263 @@
+"""Parametric decomposition for B2 (ICLR_PLAN.md B2). CPU only.
+
+Nested extensions of a baseline fit: `preference` frees (alpha, gamma, lambda),
+`action` frees the action bias, `format` frees position and label bias, `belief`
+frees kappa, `noise` frees tau. Shares come from predictive log-likelihood on
+held-out reward levels, and action against preference is compared by a paired
+cluster bootstrap over reward level x template with the Vuong statistic beside it.
+"""
+
+from __future__ import annotations
+
+from dataclasses import replace
+from typing import Dict, List, Optional, Sequence, Tuple
+
+import numpy as np
+from scipy.optimize import minimize
+
+from cv_bench.estimator.agents import (
+    AgentParams, Packed, choice_prob, latent_z_packed, pack)
+from cv_bench.tasks.core import Trial
+
+#: Which parameters each nested model frees, relative to the baseline fit.
+FREE_SETS: Dict[str, Tuple[str, ...]] = {
+    "baseline": (),
+    "preference": ("alpha", "gamma", "lam"),
+    "action": ("action",),
+    "format": ("position", "label"),
+    "belief": ("kappa",),
+    "noise": ("tau",),
+}
+
+BOUNDS: Dict[str, Tuple[float, float]] = {
+    "alpha": (0.20, 1.60), "gamma": (0.25, 1.60), "lam": (0.50, 6.00),
+    "tau": (0.02, 4.00), "action": (-6.0, 6.0), "position": (-6.0, 6.0),
+    "label": (-6.0, 6.0), "kappa": (0.20, 5.00), "lapse": (0.0, 0.40),
+}
+
+
+# --------------------------------------------------------------------------
+# reward levels and clusters
+# --------------------------------------------------------------------------
+
+def reward_level_rank(trials: Sequence[Trial]) -> np.ndarray:
+    """Rank of each trial's reward level within its own cell.
+
+    A cell is (family, p, s) where those exist, so the rank is the position of
+    the trial's x on that cell's grid. Used to hold out alternate levels.
+    """
+    keys: Dict[Tuple, List[float]] = {}
+    for t in trials:
+        pr = t.param_dict
+        cell = (t.family, pr.get("p"), pr.get("s"), pr.get("m"), pr.get("L"))
+        level = pr.get("x", pr.get("d2", pr.get("ratio", pr.get("offer", 0.0))))
+        keys.setdefault(cell, []).append(float(level))
+    order = {cell: {v: i for i, v in enumerate(sorted(set(vs)))}
+             for cell, vs in keys.items()}
+    out = []
+    for t in trials:
+        pr = t.param_dict
+        cell = (t.family, pr.get("p"), pr.get("s"), pr.get("m"), pr.get("L"))
+        level = pr.get("x", pr.get("d2", pr.get("ratio", pr.get("offer", 0.0))))
+        out.append(order[cell][float(level)])
+    return np.array(out, dtype=int)
+
+
+def heldout_mask(trials: Sequence[Trial]) -> np.ndarray:
+    """Alternate reward levels within each cell are held out for prediction."""
+    return (reward_level_rank(trials) % 2) == 1
+
+
+def cluster_ids(trials: Sequence[Trial]) -> np.ndarray:
+    """Clusters for the bootstrap: reward level x template."""
+    rank = reward_level_rank(trials)
+    tpl = {tid: i for i, tid in enumerate(sorted({t.fmt.template_id for t in trials}))}
+    return np.array([r * 1000 + tpl[t.fmt.template_id] for r, t in zip(rank, trials)])
+
+
+# --------------------------------------------------------------------------
+# likelihood
+# --------------------------------------------------------------------------
+
+def _apply(par: AgentParams, free: Sequence[str], vec: np.ndarray) -> AgentParams:
+    kw = {name: float(v) for name, v in zip(free, vec) if name != "lapse"}
+    return replace(par, **kw) if kw else par
+
+
+def log_likelihood(pk: Packed, choices: np.ndarray,
+                   par: AgentParams, lapse: float = 0.0) -> float:
+    z = latent_z_packed(pk, par)
+    p = np.clip(choice_prob(z, lapse=lapse), 1e-9, 1 - 1e-9)
+    return float(np.sum(choices * np.log(p) + (1 - choices) * np.log(1 - p)))
+
+
+def fit(trials: Sequence[Trial],
+        choices: np.ndarray,
+        free: Sequence[str],
+        init: AgentParams,
+        dominated_policy: str = "exclude",
+        dominated: Optional[np.ndarray] = None,
+        restarts: int = 3,
+        seed: int = 0) -> Tuple[AgentParams, float, float]:
+    """Maximum likelihood over `free`. Returns (params, lapse, log-likelihood).
+
+    ``dominated_policy`` is fixed in advance by BD9: "exclude" drops the flagged
+    dominated trials from the likelihood entirely, "lapse" keeps them and frees
+    a lapse rate in the choice rule.
+    """
+    trials = list(trials)
+    choices = np.asarray(choices, dtype=int)
+    if dominated is None:
+        dominated = np.array([t.dominant is not None for t in trials])
+
+    free = list(free)
+    if dominated_policy == "exclude":
+        keep = ~dominated
+        use_trials = [t for t, k in zip(trials, keep) if k]
+        use_choices = choices[keep]
+    elif dominated_policy == "lapse":
+        use_trials, use_choices = trials, choices
+        if "lapse" not in free:
+            free = free + ["lapse"]
+    else:
+        raise ValueError(f"unknown dominated_policy {dominated_policy!r}")
+
+    pk = pack(use_trials)
+    if not free:
+        return init, 0.0, log_likelihood(pk, use_choices, init)
+    if len(use_trials) == 0:
+        return init, 0.0, float("-nan")
+
+    bounds = [BOUNDS[name] for name in free]
+    start = []
+    for name in free:
+        if name == "lapse":
+            start.append(0.02)
+        else:
+            start.append(float(getattr(init, name)))
+
+    def nll(vec: np.ndarray) -> float:
+        lapse = 0.0
+        if "lapse" in free:
+            lapse = float(vec[free.index("lapse")])
+        par = _apply(init, free, vec)
+        val = -log_likelihood(pk, use_choices, par, lapse=lapse)
+        return val if np.isfinite(val) else 1e12
+
+    rng = np.random.default_rng(seed)
+    best = None
+    for r in range(max(1, restarts)):
+        x0 = np.array(start, dtype=float)
+        if r > 0:
+            lo = np.array([b[0] for b in bounds]); hi = np.array([b[1] for b in bounds])
+            x0 = np.clip(x0 + rng.normal(0, 0.15, size=len(x0)) * (hi - lo), lo, hi)
+        res = minimize(nll, x0, method="L-BFGS-B", bounds=bounds)
+        if best is None or res.fun < best.fun:
+            best = res
+
+    lapse = float(best.x[free.index("lapse")]) if "lapse" in free else 0.0
+    return _apply(init, free, best.x), lapse, float(-best.fun)
+
+
+# --------------------------------------------------------------------------
+# model comparison
+# --------------------------------------------------------------------------
+
+def pointwise_ll(pk: Packed, choices: np.ndarray,
+                 par: AgentParams, lapse: float = 0.0) -> np.ndarray:
+    z = latent_z_packed(pk, par)
+    p = np.clip(choice_prob(z, lapse=lapse), 1e-9, 1 - 1e-9)
+    return choices * np.log(p) + (1 - choices) * np.log(1 - p)
+
+
+def fit_all_models(trials: Sequence[Trial],
+                   choices: np.ndarray,
+                   init: AgentParams,
+                   dominated_policy: str = "exclude",
+                   seed: int = 0) -> Dict[str, Dict[str, object]]:
+    """Fit every nested model on the training levels, score on the held-out ones."""
+    trials = list(trials)
+    choices = np.asarray(choices, dtype=int)
+    held = heldout_mask(trials)
+    tr = [t for t, h in zip(trials, held) if not h]
+    te = [t for t, h in zip(trials, held) if h]
+    ctr, cte = choices[~held], choices[held]
+
+    out: Dict[str, Dict[str, object]] = {}
+    for name, free in FREE_SETS.items():
+        par, lapse, ll_train = fit(tr, ctr, free, init,
+                                   dominated_policy=dominated_policy, seed=seed)
+        dom_te = np.array([t.dominant is not None for t in te])
+        if dominated_policy == "exclude":
+            keep = ~dom_te
+            te_use = [t for t, k in zip(te, keep) if k]
+            cte_use = cte[keep]
+        else:
+            te_use, cte_use = te, cte
+        pw = pointwise_ll(pack(te_use), cte_use, par, lapse=lapse)
+        out[name] = {"params": par, "lapse": lapse, "ll_train": ll_train,
+                     "ll_test": float(np.sum(pw)), "pointwise": pw,
+                     "n_free": len(free) + (1 if dominated_policy == "lapse" else 0)}
+    return out
+
+
+def model_shares(fits: Dict[str, Dict[str, object]]) -> Dict[str, float]:
+    """Akaike-style weights over predictive log-likelihood on held-out levels.
+
+    The baseline is excluded: the question is which *kind of change* explains
+    the intervention, not whether anything changed at all.
+    """
+    names = [n for n in fits if n != "baseline"]
+    lls = np.array([fits[n]["ll_test"] for n in names], dtype=float)
+    lls = np.where(np.isfinite(lls), lls, -1e12)
+    w = np.exp(lls - lls.max())
+    w = w / w.sum()
+    return {n: float(v) for n, v in zip(names, w)}
+
+
+def vuong(fits: Dict[str, Dict[str, object]], a: str, b: str) -> Dict[str, float]:
+    """Vuong statistic for non-nested model `a` against `b` on held-out levels."""
+    pa = np.asarray(fits[a]["pointwise"], dtype=float)
+    pb = np.asarray(fits[b]["pointwise"], dtype=float)
+    n = min(len(pa), len(pb))
+    d = pa[:n] - pb[:n]
+    sd = float(np.std(d, ddof=1))
+    if sd < 1e-12 or n < 2:
+        return {"statistic": 0.0, "n": float(n)}
+    return {"statistic": float(np.mean(d) * np.sqrt(n) / sd), "n": float(n)}
+
+
+def cluster_bootstrap(trials: Sequence[Trial],
+                      fits: Dict[str, Dict[str, object]],
+                      a: str, b: str,
+                      n_boot: int = 400,
+                      seed: int = 0) -> Dict[str, float]:
+    """Paired cluster bootstrap of the held-out LL difference, a minus b.
+
+    Clusters are reward level x template, so a template that happens to be easy
+    does not count as independent evidence at every reward level.
+    """
+    held = heldout_mask(list(trials))
+    te = [t for t, h in zip(trials, held) if h]
+    dom = np.array([t.dominant is not None for t in te])
+    pa = np.asarray(fits[a]["pointwise"], dtype=float)
+    pb = np.asarray(fits[b]["pointwise"], dtype=float)
+    if len(pa) != len(te):                 # the exclude policy dropped dominated rows
+        te = [t for t, d in zip(te, dom) if not d]
+    if len(pa) != len(te):
+        return {"mean": float("nan"), "ci_lo": float("nan"), "ci_hi": float("nan"),
+                "p_a_better": float("nan")}
+    cl = cluster_ids(te)
+    uniq = np.unique(cl)
+    idx_by_cluster = {c: np.flatnonzero(cl == c) for c in uniq}
+    d = pa - pb
+    rng = np.random.default_rng(seed)
+    draws = np.empty(n_boot)
+    for i in range(n_boot):
+        pick = rng.choice(uniq, size=len(uniq), replace=True)
+        sel = np.concatenate([idx_by_cluster[c] for c in pick])
+        draws[i] = float(np.sum(d[sel]))
+    return {"mean": float(np.mean(draws)),
+            "ci_lo": float(np.percentile(draws, 2.5)),
+            "ci_hi": float(np.percentile(draws, 97.5)),
+            "p_a_better": float(np.mean(draws > 0))}
