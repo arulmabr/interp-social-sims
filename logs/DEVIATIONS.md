@@ -260,3 +260,48 @@ cap removes the problem entirely. The correction is noted in the report itself.
 **Rule 4.** No seed, prompt, dose, threshold or metric was changed because a result looked
 unhelpful. A coding rule was corrected because it was demonstrably wrong on inspected text, and
 every affected number was recomputed from generations already on disk.
+
+---
+
+## 2026-09-21 21:36 UTC — cvb_instr resubmitted automatically (attempt 2 of 2)
+
+**Cause:** state=CANCELLED by 234238 exit=0:0. **Technical change:** none — the job is resubmitted unchanged and resumes from its own checkpoint. Seeds, prompts, doses, thresholds and metrics are untouched (CLAUDE.md rule 4).
+**New job id:** 23421312
+
+---
+
+## 2026-09-21 21:49 UTC — cvb_neutral resubmitted automatically (attempt 1 of 2)
+
+**Cause:** state=COMPLETED exit=0:0 outputs_incomplete. **Technical change:** none — the job is resubmitted unchanged and resumes from its own checkpoint. Seeds, prompts, doses, thresholds and metrics are untouched (CLAUDE.md rule 4).
+**New job id:** 23421985
+
+---
+
+## 2026-09-21 22:30 UTC — D-2026-09-21-10: the neutral-label free generation ran over a flat range
+
+**What was wrong.** `cv_bench/neutral.py::phase_free` drew its levels from the calibration set with
+`cal_values(game, n_levels)` — an evenly spaced subsample of the whole calibration range. Every
+framing came back with a **constant** sampled choice: `free_sd = 0.000` for `ab_instructed` in both
+games, `content` in both games, and `counterbalanced` on the ultimatum. The one non-zero figure,
+0.164 for `counterbalanced` on the lottery, has `r = -0.026` — no relationship at all.
+
+**Why that is uninformative rather than a finding.** D51 established that the unsteered lottery
+crossing sits at n ≈ 242, beyond the legacy grid maximum of 240, while the calibration range runs
+22 → 143. The whole range is on one side of the switching point, so a constant choice is what the
+range guarantees, not what the label reveals. This is the same error corrected once already for the
+legacy stem (D-2026-09-21-08), and `cv_bench/s21_fix.py` already carried the remedy —
+`locate_switching_region` and `spanning_calibration_set` — which `neutral.py` did not use.
+
+**What changed.** `phase_free` now locates the crossing for **each** (framing, game, option order)
+from the unsteered readout and generates over levels spanning it (0.55× to 1.45× the crossing). The
+first pass is kept at `neutral/free_llama_flatrange.jsonl` and its selection at
+`neutral/framing_choice_flatrange.json`; nothing was deleted.
+
+**Consequence for the selection.** `framing_choice.json` from the first pass read
+`{"framing": "counterbalanced", "passed": false}`. **It is withdrawn as evidence.** No neutral
+framing is selected, and G3 waits on the second pass rather than running against a choice made on a
+flat range.
+
+**Rule 4.** The rerun is for a technical reason — the prompts could not exhibit the quantity being
+measured. No seed, dose, threshold, metric or label set was changed, and the first pass is retained
+and reported.

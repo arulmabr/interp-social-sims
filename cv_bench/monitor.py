@@ -91,7 +91,7 @@ EXPECTED.update({
     "cvb_neutral": dict(
         sbatch=REPO_SLURM / "cvb_neutral.sbatch",
         args=PREEMPT + ["--gres=gpu:a100:2", "--time=03:00:00"],
-        outputs={"neutral/mass_llama.jsonl": 400,
+        outputs={"neutral/mass_llama.jsonl": 344,   # 50 lottery + 36 ultimatum: CAL_ULTIMATUM has 36 values, not 50
                  "neutral/free_llama.jsonl": 640},
         done="neutral/done_neutral_llama.json",
     ),

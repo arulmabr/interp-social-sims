@@ -123,6 +123,35 @@ def cal_values(game: str, k: Optional[int] = None) -> List[int]:
     return [int(vs[i]) for i in sorted(set(idx.tolist()))]
 
 
+def _locate(rd, prompt_of, labels, stem, lo=10, hi=1400, n_probe=34) -> dict:
+    """Where does the unsteered readout cross 0.5 for THIS framing?"""
+    from cv_bench.readout import TrialSpec
+    xs = np.unique(np.round(np.geomspace(lo, hi, n_probe)).astype(int))
+    ps = []
+    for v in xs:
+        r = rd.score(TrialSpec(prompt=prompt_of(int(v)), labels=labels, stem=stem))
+        ps.append(r.prob[labels[1]])
+    ps = np.asarray(ps)
+    cross = None
+    for i in range(len(xs) - 1):
+        if (ps[i] - 0.5) * (ps[i + 1] - 0.5) <= 0 and ps[i] != ps[i + 1]:
+            cross = float(xs[i] + (0.5 - ps[i]) * (xs[i + 1] - xs[i])
+                          / (ps[i + 1] - ps[i]))
+            break
+    return dict(crossing=cross, probe_values=[int(v) for v in xs],
+                probe_p=[round(float(v), 5) for v in ps])
+
+
+def _spanning(region: dict, game: str, k: int) -> List[int]:
+    """k levels straddling the crossing; the calibration range if there is none."""
+    c = region.get("crossing")
+    if c is None:
+        return cal_values(game, k)
+    lo, hi = max(2, int(c * 0.55)), int(c * 1.45)
+    vals = np.unique(np.round(np.linspace(lo, hi, k)).astype(int))
+    return [int(v) for v in vals]
+
+
 def chosen_cap(default: int = 128) -> int:
     """The token cap the instrument check found sufficient, if it has run."""
     p = INSTR / "cap_choice.json"
@@ -165,15 +194,38 @@ def phase_mass(model_key: str, loaded=None) -> None:
 
 def phase_free(model_key: str, agents: int = 8, n_levels: int = 10,
                loaded=None) -> None:
-    """Free generation under each framing: what does the model do unforced?"""
+    """Free generation under each framing: what does the model do unforced?
+
+    The levels are located, not assumed. A first pass ran this over the flat
+    calibration range and every framing came back with a constant sampled choice
+    -- which says only that the whole range sits on one side of the switching
+    point, not that the label is a prior. The same mistake was caught once
+    already on the legacy stem (D-2026-09-21-08). Each (framing, game) now gets
+    its own spanning set, found from the unsteered readout.
+    """
     import torch
+    from cv_bench.readout import Readout, TrialSpec
+    from cv_bench.s21_fix import locate_switching_region
     model, tok = loaded or load(model_key, "bf16")
+    rd_loc = Readout(model, tok)
     cap = chosen_cap()
     sink = JsonlSink(OUT / f"free_{model_key}.jsonl",
                      key=lambda r: f"{r['framing']}|{r['game']}|{r['value']}|"
                                    f"{r['flip']}|{r['agent']}")
+    # one spanning set per (framing, game, flip), from the unsteered readout
+    spans: Dict[tuple, List[int]] = {}
+    for f in FRAMINGS:
+        for g in ("lottery", "ultimatum"):
+            for fl in FLIPS[f]:
+                _, labels = build(f, g, cal_values(g)[0], fl)
+                probe_prompt = lambda v, _f=f, _g=g, _fl=fl: build(_f, _g, int(v), _fl)[0]
+                reg = _locate(rd_loc, probe_prompt, labels, STEM_OF[f])
+                spans[(f, g, fl)] = _spanning(reg, g, n_levels)
+                print(f"[neutral] {f}/{g}/flip={fl}: crossing={reg['crossing']} "
+                      f"levels={spans[(f, g, fl)][:4]}...{spans[(f, g, fl)][-2:]}",
+                      flush=True)
     units = [(f, g, v, fl, a) for f in FRAMINGS for g in ("lottery", "ultimatum")
-             for v in cal_values(g, n_levels) for fl in FLIPS[f]
+             for fl in FLIPS[f] for v in spans[(f, g, fl)]
              for a in range(1, agents + 1)]
 
     def work(u):
