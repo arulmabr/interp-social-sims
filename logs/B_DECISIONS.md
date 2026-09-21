@@ -46,3 +46,31 @@ the tokenizer's `apply_chat_template`, and the one function that renders without
 Track B passes. It exists only so that a future audit can reproduce the legacy format deliberately and
 label it, in the way G2's `legacy` arm does. `readout.TrialSpec` already defaults to
 `use_chat_template=True`, so the shared readout agrees with this by default.
+
+**BD5. Experimental conditions are replicated across splits; only reward levels are divided.**
+`ICLR_PLAN.md` B1 assigns splits "by reward-level index mod 4 within each cell". Applied literally to
+every family, that rule silently destroys two parts of the design, both caught by the B1 tests rather
+than by reading:
+- **The mini-ultimatum lost a condition.** Its four alternatives — (5,5), (2,8), (10,0) and *no
+  alternative* — are conditions, not reward levels. Under mod-4 each landed in exactly one split, and
+  the no-alternative condition landed in `test`, so it was generated **zero times** and the contrast
+  the design exists to measure was absent from the dataset. Conditions are now replicated in full in
+  every split.
+- **The transfer battery was cut to a quarter.** Holt-Laury's switching point needs all ten decisions;
+  splitting by item index left **three of ten** in `disc` and no switching point to find. Each
+  instrument is now emitted whole within each requested split. The battery is still barred from `sel`
+  and `cal` (A11), enforced by `TransferMisuse`.
+The rule is therefore read as applying to *reward levels within a cell* — the sure-gain and sure-loss
+x grids, the mixed ratio, the paired spread, the responder and dictator offers — and not to design
+conditions or to the rungs of a standard instrument. Splitting a condition across splits also confounds
+condition with split, which would bias any comparison between them.
+
+**BD6. The low end of the plan's reward grid is statewise dominated, and the cells are kept.** The
+grid runs from 0.3x to 5x the risk-neutral point s/p, so whenever p >= 0.3 the lowest levels put the
+gamble's best outcome below the sure amount: at p = 0.5, s = 20 the grid starts at x = 12, and a 50%
+chance of $12 cannot beat $20 for sure. 104 of the 726 risk trials are dominated this way. They are
+kept, because a dominated level is a legitimate extreme reward level that pins the floor of the choice
+curve, but every one is flagged (`Trial.dominant`) so that the dominated-choice rate counts them and
+the B2 estimator can weight or drop them deliberately. In a gain frame the sure option dominates; in a
+loss frame the gamble does, since it risks losing at most x <= s. Dominance outside this low-end region,
+or in the paired and mixed families, is a bug and is asserted against.
