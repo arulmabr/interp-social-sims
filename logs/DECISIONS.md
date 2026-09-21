@@ -292,3 +292,28 @@ by an unhelpful result, and rule 1 still forbids any number without a file.
 **D40. `peft` is not installed**, so the LoRA anchors of B3.2 cannot run as things stand. The
 benchmark records `lora_seconds_per_step = null` rather than estimating it. Installing `peft` is a
 small change but it is a dependency addition, so it is reported rather than made silently.
+
+**D41. The "60" in the amendment's cap is Track B's budget, and D38's second flag is closed.** D38
+recorded that the cap "replaces the earlier 40 and 60" while only 40 had ever been communicated to the
+Friday session. The 60 was communicated to the **Track B session** instead, as its own allowance of 60
+GPU-hours, alongside `--nice=1000` and a one-job-at-a-time restriction, with the Friday session holding
+GPU priority. Neither session could see the other's figure, which is why the sum looked unattributed.
+The amendment's single 400 GPU-hour cap now replaces **both** budgets, and with it Track B's
+one-job-at-a-time restriction and its `--nice=1000` default, which are superseded by amendment items 2
+and 3: `--nice=10000` now marks work deferred past the cutoff, not Track B work as such. The 400 is a
+**shared** pool across both sessions, not 400 each; Track B draws from the same cap and the accounting
+in `reports/SCHEDULE.md` is therefore joint. Track B still writes only under `cv_bench/tasks/`,
+`cv_bench/estimator/`, `cv_bench/anchors/`, `results/B/` and `reports/B_*`, and takes shared modules by
+merging `iclr-extension` rather than rewriting them.
+
+**D42. B3.2's LoRA anchors are blocked on `peft`, and the 4-bit fallback is unverified, not broken.**
+Confirmed independently from the Track B worktree: `peft` is absent (`torch` 2.5.1+cu121,
+`transformers` 4.50.3, `accelerate` 1.10.0 are present), so D40 holds and no LoRA anchor can be trained
+until it is installed. The intended fallback for the 70B — 4-bit base weights if bf16 on 2 GPUs does not
+fit — needs `bitsandbytes`, which is installed at 0.43.2 but prints "compiled without GPU support" on
+import. **That warning is not evidence of a bad build**: it was observed on a login node that has no GPU
+at all (`nvidia-smi` absent, `torch.cuda.is_available()` false), where the message is expected. Whether
+4-bit actually works is therefore an open question to settle on a GPU node before the fallback is relied
+on, and it is recorded as unverified rather than failed. Both the primary path and its fallback are
+blocked or unconfirmed, so B3.2 is not schedulable until `peft` is installed and a GPU-node import check
+has run; that check costs one short interactive allocation and is not a reason to spend the budget.
