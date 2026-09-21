@@ -215,7 +215,8 @@ def fallback_gradient(layer: int, game: str, model_key: str = "llama") -> dict:
 
     OUT.mkdir(parents=True, exist_ok=True)
     doc = dict(direction=unit(v1), direction_format_averaged=unit(v2),
-               source="cv_bench/g4b.py fallback",
+               source="cv_bench/g4b.py friday-session",
+               version="friday_session",
                definition=("grad of z (logit difference) wrt the residual stream at "
                            "the layer, final prompt token, averaged over prompts; "
                            "ICLR_PLAN.md B3.1"),
@@ -224,14 +225,19 @@ def fallback_gradient(layer: int, game: str, model_key: str = "llama") -> dict:
                            "prompts, which are defined by B1/B2 and are not "
                            "available on this side"),
                n_prompts=len(vals), layer=layer, game=game,
-               duplicate_to_reconcile=True)
+               duplicate_to_reconcile=True,
+               note=("the Friday-session version. Track B's B3.1 is being rebuilt "
+                     "after a labelling bug, so this is computed here rather than "
+                     "waited for. It is a second measurement of the same defined "
+                     "quantity, not a replacement: reconcile the two when B3.1 "
+                     "lands."))
     np.save(OUT / f"fallback_gradient_L{layer}_{game}.npy", doc["direction"])
     np.save(OUT / f"fallback_gradient_fmtavg_L{layer}_{game}.npy",
             doc["direction_format_averaged"])
     meta = {k: v for k, v in doc.items() if not isinstance(v, np.ndarray)}
     (OUT / f"fallback_gradient_L{layer}_{game}.json").write_text(json.dumps(meta))
-    print(f"[g4b] fallback gradient L{layer} {game}: DUPLICATE, to be reconciled "
-          f"with Track B's B3.1", flush=True)
+    print(f"[g4b] friday-session gradient L{layer} {game}: computed here; "
+          f"reconcile with Track B's B3.1 when it lands", flush=True)
     return doc
 
 
@@ -285,7 +291,7 @@ def geometry() -> List[dict]:
                     fb2 = OUT / f"fallback_gradient_fmtavg_L{layer}_{game}.npy"
                     if fb.exists():
                         dirs["gradient"] = np.load(fb)
-                        gsrc, dup = "cv_bench/g4b.py fallback", True
+                        gsrc, dup = "cv_bench/g4b.py friday-session", True
                     if fb2.exists():
                         dirs["gradient_both_orders"] = np.load(fb2)
                 d = len(next(iter(dirs.values())))

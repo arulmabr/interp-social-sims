@@ -96,6 +96,43 @@ def _bare_label_re(game: str):
     return re.compile(r"[\s'\"*#>-]*(%s|%s)[\s.!'\"*]*" % (neg, pos), re.I)
 
 
+PHRASE = re.compile(r"""(?:\bfinal\s+answer\b
+                        |\bmy\s+(?:choice|answer|decision)\b
+                        |\bi\s+(?:would\s+|will\s+|'d\s+|'ll\s+)?
+                          (?:choose|select|pick|go\s+with|opt\s+for)\b
+                        |\bthe\s+answer\s+is\b
+                        |\bi\s+(?:accept|reject)\b)""", re.I | re.X)
+
+
+def phrase_code(text: str, game: str) -> Dict[str, object]:
+    """Third coding: the label that FOLLOWS an explicit decision phrase.
+
+    Required alongside `legacy` (last mention) and `strict` (first mention) so a
+    crossing can be read under all three. Where the response names its decision
+    -- "Final answer: Safe", "I choose the Risky Option" -- this reads the label
+    after the phrase and nothing else. A response that never uses such a phrase
+    is `no_answer`; it is not resolved by position, which is precisely what the
+    other two rules do and why they disagree on a truncated rationale.
+    """
+    neg, pos = LABELS[game]
+    t = (text or "").strip()
+    if not t:
+        return dict(kind="no_answer", choice=None)
+    best = None
+    for m in PHRASE.finditer(t):
+        lab = re.search(r"\b(%s|%s)\b" % (neg, pos), t[m.start():m.start() + 160], re.I)
+        if lab:
+            best = lab.group(1)          # the LAST decision phrase that names a label
+    if best is not None:
+        return dict(kind="phrase", choice=int(best.lower() == pos.lower()))
+    # a bare label, or a label alone on the final line, is a decision stated
+    # without a phrase, and is the same evidence
+    d = decision_code(t, game)
+    if d["kind"] in ("bare_label", "trailing_label"):
+        return dict(kind=d["kind"], choice=d["choice"])
+    return dict(kind="no_answer", choice=None)
+
+
 def decision_code(text: str, game: str) -> Dict[str, object]:
     """Code a generation only when it states a decision.
 

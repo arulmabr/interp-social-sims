@@ -77,7 +77,7 @@ RUNROOT = Path(os.environ.get("ICLR_RUNROOT",
 OUT = RUNROOT / "g4"
 INSTR = RUNROOT / "instr"
 
-LAYERS = (48, 50)
+LAYERS = (48, 50, 17)        # 17 is Qwen's probe layer (G4q)
 VARIANTS = ("as_written", "reconstruction")
 N_AGENTS = 40                      # config.LOTTERY["n_agents"], the paper's protocol
 
@@ -142,12 +142,16 @@ PROBE_PARAMS = {"lottery": LOTTERY_GRID, "ultimatum": ULTIMATUM_GRID}
 PROBE_SAMPLES = 8                  # n_samples_per_param in the legacy builder
 
 
-def variant_cfg(variant: str, cap: int) -> dict:
+def variant_cfg(variant: str, cap: int, positions: Optional[str] = None) -> dict:
     if variant == "as_written":
-        return dict(chat_template=False, max_new_tokens=12, positions="legacy_ramp",
-                    direction_space="standardised")
-    return dict(chat_template=True, max_new_tokens=cap, positions="all",
-                direction_space="raw")
+        cfg = dict(chat_template=False, max_new_tokens=12, positions="legacy_ramp",
+                   direction_space="standardised")
+    else:
+        cfg = dict(chat_template=True, max_new_tokens=cap, positions="all",
+                   direction_space="raw")
+    if positions:                      # S3.2 sweeps the position policy itself
+        cfg["positions"] = positions
+    return cfg
 
 
 def chosen_cap(default: int = 256) -> int:
@@ -219,7 +223,8 @@ def strict_code_of(text: str, game: str) -> int:
 # ---------------------------------------------------------------------------
 # phase: rebuild the probe
 # ---------------------------------------------------------------------------
-def phase_train(model_key: str, variant: str, layer: int, loaded=None) -> dict:
+def phase_train(model_key: str, variant: str, layer: int, loaded=None,
+                positions: Optional[str] = None) -> dict:
     """Rebuild the preference probe the way Probes/experiments/_common.py does.
 
     Per reward level, sample PROBE_SAMPLES choices and label the level's
@@ -235,8 +240,9 @@ def phase_train(model_key: str, variant: str, layer: int, loaded=None) -> dict:
     from sklearn.preprocessing import StandardScaler
 
     model, tok = loaded or load(model_key, "bf16")
-    cfg = variant_cfg(variant, chosen_cap())
-    path = OUT / f"probe_{variant}_L{layer}.json"
+    cfg = variant_cfg(variant, chosen_cap(), positions)
+    path = OUT / (f"probe_{variant}_L{layer}.json" if model_key == "llama"
+                  else f"probe_{model_key}_{variant}_L{layer}.json")
     if path.exists():
         print(f"[g4] probe already built: {path.name}", flush=True)
         return json.loads(path.read_text())
@@ -254,7 +260,7 @@ def phase_train(model_key: str, variant: str, layer: int, loaded=None) -> dict:
             acts, labels, drops, kept = [], [], 0, 0
             levels_of: List[int] = []
             norms = []
-            for v in PROBE_PARAMS[game]:
+            for v in (grids_for(model_key)[0 if game == "lottery" else 1]):
                 text = render(tok, game, v, cfg)
                 enc = tok(text, return_tensors="pt").to(model.device)
                 with torch.inference_mode():
@@ -285,7 +291,7 @@ def phase_train(model_key: str, variant: str, layer: int, loaded=None) -> dict:
                     kept += 1
             y = np.asarray(labels, dtype=int)
             rec = dict(game=game, n_kept=kept, n_dropped=drops,
-                       n_levels=len(PROBE_PARAMS[game]),
+                       n_levels=len(grids_for(model_key)[0 if game == "lottery" else 1]),
                        drop_rate=drops / max(kept + drops, 1),
                        classes=sorted(set(y.tolist())),
                        median_norm_train=float(np.median(norms)))
@@ -391,15 +397,27 @@ def phase_train(model_key: str, variant: str, layer: int, loaded=None) -> dict:
 # ---------------------------------------------------------------------------
 # phase: the dose sweep
 # ---------------------------------------------------------------------------
-def phase_sweep(model_key: str, variant: str, layer: int, loaded=None) -> None:
+def grids_for(model_key: str) -> Tuple[List[int], List[int]]:
+    """The legacy grid of the model being rebuilt. Qwen's is shorter."""
+    if model_key == "qwen":
+        return list(range(20, 125, 5)), list(range(10, 95, 10))
+    return LOTTERY_GRID, ULTIMATUM_GRID
+
+
+def phase_sweep(model_key: str, variant: str, layer: int, loaded=None,
+                positions: Optional[str] = None, tag: str = "",
+                dose_ids: str = "", directions: str = "") -> None:
     import torch
     from cv_bench.readout import Readout, TrialSpec
     from cv_bench.steer import Intervention, SteeringHook
 
     model, tok = loaded or load(model_key, "bf16")
     rd = Readout(model, tok)
-    cfg = variant_cfg(variant, chosen_cap())
-    probe = phase_train(model_key, variant, layer, (model, tok))
+    cfg = variant_cfg(variant, chosen_cap(), positions)
+    probe = phase_train(model_key, variant, layer, (model, tok), positions)
+    lot, ult = grids_for(model_key)
+    samp_lot, samp_ult = lot[::2], ult
+    ctrl_lot, ctrl_ult = lot[::6], ult[::2]
 
     M = median_norm(layer) or float(np.median(
         [g.get("median_norm_train", np.nan) for g in probe["games"].values()]))
@@ -415,9 +433,14 @@ def phase_sweep(model_key: str, variant: str, layer: int, loaded=None) -> None:
     print(f"[g4] control doses at ids {ctrl_ids} "
           f"({[round(doses[i]['dose'], 4) for i in ctrl_ids]})", flush=True)
 
-    sink_s = JsonlSink(OUT / f"sampled_{variant}_L{layer}.jsonl",
+    sfx = f"_{tag}" if tag else ""
+    sink_s = JsonlSink(OUT / f"sampled_{model_key}_{variant}_L{layer}{sfx}.jsonl"
+                       if model_key != "llama" or tag
+                       else OUT / f"sampled_{variant}_L{layer}.jsonl",
                        key=lambda r: f"{r['direction']}|{r['game']}|{r['dose_id']}|{r['value']}")
-    sink_r = JsonlSink(OUT / f"readout_{variant}_L{layer}.jsonl",
+    sink_r = JsonlSink(OUT / f"readout_{model_key}_{variant}_L{layer}{sfx}.jsonl"
+                       if model_key != "llama" or tag
+                       else OUT / f"readout_{variant}_L{layer}.jsonl",
                        key=lambda r: f"{r['direction']}|{r['game']}|{r['dose_id']}|{r['value']}")
 
     std = cfg["direction_space"] == "standardised"
@@ -452,10 +475,20 @@ def phase_sweep(model_key: str, variant: str, layer: int, loaded=None) -> None:
 
     # ---- sampled ----
     dirs_here = directions_for(variant)
+    if directions:
+        want = tuple(d.strip() for d in directions.split(",") if d.strip())
+        dirs_here = tuple(d for d in dirs_here if d in want)
+    keep = None
+    if dose_ids:
+        keep = {int(x) for x in dose_ids.split(",") if x.strip() != ""}
+        print(f"[g4] restricted to dose ids {sorted(keep)} and directions {dirs_here}",
+              flush=True)
     s_units = [(w, g, i, v) for w in dirs_here
                for g in ("lottery", "ultimatum")
-               for i in (range(len(doses)) if w == "probe" else ctrl_ids)
-               for v in sampled_levels(g, w)]
+               for i in (sorted(keep) if keep is not None
+                         else (range(len(doses)) if w == "probe" else ctrl_ids))
+               for v in (samp_lot if g == "lottery" else samp_ult)
+               if w == "probe" or v in (ctrl_lot if g == "lottery" else ctrl_ult)]
 
     def s_work(u):
         which, game, di, v = u
@@ -498,8 +531,8 @@ def phase_sweep(model_key: str, variant: str, layer: int, loaded=None) -> None:
     # the readout is cheap, so every direction gets every dose and every level
     r_units = [(w, g, i, v) for w in dirs_here
                for g in ("lottery", "ultimatum")
-               for i in range(len(doses))
-               for v in (LOTTERY_GRID if g == "lottery" else ULTIMATUM_GRID)]
+               for i in (sorted(keep) if keep is not None else range(len(doses)))
+               for v in (lot if g == "lottery" else ult)]
 
     def r_work(u):
         which, game, di, v = u
@@ -530,7 +563,9 @@ def phase_sweep(model_key: str, variant: str, layer: int, loaded=None) -> None:
     done_s = complete(s_units, sink_s, lambda u: f"{u[0]}|{u[1]}|{u[2]}|{u[3]}")
     sink_s.close()
     if done_r and done_s:
-        mark_done(OUT / f"done_g4_{variant}_L{layer}.json",
+        mark_done(OUT / (f"done_g4_{variant}_L{layer}.json" if model_key == "llama"
+                         and not tag else
+                         f"done_g4_{model_key}_{variant}_L{layer}{sfx}.json"),
                   variant=variant, layer=layer, M=M, n_doses=len(doses),
                   n_readout=len(r_units), n_sampled=len(s_units))
     else:
@@ -597,6 +632,14 @@ def main() -> int:
     ap.add_argument("--model", default="llama", choices=list(MODELS))
     ap.add_argument("--variant", required=True, choices=VARIANTS)
     ap.add_argument("--layer", type=int, required=True, choices=list(LAYERS))
+    ap.add_argument("--positions", default=None,
+                    choices=["legacy_ramp", "all_prompt", "all", "last"],
+                    help="S3.2: override the variant's position policy")
+    ap.add_argument("--tag", default="", help="suffix for this run's output files")
+    ap.add_argument("--dose-ids", default="", dest="dose_ids",
+                    help="S3.2: restrict to these dose indices, e.g. 0,7")
+    ap.add_argument("--directions", default="",
+                    help="restrict to these directions, e.g. probe")
     ap.add_argument("--phase", default="all",
                     choices=["train", "sweep", "bench", "all"])
     a = ap.parse_args()
@@ -607,9 +650,10 @@ def main() -> int:
     if a.phase == "bench":
         phase_bench(a.model, loaded)
     elif a.phase == "train":
-        phase_train(a.model, a.variant, a.layer, loaded)
+        phase_train(a.model, a.variant, a.layer, loaded, a.positions)
     else:
-        phase_sweep(a.model, a.variant, a.layer, loaded)
+        phase_sweep(a.model, a.variant, a.layer, loaded, a.positions, a.tag,
+                    a.dose_ids, a.directions)
     print(f"[g4] {a.phase} finished in {(time.time()-t0)/60:.1f} min", flush=True)
     return 0
 
