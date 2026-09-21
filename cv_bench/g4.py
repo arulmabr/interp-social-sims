@@ -95,7 +95,21 @@ NORM_DOSES = (0.25, 0.50, 1.00)
 # establish a band, so they run at four doses and a coarser level grid; that is
 # the difference between a 1.5x job and a 3x one.
 CONTROL_DIRECTIONS = ("reward", "rand0", "rand1")
-ALL_DIRECTIONS = ("probe",) + CONTROL_DIRECTIONS
+
+# G4b (FRIDAY_PLAN): for the chat-template reconstruction only, the
+# difference-of-means and first-PCA directions from the probe's own activations,
+# and a ridge probe for log n. These are the CAA / ActAdd and RepE / LAT style
+# baselines the review asks for, built from the same activations as the probe so
+# the comparison is not confounded by data. Steered at the same doses, from the
+# same dose grid, and reported descriptively.
+G4B_DIRECTIONS = ("diffmean", "pca1", "ridge_logn")
+ALL_DIRECTIONS = ("probe",) + CONTROL_DIRECTIONS + G4B_DIRECTIONS
+
+
+def directions_for(variant: str) -> Tuple[str, ...]:
+    if variant == "reconstruction":
+        return ALL_DIRECTIONS
+    return ("probe",) + CONTROL_DIRECTIONS
 
 # the legacy grids, from Probes/config.py
 LOTTERY_GRID = list(range(20, 245, 5))
@@ -309,6 +323,30 @@ def phase_train(model_key: str, variant: str, layer: int, loaded=None) -> dict:
                 rw_raw = rw_raw / (np.linalg.norm(rw_raw) + 1e-12)
             cos = (float(np.dot(w_std, rw_std)) if rw_std is not None
                    else float("nan"))
+
+            # --- G4b directions, from the same standardised activations -------
+            Z = sc.transform(X)
+            # difference of means, the CAA / ActAdd form
+            dm = Z[y == 1].mean(0) - Z[y == 0].mean(0)
+            dm_std = dm / (np.linalg.norm(dm) + 1e-12)
+            # first principal component of the centred activations, the RepE form
+            Zc = Z - Z.mean(0, keepdims=True)
+            try:
+                _, _, Vt = np.linalg.svd(Zc, full_matrices=False)
+                pc_std = Vt[0] / (np.linalg.norm(Vt[0]) + 1e-12)
+            except np.linalg.LinAlgError:
+                pc_std = None
+            # ridge on log of the prompt's own payoff: a payoff code by construction
+            t = np.log(np.asarray(levels_of, dtype=float))
+            A = Z.T @ Z + 1.0 * np.eye(Z.shape[1])
+            rg = np.linalg.solve(A, Z.T @ (t - t.mean()))
+            rg_std = rg / (np.linalg.norm(rg) + 1e-12)
+
+            def to_raw(v):
+                if v is None:
+                    return None
+                r = v / np.clip(sc.scale_, 1e-8, None)
+                return r / (np.linalg.norm(r) + 1e-12)
             rec.update(trained=True,
                        train_accuracy=float(lr.score(sc.transform(X), y)),
                        base_rate=float(y.mean()),
@@ -320,6 +358,18 @@ def phase_train(model_key: str, variant: str, layer: int, loaded=None) -> dict:
                                             if rw_std is not None else None),
                        reward_raw=([float(x) for x in rw_raw]
                                    if rw_raw is not None else None),
+                       diffmean_standardised=[float(x) for x in dm_std],
+                       diffmean_raw=[float(x) for x in to_raw(dm_std)],
+                       pca1_standardised=([float(x) for x in pc_std]
+                                          if pc_std is not None else None),
+                       pca1_raw=([float(x) for x in to_raw(pc_std)]
+                                 if pc_std is not None else None),
+                       ridge_logn_standardised=[float(x) for x in rg_std],
+                       ridge_logn_raw=[float(x) for x in to_raw(rg_std)],
+                       cos_choice_diffmean=float(np.dot(w_std, dm_std)),
+                       cos_choice_pca1=(float(np.dot(w_std, pc_std))
+                                        if pc_std is not None else float("nan")),
+                       cos_choice_ridge=float(np.dot(w_std, rg_std)),
                        scaler_scale_median=float(np.median(sc.scale_)))
             print(f"[g4] {variant} L{layer} {game}: reward probe acc "
                   f"{rw_acc:.3f}, cos(choice, reward) = {cos:+.3f}", flush=True)
@@ -381,6 +431,8 @@ def phase_sweep(model_key: str, variant: str, layer: int, loaded=None) -> None:
             key = "direction_standardised" if std else "direction_raw"
         elif which == "reward":
             key = "reward_standardised" if std else "reward_raw"
+        elif which in G4B_DIRECTIONS:
+            key = f"{which}_standardised" if std else f"{which}_raw"
         else:
             # A random direction of the same norm, drawn once per (layer, game,
             # draw) and fixed by seed so it is the same vector in every cell.
@@ -399,7 +451,8 @@ def phase_sweep(model_key: str, variant: str, layer: int, loaded=None) -> None:
                             norm_unit=M, sign=-1)      # legacy lambdas are negative
 
     # ---- sampled ----
-    s_units = [(w, g, i, v) for w in ALL_DIRECTIONS
+    dirs_here = directions_for(variant)
+    s_units = [(w, g, i, v) for w in dirs_here
                for g in ("lottery", "ultimatum")
                for i in (range(len(doses)) if w == "probe" else ctrl_ids)
                for v in sampled_levels(g, w)]
@@ -443,7 +496,7 @@ def phase_sweep(model_key: str, variant: str, layer: int, loaded=None) -> None:
 
     # ---- readout ----
     # the readout is cheap, so every direction gets every dose and every level
-    r_units = [(w, g, i, v) for w in ALL_DIRECTIONS
+    r_units = [(w, g, i, v) for w in dirs_here
                for g in ("lottery", "ultimatum")
                for i in range(len(doses))
                for v in (LOTTERY_GRID if g == "lottery" else ULTIMATUM_GRID)]

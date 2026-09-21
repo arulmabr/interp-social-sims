@@ -399,7 +399,15 @@ def main() -> int:
             bad_state = not last["state"].startswith("COMPLETED")
             hits = scan_log(latest_log(task))
             incomplete = not checks[task]["complete"]
-            if bad_state or hits or incomplete:
+            # A log hit is not on its own a reason to resubmit. These logs are
+            # opened in append mode across requeues, so a preemption message from
+            # an earlier attempt outlives the attempt that succeeded -- and a job
+            # that finished with every row and its marker on disk is finished
+            # whatever its log remembers. Resubmit for the state or for missing
+            # output; report the rest.
+            hits = [h for h in hits if h != "preempted"]
+            checks[task]["log_flags"] = hits
+            if bad_state or incomplete:
                 cause = (f"state={last['state']} exit={last['exit']}"
                          + (f" log={','.join(hits)}" if hits else "")
                          + (" outputs_incomplete" if incomplete else ""))
