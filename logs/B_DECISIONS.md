@@ -74,3 +74,22 @@ curve, but every one is flagged (`Trial.dominant`) so that the dominated-choice 
 the B2 estimator can weight or drop them deliberately. In a gain frame the sure option dominates; in a
 loss frame the gamble does, since it risks losing at most x <= s. Dominance outside this low-end region,
 or in the paired and mixed families, is a bug and is asserted against.
+
+**BD7. The transfer battery is locked in the runner, not just documented.** Author amendment, 22 Sept,
+extending BD5. The battery was already barred from `sel` and `cal` (`TransferMisuse`); it is now also
+**evaluation-only**. `role` is a *required* argument of every transfer generator, with no default, so a
+caller cannot materialise the battery without saying who is about to look at it. Only `unmodified` and
+`anchor` are admitted until the predictions B9 derives from the choice-based fit are committed at
+`results/B/b9_transfer_predictions.json`; every other role raises `TransferLocked`. Every access,
+granted or refused, is appended to `logs/B_TRANSFER_ACCESS.log`. The check requires the predictions to
+be **committed in HEAD**, not merely present in the working tree, because a file that can still be
+edited after the battery is seen does not constrain anything — which is the whole point of deriving
+predictions "before looking".
+
+**BD8. `peft` was already installed by the Friday session; Track B installs nothing.** Amendment item 6
+asked to check first. `peft==0.13.2` is present and pinned in `env/requirements-lock.txt`, installed
+22 Sept under the S2.1-fix amendment and recorded there as D45. BD2 is therefore closed: B3.2 is no
+longer blocked on the dependency. The 70B LoRA will train in **bf16 on 4 GPUs** per the amendment, with
+4-bit used only if four GPUs cannot be obtained and recorded as a deviation. `bitsandbytes` remains
+compiled without GPU support, which the lock file also notes, so the 4-bit fallback would need that
+fixed first — one more reason the bf16 path is the one to take.

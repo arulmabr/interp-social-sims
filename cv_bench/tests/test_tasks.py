@@ -220,7 +220,7 @@ def test_generators_refuse_the_test_split():
 
 def test_no_generator_emits_a_test_trial_by_default():
     produced = (list(risk.generate_risk()) + list(social.generate_social())
-                + list(transfer.generate_transfer()))
+                + list(transfer.generate_transfer("unmodified")))
     assert produced
     assert not [t for t in produced if t.split == "test"]
 
@@ -265,19 +265,19 @@ def test_social_uses_accept_reject_labels():
 def test_transfer_refuses_selection_and_calibration_splits():
     for split in ("sel", "cal"):
         with pytest.raises(transfer.TransferMisuse, match="never be used for selection"):
-            list(transfer.generate_transfer(splits=(split,)))
+            list(transfer.generate_transfer("unmodified", splits=(split,)))
 
 
 def test_transfer_battery_has_all_three_instruments():
-    families = {t.family for t in transfer.generate_transfer()}
+    families = {t.family for t in transfer.generate_transfer("unmodified")}
     assert families == {"holt_laury", "gneezy_potters", "eckel_grossman"}
 
 
 def test_holt_laury_switching_point_is_where_it_should_be():
     """Risk neutrality switches at decision 5 of 10 in the standard instrument."""
-    trials = sorted(transfer.generate_holt_laury(splits=("disc",)),
+    trials = sorted(transfer.generate_holt_laury("unmodified", splits=("disc",)),
                     key=lambda t: t.param_dict["decision"])
-    for t in transfer.generate_holt_laury(splits=("disc",)):
+    for t in transfer.generate_holt_laury("unmodified", splits=("disc",)):
         safe, risky = t.canonical
         p = t.param_dict["p"]
         if p < 0.5:
@@ -288,7 +288,7 @@ def test_holt_laury_switching_point_is_where_it_should_be():
 
 
 def test_gneezy_potters_risky_option_has_the_higher_mean():
-    for t in transfer.generate_gneezy_potters(splits=("disc",)):
+    for t in transfer.generate_gneezy_potters("unmodified", splits=("disc",)):
         keep, risky = t.canonical
         assert risky.ev > keep.ev
         assert risky.worst < keep.worst        # and strictly more spread
@@ -300,14 +300,14 @@ def test_holt_laury_ladder_is_complete_in_every_split():
     """A ladder split across splits has no switching point in any of them."""
     for split in ("disc",):
         rungs = [t.param_dict["decision"]
-                 for t in transfer.generate_holt_laury(splits=(split,))]
+                 for t in transfer.generate_holt_laury("unmodified", splits=(split,))]
         assert sorted(rungs) == [float(i) for i in range(1, 11)], \
             f"split {split} has {len(rungs)} of 10 Holt-Laury decisions"
 
 
 def test_every_transfer_instrument_is_whole():
     counts = {}
-    for t in transfer.generate_transfer(splits=("disc",)):
+    for t in transfer.generate_transfer("unmodified", splits=("disc",)):
         counts[t.family] = counts.get(t.family, 0) + 1
     assert counts == {"holt_laury": 10, "gneezy_potters": 10, "eckel_grossman": 5}
 
@@ -327,7 +327,7 @@ def test_no_condition_is_lost_to_the_locked_test_split():
     This is the bug that motivated BD5: with four conditions and a mod-4 split
     rule, one condition lands in `test` and silently vanishes from the dataset.
     """
-    produced = list(social.generate_mini_ultimatum()) + list(transfer.generate_transfer())
+    produced = list(social.generate_mini_ultimatum()) + list(transfer.generate_transfer("unmodified"))
     assert {t.param_dict["has_alternative"] for t in produced
             if t.family == "mini_ultimatum"} == {0.0, 1.0}
     assert len({t.param_dict["decision"] for t in produced
@@ -342,3 +342,40 @@ def test_social_dominance_is_recorded_only_on_catch_trials():
                 f"{t.family} {t.param_dict} would score a preference as dominated"
     catches = [t for t in social.generate_social() if t.is_catch]
     assert catches and all(t.dominant is not None for t in catches)
+
+
+# -- the transfer lock (evaluation-only until B9's predictions are committed) --
+
+def test_transfer_battery_is_evaluation_only():
+    for role in ("unmodified", "anchor"):
+        assert list(transfer.generate_transfer(role))
+    for role in ("probe", "sae", "persona", "prompt_family", "lora"):
+        with pytest.raises(core.TransferLocked, match="evaluation-only"):
+            list(transfer.generate_transfer(role))
+
+
+def test_transfer_role_has_no_default():
+    """A caller must say who is looking; there is no way to omit it."""
+    import inspect
+    for fn in (transfer.generate_transfer, transfer.generate_holt_laury,
+               transfer.generate_gneezy_potters, transfer.generate_eckel_grossman):
+        assert inspect.signature(fn).parameters["role"].default is inspect.Parameter.empty
+
+
+def test_transfer_access_is_logged(tmp_path):
+    log = tmp_path / "B_TRANSFER_ACCESS.log"
+    core.check_transfer_access("unmodified", "unit-test", log_path=log)
+    with pytest.raises(core.TransferLocked):
+        core.check_transfer_access("probe", "unit-test", log_path=log)
+    lines = log.read_text().strip().splitlines()
+    assert len(lines) == 2
+    assert '"granted": true' in lines[0] and '"granted": false' in lines[1]
+
+
+def test_uncommitted_predictions_do_not_unlock_the_battery(tmp_path):
+    """A file in the working tree is not committed, so it must not unlock."""
+    preds = tmp_path / "b9_transfer_predictions.json"
+    preds.write_text("{}")
+    with pytest.raises(core.TransferLocked):
+        core.check_transfer_access("probe", "unit-test", predictions_path=preds,
+                                   log_path=tmp_path / "log")

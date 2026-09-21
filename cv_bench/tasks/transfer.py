@@ -12,7 +12,8 @@ from __future__ import annotations
 from typing import Dict, Iterator, Optional, Sequence, Tuple
 
 from cv_bench.tasks.core import (
-    Format, Lottery, Trial, check_test_access, formats_for_split,
+    Format, Lottery, Trial, check_test_access, check_transfer_access,
+    formats_for_split,
 )
 
 
@@ -46,7 +47,11 @@ EG_MENU: Tuple[Tuple[float, float], ...] = (
 )
 
 
-def _guard(splits: Sequence[str], unlock_test: Optional[str], caller: str) -> set:
+def _guard(splits: Sequence[str], unlock_test: Optional[str], caller: str,
+           role: str) -> set:
+    # Evaluation-only: the unmodified model and the anchors may run now, every
+    # intervention family waits for B9's committed predictions.
+    check_transfer_access(role, caller)
     wanted = set(splits)
     forbidden = wanted & {"sel", "cal"}
     if forbidden:
@@ -82,9 +87,11 @@ def _trial(family: str, params: Dict[str, float],
     )
 
 
-def generate_holt_laury(splits: Sequence[str] = ("disc",),
-                        unlock_test: Optional[str] = None) -> Iterator[Trial]:
-    wanted = _guard(splits, unlock_test, "transfer.generate_holt_laury")
+def generate_holt_laury(role: str,
+                            splits: Sequence[str] = ("disc",),
+                            unlock_test: Optional[str] = None) -> Iterator[Trial]:
+    """Ten paired choices; the switching point is the risk-aversion measure."""
+    wanted = _guard(splits, unlock_test, "transfer.generate_holt_laury", role)
     for split in sorted(wanted):
       for i, p in enumerate(HL_PROBS):
         safe = Lottery(((p, HL_SAFE[0]), (1.0 - p, HL_SAFE[1]))) if p < 1.0 \
@@ -95,9 +102,11 @@ def generate_holt_laury(splits: Sequence[str] = ("disc",),
                      (safe, risky), split)
 
 
-def generate_gneezy_potters(splits: Sequence[str] = ("disc",),
-                            unlock_test: Optional[str] = None) -> Iterator[Trial]:
-    wanted = _guard(splits, unlock_test, "transfer.generate_gneezy_potters")
+def generate_gneezy_potters(role: str,
+                                splits: Sequence[str] = ("disc",),
+                                unlock_test: Optional[str] = None) -> Iterator[Trial]:
+    """Invest part of an endowment at a 50% chance of a 2.5x return."""
+    wanted = _guard(splits, unlock_test, "transfer.generate_gneezy_potters", role)
     for split in sorted(wanted):
       for i, invest in enumerate(GP_LEVELS):
         keep = Lottery(((1.0, GP_ENDOWMENT),))
@@ -110,9 +119,11 @@ def generate_gneezy_potters(splits: Sequence[str] = ("disc",),
                      (keep, risky), split)
 
 
-def generate_eckel_grossman(splits: Sequence[str] = ("disc",),
-                            unlock_test: Optional[str] = None) -> Iterator[Trial]:
-    wanted = _guard(splits, unlock_test, "transfer.generate_eckel_grossman")
+def generate_eckel_grossman(role: str,
+                                splits: Sequence[str] = ("disc",),
+                                unlock_test: Optional[str] = None) -> Iterator[Trial]:
+    """Choices between adjacent rungs of a menu of 50/50 gambles."""
+    wanted = _guard(splits, unlock_test, "transfer.generate_eckel_grossman", role)
     for split in sorted(wanted):
       for i in range(len(EG_MENU) - 1):
         lo_a, hi_a = EG_MENU[i]
@@ -125,9 +136,15 @@ def generate_eckel_grossman(splits: Sequence[str] = ("disc",),
                      (tighter, wider), split)
 
 
-def generate_transfer(splits: Sequence[str] = ("disc",),
+def generate_transfer(role: str,
+                      splits: Sequence[str] = ("disc",),
                       unlock_test: Optional[str] = None) -> Iterator[Trial]:
-    """The whole battery. Defaults to `disc`; `sel` and `cal` are refused."""
-    yield from generate_holt_laury(splits, unlock_test)
-    yield from generate_gneezy_potters(splits, unlock_test)
-    yield from generate_eckel_grossman(splits, unlock_test)
+    """The whole battery. Defaults to `disc`; `sel` and `cal` are refused.
+
+    ``role`` is required and has no default: a caller must say who is about to
+    look at the battery, because it is evaluation-only until B9's predictions
+    are committed. Pass "unmodified" or "anchor" before then.
+    """
+    yield from generate_holt_laury(role, splits, unlock_test)
+    yield from generate_gneezy_potters(role, splits, unlock_test)
+    yield from generate_eckel_grossman(role, splits, unlock_test)

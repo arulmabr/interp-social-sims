@@ -66,10 +66,23 @@ TEMPLATES: Dict[str, Dict[str, str]] = {
 }
 
 TEST_ACCESS_LOG = Path("logs/TEST_ACCESS.log")
+TRANSFER_ACCESS_LOG = Path("logs/B_TRANSFER_ACCESS.log")
+
+#: B9 derives transfer predictions from the choice-based fit "before looking".
+#: Until that file is committed, the battery is evaluation-only.
+TRANSFER_PREDICTIONS = Path("results/B/b9_transfer_predictions.json")
+
+#: Roles that may run on the transfer battery at any time: the unmodified model
+#: and the B3 anchors. Every intervention family must wait for the predictions.
+TRANSFER_EVAL_ONLY_ROLES: Tuple[str, ...] = ("unmodified", "anchor")
 
 
 class TestSplitLocked(RuntimeError):
     """Raised on any attempt to materialise a test-split trial while locked."""
+
+
+class TransferLocked(RuntimeError):
+    """Raised when an intervention family reaches the transfer battery too early."""
 
 
 # --------------------------------------------------------------------------
@@ -407,3 +420,60 @@ def expand_formats(trials: Iterable[Trial],
     for trial in trials:
         for fmt in formats_for_split(trial.split, response_formats, label_sets):
             yield replace(trial, fmt=fmt)
+
+
+# --------------------------------------------------------------------------
+# the transfer lock
+# --------------------------------------------------------------------------
+
+def _is_committed(path: Path) -> bool:
+    """True when `path` exists on disk and is tracked in HEAD.
+
+    A file merely written to the working tree does not count: B9 requires the
+    predictions to be *committed* before the battery is looked at, so that the
+    predictions cannot be revised after seeing the battery's results.
+    """
+    import subprocess
+    if not path.exists():
+        return False
+    try:
+        subprocess.run(["git", "cat-file", "-e", f"HEAD:{path.as_posix()}"],
+                       capture_output=True, check=True, timeout=10)
+        return True
+    except Exception:
+        return False
+
+
+def check_transfer_access(role: str,
+                          caller: str,
+                          predictions_path: Path = TRANSFER_PREDICTIONS,
+                          log_path: Path = TRANSFER_ACCESS_LOG) -> None:
+    """Gate the transfer battery. The battery is evaluation-only (A11).
+
+    Only the unmodified model and the B3 anchors may run on it until the
+    predictions B9 requires are committed. Every access is logged, granted or
+    not, so the order of operations can be audited after the fact.
+    """
+    committed = _is_committed(predictions_path)
+    ok = role in TRANSFER_EVAL_ONLY_ROLES or committed
+    record = {
+        "utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "caller": caller,
+        "role": role,
+        "predictions_committed": committed,
+        "granted": ok,
+        "pid": os.getpid(),
+    }
+    try:
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        with log_path.open("a") as fh:
+            fh.write(json.dumps(record, sort_keys=True) + "\n")
+    except OSError:
+        pass
+    if not ok:
+        raise TransferLocked(
+            f"role {role!r} may not touch the transfer battery yet: it is "
+            f"evaluation-only until {predictions_path} is committed (ICLR_PLAN.md "
+            f"B9, A11). Allowed before then: {', '.join(TRANSFER_EVAL_ONLY_ROLES)}. "
+            "The battery is never used for selection or calibration at all."
+        )

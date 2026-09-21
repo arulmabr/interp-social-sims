@@ -70,7 +70,7 @@ def content_trials(splits) -> List[core.Trial]:
     # The transfer battery is never used for selection or calibration (A11).
     transfer_splits = tuple(s for s in splits if s not in ("sel", "cal"))
     if transfer_splits:
-        out += list(transfer.generate_transfer(splits=transfer_splits))
+        out += list(transfer.generate_transfer("unmodified", splits=transfer_splits))
     return out
 
 
