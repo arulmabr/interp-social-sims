@@ -357,30 +357,46 @@ with bootstrap intervals, S1.4(a)(b) what the choice probe encodes — S1.4(c) i
 no activations are cached anywhere — S1.5 the per-judge and mixed-effects capability picture, S1.6 the
 judge-independent text measures, S1.7 the prompting ladder.
 
-A preview of S1.1, already computed and in the manifest, since it is the fact the whole thesis leans on.
-P(risky | n < 50), where the gamble's best outcome is worse than the sure 50:
+A preview of S1.1, already computed and in the manifest. P(risky | n < 50), where the gamble's best
+outcome is worse than the sure 50:
 
 | calibrated target | 30 | 49 | 68 | 87 | ≥106 |
 |---|---:|---:|---:|---:|---:|
 | Llama L48 probe steering | **0.483** | 0.079 | 0.025 | 0.000 | 0.000 |
 | Qwen L17 (targets 30/40/50/60/≥70) | **0.575** | 0.304 | 0.108 | 0.042 | ≤0.013 |
 
-(240 trials per cell; Wilson intervals at S1.3.) And on the hosted stack, the `slightly_prompting`
-persona takes the dominated gamble **69%** of the time, while SAE steering takes it **0%**
+(240 trials per cell; Wilson intervals at S1.3.) On the hosted stack the `slightly_prompting` persona
+takes the dominated gamble **69%** of the time and SAE steering **0%**
 (`S0.A.lottery.pRisky_dominated.hosted.*`).
 
-That refines PAPER_AUDIT §3.1–3.2 in a way that matters for the thesis: **dominated choices are produced
-by the persona prompt and by probe steering at its strongest doses, but not by the SAE features at
-either published dose.** The three families are not interchangeable on this diagnostic, which is a point
-in favour of the benchmark being able to tell them apart.
+> **Corrected 2026-09-21 under GATE_S0_RESPONSE §3 P2** (`logs/DEVIATIONS.md` D-2026-09-21-01). This
+> passage previously concluded that the three families "are not interchangeable on this diagnostic" and
+> that this favoured the benchmark separating them. That does not follow. Eight legacy reward levels lie
+> below 50, so P(risky | n < 50) is an arithmetic restatement of the achieved switching point: a switch
+> at 30 puts about 4 of 8 levels above it, 19.8 about 6 of 8, ≈59 none. The three rates are the three
+> switching points (30 probe, 19.8 persona, 59.1 SAE), measured on **two different stacks at unequal
+> doses**, and no unsteered rate exists on the probe stack to compare against. S1.1 reports each rate
+> beside its own switching point and its own stack's baseline, and makes no cross-stack claim.
 
-Two more for S1.2 while they are in view: on the hosted stack **no** condition ever rejects an offer
-≥ 50 (`S0.A.ultimatum.pReject_hyperfair.hosted.*` = 0 everywhere), because the offer grid stops at
-**90** and the crossing never goes that high — so the paper has **no hyper-fair catch trials at all**,
-and PAPER_AUDIT §3.3's observation is about the probe stack's *calibration targets* (up to 100) rather
-than about realised rejections. And the `barely_prompting` persona takes the risky option **0%** of the
-time at every reward up to 180, where the gamble's expected value is 90 against a sure 50 — the
-mirror image of the dominated-choice anomaly, and not currently in the audit.
+What does hold, within one stack and without a baseline, is a floor argument: no monotone utility
+produces a switching point below 50, since for power utility n* = 50·2^(1/α) approaches 50 from above.
+A risk-preference shift therefore has a floor at 50 in its dose-response; an action bias or a
+payoff-scaling direction passes through it. The hosted persona goes from 127.6 to 19.8, through the
+floor. The matching statement for the probe stack waits on S2.0.
+
+Two more for S1.2 while they are in view. On the hosted stack no condition ever rejects an offer
+≥ 50 (`S0.A.ultimatum.pReject_hyperfair.hosted.*` = 0 everywhere). And the `barely_prompting` persona
+takes the risky option **0%** of the time at every reward up to 180, where the gamble's expected value
+is 90 against a sure 50 — the mirror image of the dominated-choice anomaly, and not currently in the
+audit.
+
+> **Corrected 2026-09-21** (`logs/DEVIATIONS.md` D-2026-09-21-04). This passage previously added that
+> the offer grid stopping at 90 meant "the paper has no hyper-fair catch trials at all", and that
+> PAPER_AUDIT §3.3 was about calibration targets rather than realised rejections. Both are wrong.
+> Offers of 50 to 90 are on the grid throughout — 360 such trials per hosted condition and 440 per
+> probe condition — so the trials exist; what the hosted stack has is no hyper-fair *rejections*. And
+> the probe stack does produce them: S1.2 measures P(reject | offer ≥ 50) rising with the calibrated
+> target to 0.232 on Llama layer 48, 0.268 on layer 50 and 0.400 on Qwen. See `reports/S1_2.md`.
 
 ---
 

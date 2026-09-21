@@ -1,0 +1,4 @@
+probe,n_distinct_prompts,samples_per_prompt,n_training_rows,distinct_activation_vectors,label_rule,activation_position,sources_of_variation,split,artefact_saved
+preference/lottery,45,8,360,45,"the agent's own parsed choice on that sample: Risky=1, Safe=0","final token of the prompt (capture_activations), second forward pass, no chat template, no steering",reward level n only,by row (StratifiedKFold over rows); each activation vector appears in the training fold and the validation fold of the same split,no
+preference/ultimatum,19,8,152,19,"Accept=1, Reject=0",final token of the prompt,offer amount only,by row,no
+capability/creativity,2,80,160,2,median split of the GPT-5 judge's score of the generated text,"final token of the prompt (task prompt, or persona prefix + task prompt)",presence or absence of the creative-persona prefix only,by row,no

@@ -52,3 +52,49 @@ probe was trained on, not only the scores it is evaluated with.
 
 If the extension plan is adopted, the assistant's continued work on it is disclosable under
 "implementing methods" and "analysing or interpreting results". This log is the record.
+
+---
+
+## Session 2 — 2026-09-21 — S1, under GATE_S0_RESPONSE §3 P2–P5 and P10
+
+**Model:** Claude Opus 5, Claude Code, same HPC login node. No GPU, no external API, no paid service.
+One small local encoder was run on CPU (see below).
+
+**Instructed by the authors to:** read `GATE_S0_RESPONSE.md` §3 P2–P5 and P10, apply them to S1, revise
+any existing S1 report to comply and log the change in `logs/DEVIATIONS.md`. The rest of that file is
+not in force.
+
+### AI feedback on methodology — disclosable, and not the assistant's own work
+
+`GATE_S0_RESPONSE.md` states in its own header that it was **drafted by Claude in a separate chat
+session at the authors' request**, from the Gate S0 terminal summary only. It contains methodological
+directions: how to report a rate (P2), a new task (P3), what to add to two analyses (P4, P5), and how to
+handle two conflicting datasets (P10). Under the ICLR policy that is *designing or giving feedback on
+methodology or experiments* and *proposing or refining hypotheses*, and it is **required disclosure**.
+The authors should record that a second AI session produced it, that this session then acted on five of
+its items, and which items those were. Nothing in it has been signed: §1 is blank and the CONFIRMED BY
+line is empty.
+
+### What the assistant did
+
+| policy category | work |
+|---|---|
+| *Analysing or interpreting existing data* | Ran S1.1–S1.8 over the logged choices and judge scores: dominated and negative-premium rates with Wilson intervals; hyper-fair catch-trial rates; 68 logistic switching points with two kinds of bootstrap interval and 121 within-stack contrasts; the ceiling of any predictor of the logged choices that sees only the reward level; per-judge condition orderings, a crossed mixed-effects model, length residualisation and inter-judge agreement sliced by condition and task; four judge-independent text measures; the prompting ladder; the cross-stack persona table. |
+| *Implementing methods / writing code* | Wrote `cv_bench/s1_data.py`, `s1_behaviour.py`, `s1_probe.py`, `s1_capability.py`, `s1_text.py`, `s1_ladder.py`, `s1_figures.py`, `cv_bench/__init__.py`, and eight `figures/make_s1_*.py`. No existing code was modified. |
+| *Implementing methods* | Ran `sentence-transformers/all-MiniLM-L6-v2` (22M parameters, CPU, already in the local cache) to embed 680 existing creativity responses for the S1.6 text measures. This is an encoder used as a measuring instrument over text the authors already had; it generated no data and judged nothing. The Divergent Semantic Integration figure is an **approximation** of Johnson et al.'s operationalisation with a different encoder, and is labelled as such everywhere it appears. |
+| *Writing — internal documents only* | Drafted `reports/S1_1.md` … `S1_8.md` and `reports/PHASE1_FINDINGS.md`; extended `logs/DECISIONS.md` and `logs/DEVIATIONS.md`. |
+| *Writing — one draft destined for the paper* | `paper_patches/appendix_prompts.md`: the verbatim prompting-ladder prompts, extracted from the logs, not composed. The paper promises these conditions and contains no appendix for them. |
+| *Correcting its own earlier output* | Withdrew two claims made in the Gate S0 summary — the separability reading of the dominated-choice rates (D-2026-09-21-01) and the statement that the paper had no hyper-fair catch trials (D-2026-09-21-04). Both are recorded with before and after. |
+
+### What the assistant did not do
+
+- No model was fine-tuned, steered or asked to produce data. No synthetic dataset was generated. No
+  response was scored by an LLM judge in this session.
+- No experiment was rerun, and no logged result was altered. The four legacy directories are untouched.
+- No hypothesis was proposed; the hypotheses are the authors'.
+- No paid API call, no download, nothing written outside this repository.
+
+### Still outstanding for the statement
+
+Unchanged from session 1: whether any paper text was LLM-generated, and whether `feedback.txt` is an
+automated review. Now added: the provenance of `GATE_S0_RESPONSE.md` above.

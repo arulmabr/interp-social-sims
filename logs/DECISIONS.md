@@ -64,3 +64,46 @@ cached activations, and none exist anywhere in the repository.
 - **P2.** Run ICLR GPU work on `ou_bcs_low` only, and touch none of my other running jobs.
 - **P3.** Report the prompting ladder on its own axes with the stack stated, rather than overlaying it
   on Figs. 3 and 5. Overlaying would reproduce the cross-stack confound the audit flags in §4.6.
+
+---
+
+## 2026-09-21 — S1, under GATE_S0_RESPONSE §3 P2–P5 and P10
+
+**D11. Intervals are bootstrapped over reward levels, not trials.** At a fixed reward level the 40
+"agents" are i.i.d. draws from one prompt at one temperature, so they say how noisy that cell is, not
+how uncertain the curve's location is. Both intervals are in
+`results/S/s1/s1_3_switching_points.csv`; the reward-level one is primary everywhere, and it is the
+wider of the two for every hosted curve. This is the plan's own rule for Track B (§0.1), applied to S1
+because the same argument holds.
+
+**D12. A switching point is reported only where the measured curve crosses 0.5 inside the grid.**
+Several curves never do — `barely_prompting` on the hosted lottery, the vLLM ultimatum baseline and its
+persona, the ρ = 0 lottery condition. A two-parameter logistic will still return a number for these, and
+the number is an extrapolation past the data with an interval hundreds of tokens wide. Those rows carry
+`crosses_half_on_grid = False` and blank estimates rather than a fitted fantasy.
+
+**D13. Probe-stack pairwise differences are adjacent doses only.** The "conditions" on that stack are
+calibrated targets, so all 45 pairs of a 10-target sweep would mostly compare a dose with a dose four
+steps away. Adjacent pairs answer the question that matters — whether the dose-response is monotone —
+at a twentieth of the compute.
+
+**D14. The repo's canonical condition-to-colour map is kept; three of its six hexes are snapped.**
+`cleaned/regenerate_all_figures.py` fixes which family gets which hue, and the paper depends on that
+across every figure, so the hue *assignments* are preserved exactly. Three hexes fail the computable
+palette checks — navy at OKLCH L 0.32 is outside the 0.43–0.77 band, and orange, teal and goldenrod
+fall below 3:1 against the surface — so each was moved to the nearest step of the same hue that passes.
+The snapped set passes all five checks. Conditions that share a family colour are separated by marker
+shape and a direct label, never by inventing a hue. Details in `cv_bench/s1_figures.py`.
+
+**D15. Analysis code pins BLAS to one thread.** The S1 bootstraps solve millions of 2×2 systems; on
+this login node OpenBLAS spread each across every core it could see, measured at 394% CPU for a
+single-threaded workload, on a machine shared with other users' jobs. `cv_bench/__init__.py` sets the
+thread variables before numpy is imported. Override with `CV_BENCH_THREADS` if something genuinely
+parallel is ever added.
+
+**D16. S1.7 is reported on Stack B's own axes.** The plan asks for the ladder overlaid on the Fig. 3
+and Fig. 5 panels. Those panels are Stack A. The same persona text moves Stack A's switching point by
+−113 tokens and Stack B's by −12.5, so an overlay would read as a difference between prompting
+strategies when it is mostly a difference between stacks. The figure draws Stack A's baseline as a
+separately labelled reference line and differences nothing against it. Recorded as a deviation from the
+plan's wording, with the reason, rather than done silently.
