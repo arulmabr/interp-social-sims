@@ -204,3 +204,49 @@ that makes the model append a rationale would move the last-match coding without
 The finding is now stated as a difference in **coded outputs**, with the question of whether it is a
 difference in **choices** deferred to G4. A section was also added recording that the hosted-stack
 curves in S1 and in Figure 3 come from EDSL's recorded answer, not from a regex over the text.
+
+---
+
+## 2026-09-22 — Track B in parallel; shared modules landed
+
+**D31. The four governing documents are now tracked.** `CLAUDE.md`, `ICLR_PLAN.md`,
+`PAPER_AUDIT.md` and `GATE_S0_RESPONSE.md` were deliberately left untracked through S0 and S1 as the
+authors' own inputs; `FRIDAY_PLAN.md` was already tracked. Git worktrees share `.git` but not the
+working tree, so an untracked rules file is invisible in the Track B worktree. Committed at `5b4e01f`.
+Still untracked on purpose: the 18 MB submitted PDF, `feedback.txt`, the plan `.docx`, and
+`hf_token.txt` (which is also in `.git/info/exclude`, and `.git/info/exclude` *is* shared across
+worktrees, so the exclusion holds there too).
+
+**D32. Track B runs in parallel on `iclr-trackB`, and nothing from it enters the Sept 25 PDF.**
+The amendment says it supersedes "Not in this week's plan" in `FRIDAY_PLAN.md`. **That phrase is not in
+that file, or in any other document in the repository.** The nearest thing is
+`GATE_S0_RESPONSE.md:130` — "Until the deadline `FRIDAY_PLAN.md` replaces this list. It applies again
+afterwards, for Track B" — which defers Track B until after the deadline, and that is the line taken as
+superseded. Flagged rather than assumed. My priorities are unchanged: G2 running, then V1/V2 on CPU,
+then G4 and G3.
+
+**D33. `cv_bench/readout.py` and `cv_bench/steer.py` are committed early, with tests.** They did not
+exist before this amendment; S2.1 and S2.2 were queued inside G3 and G4. They are now a shared
+dependency of two sessions, so they land on their own at `82daf32` with a passing suite rather than
+arriving inside a large GPU commit.
+
+Two design choices the other session should know about:
+
+* **`scale` is in units of the median residual-stream norm at the intervention layer**, measured over
+  calibration prompts with the first token excluded. The legacy λ was in raw units, which is why it is
+  not comparable across layers or models. `Intervention.norm_unit` carries the measured value and
+  `delta_norm` is what actually gets added.
+* **`positions` is explicit**, one of `last`, `all_prompt`, `all`, `legacy_ramp`. The first three say
+  what they mean at every forward pass, prefill or cached decode. `legacy_ramp` reproduces
+  `Probes/models.py` exactly — including that it modifies **no generated token**, because its index
+  arithmetic yields zero positions when `seq_len == 1`. The recording test asserts that, so the
+  `STACK_AUDIT.md` §3 finding cannot silently regress.
+
+**D34. The test suite runs on CPU against Qwen2.5-0.5B-Instruct from the lab share.** Real forward
+passes, not mocks, because the two things that actually break here — left padding silently corrupting
+rotary positions, and a position policy meaning something different during cached decoding — are
+invisible to a mock. Measured on that model: batched and unbatched logit differences agree to
+**0.00e+00**, median residual norm at layer 8 is 14.06, and valid mass is **0.32**, far below the
+plan's 0.98 bar. The last number is expected on a 0.5B model with this stem and is reported, not
+asserted; `Readout.check_valid_mass` enforces the bar before any 70B result is used, and if the stem
+fails there it gets revised, as S2.1 instructs.
