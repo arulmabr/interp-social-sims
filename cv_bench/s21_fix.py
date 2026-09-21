@@ -107,16 +107,75 @@ def cal_specs(game: str, labels: Tuple[str, str], stem: str):
                   for v in vals]
 
 
-def load(model_key: str, dtype: str):
+def wait_for_gpus(need_gib: float = 70.0, timeout_s: float = 900.0,
+                  poll_s: float = 20.0) -> None:
+    """Block until every visible GPU has `need_gib` free, or raise.
+
+    On a preemptable partition the job we displaced may still be releasing its
+    GPU memory when we start. `device_map="auto"` asks how much is free exactly
+    once, and if the answer is "almost none" it places the model on the CPU and
+    says nothing. A 70B forward pass then takes hours instead of a second, the
+    job looks healthy, and the wall clock is gone. So: wait for the memory
+    first, and fail loudly rather than fall back silently.
+    """
+    import time as _t
+    import torch
+    n = torch.cuda.device_count()
+    if n == 0:
+        raise RuntimeError("no CUDA device visible; this job needs GPUs")
+    deadline = _t.time() + timeout_s
+    while True:
+        free = [torch.cuda.mem_get_info(i)[0] / 2**30 for i in range(n)]
+        if all(f >= need_gib for f in free):
+            print(f"[load] {n} GPU(s) free: " +
+                  ", ".join(f"{f:.1f} GiB" for f in free), flush=True)
+            return
+        if _t.time() >= deadline:
+            raise RuntimeError(
+                f"GPUs still busy after {timeout_s:.0f}s: free = " +
+                ", ".join(f"{f:.1f} GiB" for f in free) +
+                f"; need {need_gib} GiB each")
+        print(f"[load] waiting for GPU memory: " +
+              ", ".join(f"{f:.1f} GiB" for f in free), flush=True)
+        _t.sleep(poll_s)
+
+
+def load(model_key: str, dtype: str, per_gpu_gib: float = 74.0):
+    """Load onto the GPUs, or fail. Never silently onto the CPU."""
     import torch
     from transformers import AutoModelForCausalLM, AutoTokenizer
     td = {"bf16": torch.bfloat16, "fp32": torch.float32}[dtype]
     tok = AutoTokenizer.from_pretrained(MODELS[model_key])
     if tok.pad_token_id is None:
         tok.pad_token = tok.eos_token
+
+    n = torch.cuda.device_count()
+    if n == 0:
+        raise RuntimeError("no CUDA device visible; this job needs GPUs")
+    # "free" means free relative to the card, so this also works on a 48 GiB
+    # card where 70 GiB could never be free.
+    total_gib = min(torch.cuda.mem_get_info(i)[1] / 2**30 for i in range(n))
+    wait_for_gpus(need_gib=min(per_gpu_gib, 0.85 * total_gib))
+    # cpu 0 GiB: accelerate must place every module on a GPU or raise. Without
+    # this it offloads quietly whenever it thinks the GPUs are short.
+    max_memory = {i: f"{per_gpu_gib}GiB" for i in range(n)}
+    max_memory["cpu"] = "0GiB"
     m = AutoModelForCausalLM.from_pretrained(MODELS[model_key], torch_dtype=td,
-                                             device_map="auto")
+                                             device_map="auto",
+                                             max_memory=max_memory)
     m.eval()
+
+    dm = getattr(m, "hf_device_map", {}) or {}
+    bad = sorted({str(v) for v in dm.values()} & {"cpu", "disk"})
+    if bad:
+        where = {k: str(v) for k, v in dm.items() if str(v) in bad}
+        raise RuntimeError(
+            f"{len(where)} module(s) landed on {'/'.join(bad)} rather than a GPU, "
+            f"e.g. {list(where)[:3]}. A 70B forward pass there takes hours; "
+            f"refusing to run. Free memory was checked before the load, so this "
+            f"is a placement problem, not a busy GPU.")
+    dev = sorted({str(v) for v in dm.values()}) or ["(single device)"]
+    print(f"[load] {model_key} {dtype} on {dev}", flush=True)
     return m, tok
 
 
