@@ -93,3 +93,24 @@ longer blocked on the dependency. The 70B LoRA will train in **bf16 on 4 GPUs** 
 4-bit used only if four GPUs cannot be obtained and recorded as a deviation. `bitsandbytes` remains
 compiled without GPU support, which the lock file also notes, so the 4-bit fallback would need that
 fixed first — one more reason the bf16 path is the one to take.
+
+**BD9. The dominated-trial policy for B2, recorded before any model data is fitted.** Author amendment
+item 4. Default: the flagged dominated trials (BD6) feed **D1 only** — the dominance-violation rate —
+and are **excluded from the parametric likelihood**. Sensitivity analysis: include them with a free
+lapse parameter in the choice rule. The recovery study decides which recovers parameters better, and
+this entry fixes the comparison *before* any model data exists, so the choice cannot be made by
+looking at which answer suits the paper. Both policies are implemented in
+`cv_bench/estimator/fit.py` as `dominated_policy in {"exclude", "lapse"}`.
+
+**BD10. Lambda is unidentified outside mixed frames, predicted analytically before fitting.** Under the
+contextual-utility normalisation the plan mandates, the loss-aversion parameter cancels on any trial
+whose outcomes all share a sign: every value scales by lambda, the utility range scales by lambda, and
+the normalised difference is unchanged. Measured on the B1 grid, the largest change in z from moving
+lambda by its full minimum detectable change (0.30) is **exactly 0.000000 on all 245 sure-gain and all
+245 sure-loss trials**, 0.105 on the 36 mixed trials and 0.044 on the 68 paired trials. So lambda is
+identified on 104 of 726 risk trials and weakly at that. The prediction recorded here, before the
+recovery study runs, is that **lambda's RMSE will fail Gate B2's "at most half the minimum detectable
+change" (0.15)** while alpha and gamma pass. Under Gate B2 the response to a failure is to change the
+grid and never the thresholds, so the remedy would be more mixed-frame trials, not a looser bound.
+This is written down now so that the grid change, if it happens, is visibly a response to a
+pre-stated structural fact rather than to an unwelcome number.
