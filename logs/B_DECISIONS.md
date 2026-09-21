@@ -134,3 +134,20 @@ reward levels in at least 95% of paired cluster-bootstrap draws, clustered on re
 as the plan specifies for that comparison, with the Vuong statistic reported beside it. The 0.95 is a
 threshold and therefore an **AUTHOR DECISION** frozen at B6; it is flagged here rather than quietly
 chosen, and `reports/B_B2.md` reports the rule's behaviour if it were dropped to 0.90.
+
+**BD13. Label sets are chosen per family and domain, not applied to everything.** A bug, caught while
+sampling prompts for the fp32 job and visible the moment a prompt was printed. `expand_formats`
+defaulted to *every* label set in `LABEL_SETS`, so after the social pairs were added it dressed lottery
+trials in Reject/Accept and Yes/No:
+
+    Reject: $20 for sure
+    Accept: a 10% chance of $60 and otherwise nothing
+
+Three-quarters of the risk grid carried a label pair that does not describe the choice, and the
+label-bias term — which contrasts "legacy" against everything else — was being computed against that.
+`DOMAIN_LABEL_SETS` existed but was never wired in. Now `label_sets_for` picks by family first and
+domain second: risk and transfer take legacy/neutral, social takes accept-reject/neutral, and the
+accept-bias control takes accept-reject/yes-no, since its items are yes/no questions with a correct
+answer. The expanded grid falls from 29,408 rows to **14,704**, which is the correct size; the earlier
+B1 dataset and the first two B2 recovery submissions were built on the wrong grid and are superseded,
+not reported. A test now asserts that no risk prompt can contain "Reject:" or "Accept:".

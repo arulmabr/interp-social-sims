@@ -379,3 +379,29 @@ def test_uncommitted_predictions_do_not_unlock_the_battery(tmp_path):
     with pytest.raises(core.TransferLocked):
         core.check_transfer_access("probe", "unit-test", predictions_path=preds,
                                    log_path=tmp_path / "log")
+
+
+# -- label sets must suit the trial ----------------------------------------
+
+def test_label_sets_suit_the_domain():
+    """A lottery must never be labelled Reject/Accept, nor an offer Safe/Risky."""
+    for t in core.expand_formats(list(risk.generate_risk())):
+        assert t.fmt.label_set in ("legacy", "neutral"), t.family
+    for t in core.expand_formats(list(social.generate_social())):
+        assert t.fmt.label_set in ("accept_reject", "neutral", "yes_no"), t.family
+        assert t.fmt.label_set != "legacy"
+    for t in core.expand_formats(list(transfer.generate_transfer("unmodified"))):
+        assert t.fmt.label_set in ("legacy", "neutral")
+
+
+def test_accept_bias_control_uses_yes_no():
+    sets = {t.fmt.label_set for t in core.expand_formats(list(social.generate_social()))
+            if t.family == "accept_bias_control"}
+    assert sets == {"accept_reject", "yes_no"}
+
+
+def test_no_prompt_mislabels_its_options():
+    """Regression: the expansion once produced 'Reject: $20 for sure'."""
+    for t in core.expand_formats(list(risk.generate_risk())):
+        text = core.prompt_text(t)
+        assert "Reject:" not in text and "Accept:" not in text

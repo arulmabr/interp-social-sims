@@ -91,7 +91,7 @@ def paired_pair(m: float, d1: float, d2: float) -> Tuple[Lottery, Lottery]:
 # --------------------------------------------------------------------------
 
 def _default_format(split: str) -> Format:
-    available = formats_for_split(split)
+    available = formats_for_split(split, label_sets=("legacy", "neutral"))
     if not available:
         raise KeyError(
             f"no formats available for split {split!r}"

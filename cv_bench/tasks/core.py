@@ -45,6 +45,25 @@ DOMAIN_LABEL_SETS: Dict[str, Tuple[str, ...]] = {
     "social": ("accept_reject", "neutral"),
     "transfer": ("legacy", "neutral"),
 }
+
+#: Families whose wording needs a different pair than their domain's default.
+#: The accept-bias control asks yes/no questions with a correct answer, so it
+#: carries the yes/no pair beside accept/reject.
+FAMILY_LABEL_SETS: Dict[str, Tuple[str, ...]] = {
+    "accept_bias_control": ("accept_reject", "yes_no"),
+}
+
+
+def label_sets_for(trial: "Trial") -> Tuple[str, ...]:
+    """The label sets this trial may legitimately wear.
+
+    Without this, `expand_formats` would dress a lottery in "Reject/Accept" and
+    an ultimatum offer in "Safe Option/Risky Option", producing prompts that
+    read as nonsense and a label-bias term that means nothing.
+    """
+    if trial.family in FAMILY_LABEL_SETS:
+        return FAMILY_LABEL_SETS[trial.family]
+    return DOMAIN_LABEL_SETS.get(trial.domain, ("legacy", "neutral"))
 RESPONSE_FORMATS: Tuple[str, ...] = ("mc", "freetext")
 
 #: Two instruction templates per split (ICLR_PLAN B1). The test templates are
@@ -415,10 +434,16 @@ def render_raw_unsafe(trial: Trial, *, acknowledge_no_chat_template: bool = Fals
 
 def expand_formats(trials: Iterable[Trial],
                    response_formats: Sequence[str] = RESPONSE_FORMATS,
-                   label_sets: Sequence[str] = tuple(LABEL_SETS)) -> Iterator[Trial]:
-    """One trial per (content, format) pair, for contents that arrive format-free."""
+                   label_sets: Optional[Sequence[str]] = None) -> Iterator[Trial]:
+    """One trial per (content, format) pair, for contents that arrive format-free.
+
+    With `label_sets` left at None each trial gets the pairs that suit it, by
+    family and then by domain. Passing an explicit list overrides that and is
+    for tests and audits only.
+    """
     for trial in trials:
-        for fmt in formats_for_split(trial.split, response_formats, label_sets):
+        sets = label_sets if label_sets is not None else label_sets_for(trial)
+        for fmt in formats_for_split(trial.split, response_formats, sets):
             yield replace(trial, fmt=fmt)
 
 
