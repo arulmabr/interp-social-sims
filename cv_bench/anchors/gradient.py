@@ -80,7 +80,31 @@ def load(model_key: str):
     # requiring grad would allocate a gradient buffer the size of the model.
     for p in model.parameters():
         p.requires_grad_(False)
+    # But with every parameter frozen nothing downstream requires grad either,
+    # so the autograd graph is never built and retain_grad raises. Making the
+    # input embeddings' output require grad rebuilds the graph through the
+    # layers without allocating a single parameter gradient.
+    model.enable_input_require_grads()
     return model, tok
+
+
+def assert_labels_distinguishable(ro, trial) -> None:
+    """The two labels must differ at the token the readout actually scores.
+
+    If their first-token id sets overlap, z is a difference of two identical
+    log-probabilities and is identically zero, so every gradient is zero and
+    every reading is uninformative -- silently. This turns that into an error.
+    """
+    spec = core.to_trial_spec(trial, stem=core.stem_for(trial))
+    neg = set(ro.label_token_ids(spec.negative))
+    pos = set(ro.label_token_ids(spec.positive))
+    if not neg or not pos or (neg & pos):
+        raise ValueError(
+            f"labels {spec.negative!r} and {spec.positive!r} share first-token ids "
+            f"{sorted(neg & pos)} under stem {core.stem_for(trial)!r}: z would be "
+            "identically zero. Choose a stem that moves the scored position onto "
+            "the part of the label that differs (cv_bench.tasks.core.STEM_BY_LABEL_SET)."
+        )
 
 
 def z_gradient(model, tok, ro, trial: core.Trial, layer: int) -> Optional[np.ndarray]:
@@ -89,7 +113,8 @@ def z_gradient(model, tok, ro, trial: core.Trial, layer: int) -> Optional[np.nda
     z is the readout's logit difference, built the same way `readout._from_logits`
     builds it, so the direction is the gradient of the quantity actually reported.
     """
-    spec = core.to_trial_spec(trial, stem=STEM)
+    assert_labels_distinguishable(ro, trial)
+    spec = core.to_trial_spec(trial, stem=core.stem_for(trial))
     text = ro.render(spec)
     enc = tok(text, return_tensors="pt").to(model.device)
 
@@ -189,10 +214,14 @@ def main(argv=None) -> int:
     args.out.mkdir(parents=True, exist_ok=True)
     hb = args.out / "heartbeat.json"
 
+    # Author item 4: the two option orders are computed separately so their sum
+    # and difference are available. g1 + g2 is the order-invariant anchor Track B
+    # uses; g1 - g2 is a position-bias direction by construction and joins the
+    # controls; legacy_one_format is what the Friday session loads for G4b.
     versions = {
+        "legacy_order0": core_trials(("legacy",), (0,), None, args.max_content),
+        "legacy_order1": core_trials(("legacy",), (1,), None, args.max_content),
         "legacy_one_format": core_trials(("legacy",), (0,), ("t_cal_0",), args.max_content),
-        "legacy_both_orders": core_trials(("legacy",), (0, 1), None, args.max_content),
-        "all_formats": core_trials(("legacy", "neutral"), (0, 1), None, args.max_content),
     }
     for k, v in versions.items():
         print(f"{k}: {len(v)} prompts", flush=True)
@@ -245,6 +274,29 @@ def main(argv=None) -> int:
                   f"mean|g|={res['mean_of_norms']:.4f} coherence={res['coherence']:.3f}",
                   flush=True)
 
+    # Derived directions, per layer: the order-invariant sum and the
+    # position-bias difference. Both come free from g1 and g2.
+    for layer in args.layers:
+        p1 = args.out / f"grad_L{layer}_legacy_order0.npy"
+        p2 = args.out / f"grad_L{layer}_legacy_order1.npy"
+        if not (p1.exists() and p2.exists()):
+            continue
+        g1, g2 = np.load(p1), np.load(p2)
+        cos12 = float(g1 @ g2 / (np.linalg.norm(g1) * np.linalg.norm(g2)))
+        summary["versions"][f"L{layer}_cos_g1_g2"] = cos12
+        print(f"L{layer}: cos(g1, g2) = {cos12:+.4f}", flush=True)
+        for name, vec, what in (
+                ("legacy_sum", g1 + g2, "order-invariant anchor (g1 + g2)"),
+                ("legacy_diff", g1 - g2, "position-bias direction (g1 - g2), a control")):
+            vp = args.out / f"grad_L{layer}_{name}.npy"
+            np.save(vp, vec)
+            summary["versions"][f"L{layer}_{name}"] = {
+                "derived_from": [p1.name, p2.name], "role": what,
+                "norm": float(np.linalg.norm(vec)),
+                "sha256": hashlib.sha256(vp.read_bytes()).hexdigest(),
+                "shape": list(vec.shape), "dtype": str(vec.dtype), "file": vp.name,
+            }
+
     # cosine matrix across everything saved
     saved = sorted(p for p in args.out.glob("grad_*.npy"))
     if len(saved) > 1:
@@ -269,6 +321,12 @@ def main(argv=None) -> int:
                  "model.model.layers[L], which is the tensor SteeringHook adds to; "
                  "Intervention normalises it, so only its direction is used"),
         "prefer": "the legacy_* versions until the neutral-label readout work lands",
+        "roles": {
+            "legacy_sum": "order-invariant anchor; what Track B uses as the B3.1 anchor",
+            "legacy_diff": "position-bias direction by construction; a control, not an anchor",
+            "legacy_one_format": "what the Friday session loads for G4b",
+            "legacy_order0/1": "the per-order gradients g1 and g2 the others derive from",
+        },
         "verify": "sha256 of each .npy is in versions[<key>]['sha256']",
     }
     (args.out / "b3_gradient.json").write_text(

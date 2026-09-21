@@ -160,7 +160,9 @@ def soft_label_loss(logits: torch.Tensor, safe_ids: Sequence[int],
 
 def train_adapter(peft_model, tok, ro, name: str, trials: Sequence[core.Trial],
                   targets: np.ndarray, steps: int, lr: float, seed: int,
-                  accum: int, out: Path, log_every: int = 25) -> Dict[str, object]:
+                  accum: int, out: Path, log_every: int = 25,
+                  clone_every: int = 0, clone_trials: Optional[Sequence] = None,
+                  clone_agent: Optional[AgentParams] = None) -> Dict[str, object]:
     """Train one adapter. Identical order and schedule for every adapter (A5)."""
     peft_model.set_adapter(name)
     params = [p for n, p in peft_model.named_parameters()
@@ -185,6 +187,7 @@ def train_adapter(peft_model, tok, ro, name: str, trials: Sequence[core.Trial],
     # The same permutation for every adapter: A5 requires identical data order.
     order = np.random.default_rng(seed).permutation(len(trials))
     losses: List[float] = []
+    trace: List[Dict[str, object]] = []
     peft_model.train()
     for step in range(start, steps):
         opt.zero_grad(set_to_none=True)
@@ -214,9 +217,25 @@ def train_adapter(peft_model, tok, ro, name: str, trials: Sequence[core.Trial],
             torch.save({"step": step + 1, "opt": opt.state_dict(),
                         "adapter": get_peft_model_state_dict(
                             peft_model, adapter_name=name)}, ck_path)
+        # A cloning check partway through turns one run into a curve: the
+        # question is not "did 300 steps work" but "how does the calibration
+        # slope move with training", and guessing a step count one run at a
+        # time is how the last two attempts were spent.
+        if clone_every and clone_trials is not None and (step + 1) % clone_every == 0:
+            peft_model.eval()
+            with torch.inference_mode():
+                zs = np.array([ro.score(core.to_trial_spec(t, stem=core.stem_for(t))).logit_diff
+                               for t in clone_trials])
+            za = latent_z_packed(pack(list(clone_trials)), clone_agent)
+            chk = cloning_check(zs, za)
+            trace.append({"step": step + 1, **chk})
+            print(f"  {name} @ {step+1}: r={chk['correlation']:.4f} "
+                  f"slope={chk['slope']:.4f} z_sd={zs.std():.3f}", flush=True)
+            peft_model.train()
+
     peft_model.eval()
-    return {"adapter": name, "steps": steps, "final_loss": float(np.mean(losses[-25:]))
-            if losses else float("nan")}
+    return {"adapter": name, "steps": steps, "trace": trace,
+            "final_loss": float(np.mean(losses[-25:])) if losses else float("nan")}
 
 
 @torch.inference_mode()
@@ -268,6 +287,10 @@ def main(argv=None) -> int:
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--max-content", type=int, default=None)
     ap.add_argument("--clone-content", type=int, default=60)
+    ap.add_argument("--clone-every", type=int, default=0,
+                    help="run a cloning probe every N steps, to see the slope trajectory")
+    ap.add_argument("--clone-probe", type=int, default=60,
+                    help="how many selection-split prompts the mid-training probe uses")
     ap.add_argument("--four-bit", action="store_true",
                     help="fallback if bf16 does not fit; recorded as a deviation")
     ap.add_argument("--out", type=Path, default=DEFAULT_OUT)
@@ -311,7 +334,10 @@ def main(argv=None) -> int:
     for name in ADAPTERS:
         print(f"--- training {name} ---", flush=True)
         info = train_adapter(peft_model, tok, ro, name, train, targets[name],
-                             args.steps, args.lr, args.seed, args.accum, args.out)
+                             args.steps, args.lr, args.seed, args.accum, args.out,
+                             clone_every=args.clone_every,
+                             clone_trials=clone[:args.clone_probe],
+                             clone_agent=agents[name])
         results["adapters"][name].update(info)
         from peft import get_peft_model_state_dict
         torch.save(get_peft_model_state_dict(peft_model, adapter_name=name),

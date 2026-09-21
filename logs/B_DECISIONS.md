@@ -307,3 +307,36 @@ and gamma held at the baseline fit, to separate "lambda is invisible" from "lamb
 the curvature it is estimated beside"; if the held arm passes where the joint arm fails, the remedy is
 to pin alpha on the gain frame — which is what the plan already does for out-of-frame prediction —
 rather than to enlarge the grid.
+
+**BD27. The readout gradient at layers 48 and 50 is mostly a position direction, not a preference
+direction.** B3.1 on Llama-3.3-70B, calibration-split core prompts, legacy labels, gradient taken with
+respect to the output of `model.model.layers[L]` — the tensor `SteeringHook` adds to. The two option
+orders give **strongly anti-aligned** gradients:
+
+| layer | \|g1\| | \|g2\| | \|g1+g2\| | \|g1-g2\| | cos(g1,g2) | diff/sum |
+|---|---|---|---|---|---|---|
+| 48 | 13.74 | 8.82 | **8.32** | **21.54** | **-0.8140** | 2.59 |
+| 50 | 13.00 | 8.40 | **7.73** | **20.48** | **-0.8232** | 2.65 |
+
+Within a single order the per-prompt gradients are highly coherent (0.927-0.941), so each of g1 and g2
+is a real direction rather than an average of noise. But swapping which option is presented first very
+nearly reverses it. Decomposed as the amendment asks: the **order-invariant part g1 + g2 has norm 8.3
+at layer 48, while the position part g1 - g2 has norm 21.5** — the position component is about **2.6
+times larger** than the part that survives a change of presentation order.
+
+This is the concern A6 raises, measured: "features chosen by their effect on the risky-minus-safe logit
+are aligned with the readout gradient, which the plan itself defines as action-like". On this model the
+readout gradient is not merely *somewhat* action-like, it is **predominantly** a position signal.
+
+Two consequences, neither of them Track B's to settle alone:
+
+- **For Track B**, the B3.1 anchor is `legacy_sum` (g1 + g2), which is the right choice and also a much
+  weaker direction than the raw gradient. `legacy_diff` joins the controls as a position-bias direction
+  by construction, and it is the larger of the two.
+- **For the Friday session's G4b**, the instruction was to load `legacy_one_format`. That version is
+  order-0 only, so by construction it carries the position component — steering along it would move
+  position bias at least as much as preference. The per-order files and the sum are saved beside it so
+  the choice can be made deliberately; this is flagged rather than decided here.
+
+Saved under `$TRACKB_SHARE/trackB/b3_gradient/` with sha256 per file in `b3_gradient.json`, plus a
+`how_to_load` block naming the tensor the gradient is taken against.

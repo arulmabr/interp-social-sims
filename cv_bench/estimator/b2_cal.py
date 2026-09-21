@@ -77,6 +77,25 @@ def load(model_key: str):
     return model, tok
 
 
+def assert_labels_distinguishable(ro, trial) -> None:
+    """The two labels must differ at the token the readout actually scores.
+
+    If their first-token id sets overlap, z is a difference of two identical
+    log-probabilities and is identically zero, so every gradient is zero and
+    every reading is uninformative -- silently. This turns that into an error.
+    """
+    spec = core.to_trial_spec(trial, stem=core.stem_for(trial))
+    neg = set(ro.label_token_ids(spec.negative))
+    pos = set(ro.label_token_ids(spec.positive))
+    if not neg or not pos or (neg & pos):
+        raise ValueError(
+            f"labels {spec.negative!r} and {spec.positive!r} share first-token ids "
+            f"{sorted(neg & pos)} under stem {core.stem_for(trial)!r}: z would be "
+            "identically zero. Choose a stem that moves the scored position onto "
+            "the part of the label that differs (cv_bench.tasks.core.STEM_BY_LABEL_SET)."
+        )
+
+
 def read_z(ro, trials: Sequence[core.Trial], heartbeat: Optional[Path] = None,
            tag: str = "", ckpt: Optional[Path] = None) -> Tuple[np.ndarray, np.ndarray]:
     """Unbatched z and valid mass for each trial (amendment item 5a).
@@ -165,7 +184,12 @@ def free_generation(model, tok, ro, trials: Sequence[core.Trial],
     agree = 0; n = 0; no_answer = 0
     rows: List[Dict[str, object]] = []
     for t in trials:
-        spec = core.to_trial_spec(t, stem=None)          # no stem: let it talk
+        # stem="" not stem=None: readout.render treats None as the legacy
+        # no-chat-template path, which would compare a chat-templated readout
+        # against a raw-format generation and measure the format difference
+        # rather than the readout. Every Track B prompt goes through the chat
+        # template (BD4).
+        spec = core.to_trial_spec(t, stem="")
         text = ro.render(spec)
         enc = tok(text, return_tensors="pt").to(model.device)
         with torch.inference_mode():

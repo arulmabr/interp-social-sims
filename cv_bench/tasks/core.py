@@ -84,6 +84,25 @@ TEMPLATES: Dict[str, Dict[str, str]] = {
     "test": {},  # author-written, added only at unlock
 }
 
+#: The stem each label set needs so that the two options differ at the FIRST
+#: token the readout scores. "Option A" and "Option B" share their first token
+#: ("Option"), so with a bare stem the readout computes
+#: log p(Option) - log p(Option) = 0 for every trial and can express nothing at
+#: all. Ending the stem with "Option" moves the scored position onto "A"/"B",
+#: which do differ. The Friday session's D47 chose these stems on valid mass;
+#: this is the reason they were the only ones that could work.
+STEM_BY_LABEL_SET: Dict[str, str] = {
+    "legacy": "Answer:",
+    "neutral": "Answer: Option",
+    "accept_reject": "Answer:",
+    "yes_no": "Answer:",
+}
+
+
+def stem_for(trial: "Trial") -> str:
+    return STEM_BY_LABEL_SET.get(trial.fmt.label_set, "Answer:")
+
+
 TEST_ACCESS_LOG = Path("logs/TEST_ACCESS.log")
 TRANSFER_ACCESS_LOG = Path("logs/B_TRANSFER_ACCESS.log")
 

@@ -405,3 +405,30 @@ def test_no_prompt_mislabels_its_options():
     for t in core.expand_formats(list(risk.generate_risk())):
         text = core.prompt_text(t)
         assert "Reject:" not in text and "Accept:" not in text
+
+
+def test_every_label_pair_differs_at_its_scored_token():
+    """A pair sharing a first token makes z identically zero, silently.
+
+    "Option A" and "Option B" both begin with "Option", so under a bare stem the
+    readout computes log p(Option) - log p(Option) = 0 on every trial. That is
+    what made half the B3.1 dry run's prompts contribute exactly zero gradient.
+    The stem has to move the scored position onto the part that differs.
+    """
+    for label_set, (neg, pos) in core.LABEL_SETS.items():
+        stem = core.STEM_BY_LABEL_SET[label_set]
+        if neg.split()[0] == pos.split()[0]:
+            # the labels share a leading word, so the stem must consume it
+            assert stem.rstrip().endswith(neg.split()[0]), \
+                f"{label_set}: labels share {neg.split()[0]!r} but stem is {stem!r}"
+        else:
+            assert not stem.rstrip().endswith(neg.split()[0])
+
+
+def test_stem_for_picks_by_label_set():
+    t = next(x for x in core.expand_formats(list(risk.generate_risk()))
+             if x.fmt.label_set == "legacy")
+    assert core.stem_for(t) == "Answer:"
+    t2 = next(x for x in core.expand_formats(list(risk.generate_risk()))
+              if x.fmt.label_set == "neutral")
+    assert core.stem_for(t2) == "Answer: Option"
