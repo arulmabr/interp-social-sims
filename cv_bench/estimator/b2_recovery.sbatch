@@ -33,5 +33,5 @@ if [ "${policy_idx}" -eq 0 ]; then POLICY=exclude; else POLICY=lapse; fi
 echo "task=${i} template=${t} numerical=${n} policy=${POLICY} host=$(hostname) start=$(date -Is)"
 python -m cv_bench.estimator.recovery \
   --template-noise "${t}" --numerical-noise "${n}" --policy "${POLICY}" \
-  --reps 20 --seed $(( i + 1 ))
+  --reps 20 --seed $(( i + 1 )) --observe logit
 echo "done=$(date -Is)"

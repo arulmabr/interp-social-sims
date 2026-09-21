@@ -151,3 +151,46 @@ accept-bias control takes accept-reject/yes-no, since its items are yes/no quest
 answer. The expanded grid falls from 29,408 rows to **14,704**, which is the correct size; the earlier
 B1 dataset and the first two B2 recovery submissions were built on the wrong grid and are superseded,
 not reported. A test now asserts that no risk prompt can contain "Reject:" or "Accept:".
+
+**BD14. Three estimator corrections, each found by the recovery study failing for the wrong reason.**
+The first run of the study failed Gate B2 in all 18 configurations with *every* agent, preference
+shifts included, classified as not preference-like. A rule that rejects everything has perfect
+specificity for free and is not a rule, so the failure was diagnosed rather than reported:
+
+- **The model had no template term.** B1 gives each split two instruction templates, and the plan asks
+  B2 to simulate template-level variation of 0.5 to 2 logits. With no per-template intercept that
+  variation is unmodelled misfit, and the comparison between nested models is decided by which one best
+  absorbs it rather than by the effect under study. Adding intercepts, estimated on the baseline
+  condition and held fixed across the intervention models, raised the preference share for a true alpha
+  shift from 0.265 to 0.591. The intercepts are not separately identified — templates are nested within
+  splits, so a template effect is confounded with that split's reward levels — and only differences
+  matter; the first is pinned at zero.
+- **The fit used binary choices when the instrument returns z.** The plan's own diagnostics are written
+  on z and dz, and the logit readout returns z directly; fitting one Bernoulli draw per row discards
+  most of the measurement. With an observation mode that fits z under Gaussian numerical noise, alpha's
+  RMSE fell from 0.055 to **0.0054** and gamma's to **0.0032**, against a Gate B2 limit of 0.05, and the
+  preference share for a true shift went to 1.000 with the action model rejected in every draw. Both
+  modes are kept: `choice` is what sampled free-text generation gives, `logit` what the readout gives.
+- **D5's transfer ratio divided two squashed probability differences.** A change in choice probability
+  is a few points wide, so the ratio of two of them swung outside the pre-registered band on noise alone
+  and failed a genuine preference shift about half the time. It is now taken on mean dz, like the
+  plan's other diagnostics, and a zero effect in both formats is scored as perfect transfer rather than
+  as a ratio of 0/0.
+
+None of this touched a threshold. Plan v4's numbers are held in one place in `decision.py` and asserted
+by a test.
+
+**BD15. What Gate B2 still fails on, and the arithmetic of the remedy.** Two failures survive, both
+measured rather than argued, and both with the remedy the gate prescribes — change the grid, never the
+thresholds.
+
+- **Lambda, as predicted in BD10.** RMSE around 0.25 against a limit of 0.15, because lambda cancels
+  exactly outside mixed frames and only 36 of 726 risk trials are mixed. The remedy is a denser
+  mixed-frame grid, not a wider bound.
+- **D5's transfer band is beyond the grid's power.** At the minimum detectable change the mean shift is
+  **+0.0109 logits**, while the numerical-noise floor on a format subset's mean is **0.0023** — a
+  signal-to-noise of 4.7 on each subset, so their *ratio* carries about 24% error against a band of
+  +/-25%. Holding the band at 0.8-1.25 therefore needs roughly **nine times** the rows per subset, or
+  about nine independent reads per prompt to average the numerical noise down. That is a grid decision
+  and a budget decision for the authors: nine reads of the current grid is a real cost, and the
+  alternative — widening the band — is an AUTHOR DECISION frozen at B6 and is not Track B's to make.

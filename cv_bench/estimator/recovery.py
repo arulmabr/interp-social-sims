@@ -51,7 +51,8 @@ def run_config(trials: Sequence[core.Trial],
                numerical_noise: float,
                dominated_policy: str,
                reps: int = 20,
-               seed: int = 0) -> Dict[str, object]:
+               seed: int = 0,
+               observe: str = "logit") -> Dict[str, object]:
     """One configuration: every agent, `reps` independent simulations each."""
     base = AgentParams()
     zoo = dict(agent_zoo())
@@ -77,8 +78,17 @@ def run_config(trials: Sequence[core.Trial],
             if template_noise > 0 else None
         sim_b = simulate(trials, base, rng, template_noise, numerical_noise,
                          template_offsets=offsets)
-        fitted_base, lapse_b, _ = FIT.fit(trials, sim_b["choice"], ("alpha", "gamma", "tau"),
-                                          base, dominated_policy=dominated_policy, seed=rep)
+        # The baseline condition estimates the template intercepts, which are
+        # then held fixed for every intervention model. They are a property of
+        # the prompt, shared by both conditions (BD11), so estimating them once
+        # on the baseline is both correct and what a real experiment can do.
+        sigma = max(numerical_noise, 1e-3)
+        obs_b = sim_b["z"] if observe == "logit" else sim_b["choice"]
+        fitted_base, lapse_b, _ = FIT.fit(trials, obs_b, ("alpha", "gamma", "tau"),
+                                          base, dominated_policy=dominated_policy, seed=rep,
+                                          free_templates=template_noise > 0,
+                                          observe=observe, sigma=sigma)
+        tpl_offsets = dict(FIT.fit.last_template_offsets)
         d1_base = FP.d1_dominance_violations(trials, sim_b["choice"])
         p_base = choice_prob(sim_b["z"])
 
@@ -90,13 +100,18 @@ def run_config(trials: Sequence[core.Trial],
             p_int = choice_prob(sim_i["z"])
             dz = sim_i["z"] - sim_b["z"]
 
-            fits = FIT.fit_all_models(trials, sim_i["choice"], fitted_base,
-                                      dominated_policy=dominated_policy, seed=rep)
+            obs_i = sim_i["z"] if observe == "logit" else sim_i["choice"]
+            fits = FIT.fit_all_models(trials, obs_i, fitted_base,
+                                      dominated_policy=dominated_policy, seed=rep,
+                                      template_offsets=tpl_offsets,
+                                      observe=observe, sigma=sigma)
             shares = FIT.model_shares(fits)
             boot = FIT.cluster_bootstrap(trials, fits, "preference", "action",
                                          n_boot=200, seed=rep)
-            oof = DEC.out_of_frame_check(trials, sim_i["choice"], fitted_base,
-                                         dominated_policy=dominated_policy, seed=rep)
+            oof = DEC.out_of_frame_check(trials, obs_i, fitted_base,
+                                         dominated_policy=dominated_policy, seed=rep,
+                                         template_offsets=tpl_offsets,
+                                         observe=observe, sigma=sigma)
             fitted_int = fits["preference"]["params"]
             fp = FP.fingerprint(trials, base, par, fitted_base, fitted_int,
                                 sim_i["choice"], p_base, p_int, dz)
@@ -127,10 +142,19 @@ def run_config(trials: Sequence[core.Trial],
                 rec["true_value"] = float(getattr(par, field))
                 rec["fitted_value"] = float(getattr(fitted_int, field))
             if name in MISSPECIFIED_AGENTS:
+                # "handled on the model-free layer" is read as: the agent is not
+                # called preference-like, AND the model-free layer is what
+                # catches it, rather than the parametric fit alone. Mean-variance
+                # utility genuinely violates stochastic dominance, so D1 flags it
+                # -- requiring these agents to look *clean* would be the wrong
+                # test. The reading is an AUTHOR DECISION and is flagged in
+                # logs/B_DECISIONS.md BD14.
                 c = verdict["criteria"]
+                flagged_by_modelfree = not (c["dominance_intact"]
+                                            and c["transfer_in_band"]
+                                            and c["recall_intact"])
                 misspec_modelfree.setdefault(name, []).append(
-                    bool(c["dominance_intact"] and c["transfer_in_band"]
-                         and c["recall_intact"]))
+                    bool(not verdict["preference_like"] and flagged_by_modelfree))
             records.append(rec)
 
     rmse = DEC.parameter_rmse(records)
@@ -141,7 +165,7 @@ def run_config(trials: Sequence[core.Trial],
     return {
         "config": {"template_noise_sd": template_noise,
                    "numerical_noise_sd": numerical_noise,
-                   "dominated_policy": dominated_policy,
+                   "dominated_policy": dominated_policy, "observe": observe,
                    "reps": reps, "n_trials": len(trials), "seed": seed},
         "matched_effect_target": pref_effect,
         "effect_sizes": matched_effects,
@@ -161,6 +185,9 @@ def main(argv=None) -> int:
     ap.add_argument("--policy", choices=("exclude", "lapse"), required=True)
     ap.add_argument("--reps", type=int, default=20)
     ap.add_argument("--seed", type=int, default=1)
+    ap.add_argument("--observe", choices=("logit", "choice"), default="logit",
+                    help="logit: z is read directly, which is what the readout gives; "
+                         "choice: one Bernoulli draw per row, as sampled generation gives")
     ap.add_argument("--out", type=Path, default=DEFAULT_SHARE / "b2_recovery")
     ap.add_argument("--max-rows", type=int, default=None,
                     help="cap the expanded grid, for a fast smoke run")
@@ -172,11 +199,12 @@ def main(argv=None) -> int:
         step = max(1, len(trials) // args.max_rows)
         trials = trials[::step]
     res = run_config(trials, args.template_noise, args.numerical_noise,
-                     args.policy, reps=args.reps, seed=args.seed)
+                     args.policy, reps=args.reps, seed=args.seed,
+                     observe=args.observe)
     res["utc"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
 
     args.out.mkdir(parents=True, exist_ok=True)
-    tag = f"t{args.template_noise}_n{args.numerical_noise}_{args.policy}"
+    tag = f"t{args.template_noise}_n{args.numerical_noise}_{args.policy}_{args.observe}"
     path = args.out / f"recovery_{tag}.json"
     path.write_text(json.dumps(res, indent=2, sort_keys=True, default=float) + "\n")
 

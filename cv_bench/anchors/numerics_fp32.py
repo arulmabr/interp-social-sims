@@ -79,10 +79,11 @@ def load(dtype: torch.dtype):
     return model, tok, devices
 
 
-def free(model) -> None:
-    del model
-    gc.collect()
-    torch.cuda.empty_cache()
+# NOTE: there is deliberately no `free(model)` helper here. Passing the model to
+# a function and deleting the parameter there only drops that function's local
+# name; the caller still holds the reference and 282 GB stays resident, which is
+# exactly how the first run OOMed when bf16 began loading on top of fp32. Each
+# dtype now runs in its own process, so the operating system does the freeing.
 
 
 def score_all(model, tok, trials: Sequence[core.Trial],
@@ -139,8 +140,78 @@ def summarise(a: np.ndarray, b: np.ndarray) -> Dict[str, float]:
             "rms": float(np.sqrt(np.mean(d ** 2)))}
 
 
+def run_dtype(dtype_name: str, args) -> None:
+    """Score one dtype and write its z arrays. One process per dtype."""
+    dtype = {"fp32": torch.float32, "bf16": torch.bfloat16}[dtype_name]
+    args.out.mkdir(parents=True, exist_ok=True)
+    hb = args.out / f"heartbeat_{dtype_name}.json"
+    trials = select_prompts(args.n_prompts, args.seed)
+    print(f"{len(trials)} calibration-split trials, "
+          f"{len({t.family for t in trials})} families, unbatched reads only", flush=True)
+
+    t_start = datetime.now(timezone.utc)
+    model, tok, devices = load(dtype)
+    on_cpu = any(d.startswith("cpu") for d in devices)
+    print(f"{dtype_name} loaded in "
+          f"{(datetime.now(timezone.utc) - t_start).total_seconds():.0f}s; devices={devices}"
+          + ("  *** CPU OFFLOAD IN USE - record as a deviation ***" if on_cpu else ""),
+          flush=True)
+
+    iv, kind, unit = build_dose(model, tok, trials, args.scale, args.direction, args.seed)
+    z_base = score_all(model, tok, trials, None, hb, f"{dtype_name}_baseline")
+    z_dose = score_all(model, tok, trials, iv, hb, f"{dtype_name}_dose")
+
+    np.savez(args.out / f"z_{dtype_name}.npz", baseline=z_base, dose=z_dose)
+    (args.out / f"meta_{dtype_name}.json").write_text(json.dumps({
+        "utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "dtype": dtype_name, "devices": devices, "cpu_offload": bool(on_cpu),
+        "norm_unit": unit, "dose_kind": kind, "scale": args.scale,
+        "n_prompts": len(trials), "n_gpus": torch.cuda.device_count(),
+        "trial_ids": [t.trial_id for t in trials],
+    }, indent=2, sort_keys=True, default=float) + "\n")
+    print(f"wrote z_{dtype_name}.npz", flush=True)
+
+
+def compare(args) -> int:
+    """Combine the two dtypes and report the errors."""
+    fp = np.load(args.out / "z_fp32.npz")
+    bf = np.load(args.out / "z_bf16.npz")
+    meta_fp = json.loads((args.out / "meta_fp32.json").read_text())
+    meta_bf = json.loads((args.out / "meta_bf16.json").read_text())
+    if meta_fp["trial_ids"] != meta_bf["trial_ids"]:
+        raise RuntimeError("the two dtypes scored different prompts; refusing to compare")
+
+    d_fp = fp["dose"] - fp["baseline"]
+    d_bf = bf["dose"] - bf["baseline"]
+    results: Dict[str, object] = {
+        "utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "model": MODEL_ID, "layer": COMMON_LAYER,
+        "n_prompts": meta_fp["n_prompts"], "scale": meta_fp["scale"],
+        "dose_kind": meta_fp["dose_kind"],
+        "cpu_offload_fp32": meta_fp["cpu_offload"],
+        "cpu_offload_bf16": meta_bf["cpu_offload"],
+        "n_gpus": meta_fp["n_gpus"],
+        "error_in_z_baseline": summarise(bf["baseline"], fp["baseline"]),
+        "error_in_z_dose": summarise(bf["dose"], fp["dose"]),
+        "error_in_condition_difference": summarise(d_bf, d_fp),
+        "effect_size_fp32": {"mean_abs_dz": float(np.mean(np.abs(d_fp))),
+                             "sd_dz": float(np.std(d_fp, ddof=1))},
+        "z_spread_fp32": {"sd": float(np.std(fp["baseline"], ddof=1)),
+                          "min": float(fp["baseline"].min()),
+                          "max": float(fp["baseline"].max())},
+    }
+    err = results["error_in_condition_difference"]["rms"]
+    eff = results["effect_size_fp32"]["mean_abs_dz"]
+    results["error_to_effect_ratio"] = float(err / eff) if eff > 1e-9 else None
+    (args.out / "numerics_fp32.json").write_text(
+        json.dumps(results, indent=2, sort_keys=True, default=float) + "\n")
+    print(json.dumps(results, indent=2, sort_keys=True, default=float))
+    return 0
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--stage", required=True, choices=("fp32", "bf16", "compare"))
     ap.add_argument("--n-prompts", type=int, default=200)
     ap.add_argument("--scale", type=float, default=0.5,
                     help="dose in units of the median residual norm")
@@ -149,62 +220,9 @@ def main(argv=None) -> int:
     ap.add_argument("--out", type=Path, default=DEFAULT_OUT)
     args = ap.parse_args(argv)
 
-    args.out.mkdir(parents=True, exist_ok=True)
-    hb = args.out / "heartbeat.json"
-    trials = select_prompts(args.n_prompts, args.seed)
-    print(f"{len(trials)} calibration-split trials, "
-          f"{len({t.family for t in trials})} families, unbatched reads only")
-
-    results: Dict[str, object] = {
-        "utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "model": MODEL_ID, "layer": COMMON_LAYER,
-        "n_prompts": len(trials), "scale": args.scale,
-        "n_gpus": torch.cuda.device_count(),
-        "trial_ids": [t.trial_id for t in trials],
-    }
-
-    z: Dict[str, np.ndarray] = {}
-    dose_kind = None
-    for dtype_name, dtype in (("fp32", torch.float32), ("bf16", torch.bfloat16)):
-        print(f"\n--- loading {dtype_name} ---", flush=True)
-        t_start = datetime.now(timezone.utc)
-        model, tok, devices = load(dtype)
-        on_cpu = any(d.startswith("cpu") for d in devices)
-        results[f"devices_{dtype_name}"] = devices
-        results[f"cpu_offload_{dtype_name}"] = bool(on_cpu)
-        print(f"loaded in {(datetime.now(timezone.utc) - t_start).total_seconds():.0f}s; "
-              f"devices={devices}"
-              + ("  *** CPU OFFLOAD IN USE - record as a deviation ***" if on_cpu else ""),
-              flush=True)
-
-        iv, kind, unit = build_dose(model, tok, trials, args.scale, args.direction, args.seed)
-        dose_kind = kind
-        results[f"norm_unit_{dtype_name}"] = unit
-
-        z[f"{dtype_name}_baseline"] = score_all(model, tok, trials, None, hb,
-                                                f"{dtype_name}_baseline")
-        z[f"{dtype_name}_dose"] = score_all(model, tok, trials, iv, hb,
-                                            f"{dtype_name}_dose")
-        np.savez(args.out / f"z_{dtype_name}.npz", **{k: v for k, v in z.items()
-                                                      if k.startswith(dtype_name)})
-        free(model)
-
-    results["dose_kind"] = dose_kind
-    results["error_in_z_baseline"] = summarise(z["bf16_baseline"], z["fp32_baseline"])
-    results["error_in_z_dose"] = summarise(z["bf16_dose"], z["fp32_dose"])
-    d_fp32 = z["fp32_dose"] - z["fp32_baseline"]
-    d_bf16 = z["bf16_dose"] - z["bf16_baseline"]
-    results["error_in_condition_difference"] = summarise(d_bf16, d_fp32)
-    results["effect_size_fp32"] = {"mean_abs_dz": float(np.mean(np.abs(d_fp32))),
-                                   "sd_dz": float(np.std(d_fp32, ddof=1))}
-    err = results["error_in_condition_difference"]["rms"]
-    eff = results["effect_size_fp32"]["mean_abs_dz"]
-    results["error_to_effect_ratio"] = float(err / eff) if eff > 1e-9 else None
-
-    (args.out / "numerics_fp32.json").write_text(
-        json.dumps(results, indent=2, sort_keys=True, default=float) + "\n")
-    print("\n" + json.dumps({k: v for k, v in results.items()
-                             if k != "trial_ids"}, indent=2, sort_keys=True, default=float))
+    if args.stage == "compare":
+        return compare(args)
+    run_dtype(args.stage, args)
     return 0
 
 

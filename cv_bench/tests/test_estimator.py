@@ -177,8 +177,7 @@ def test_decision_rule_refuses_to_run_without_format_variation():
     """A silent NaN here would read as 'nothing is preference-like'."""
     one_format = [t for t in core.expand_formats(list(risk.generate_risk()))
                   if t.fmt.label_set == "legacy" and t.fmt.option_order == 0]
-    p = np.zeros(len(one_format))
-    d5 = FP.d5_format_transfer(one_format, p, p)
+    d5 = FP.d5_format_transfer(one_format, np.zeros(len(one_format)))
     assert d5.get("no_format_variation") == 1.0
     with pytest.raises(ValueError, match="format variation"):
         DEC.decide({}, {"D5_format": d5, "D1_dominance": 0.0, "D4_ce": {},
@@ -206,3 +205,65 @@ def test_gate_thresholds_are_plan_v4():
     assert DEC.GATE_CLASSIFICATION_MIN == 0.95
     assert DEC.GATE_RMSE_FRACTION == 0.5
     assert A.MDC == {"alpha": 0.10, "gamma": 0.10, "lambda": 0.30}
+
+
+def test_d5_uses_dz_not_probability_differences(trials):
+    """A ratio of two squashed probability differences swings on noise alone."""
+    dz = np.full(len(trials), 0.3)
+    d5 = FP.d5_format_transfer(trials, dz)
+    assert d5["ratio_label"] == pytest.approx(1.0, abs=1e-9)
+    assert d5["ratio_order"] == pytest.approx(1.0, abs=1e-9)
+    assert d5["in_band"] == 1.0
+
+
+def test_d5_calls_a_zero_effect_perfect_transfer():
+    """No effect in either format is not a transfer failure."""
+    ts = list(core.expand_formats(list(risk.generate_risk())))
+    d5 = FP.d5_format_transfer(ts, np.zeros(len(ts)))
+    assert d5["in_band"] == 1.0
+
+
+def test_d5_catches_a_label_dependent_effect(trials):
+    """An effect present only under legacy labels must leave the band."""
+    dz = np.array([0.3 if t.fmt.label_set == "legacy" else 0.0 for t in trials])
+    d5 = FP.d5_format_transfer(trials, dz)
+    assert d5["in_band"] == 0.0
+
+
+def test_logit_mode_beats_choice_mode_at_recovering_alpha(trials):
+    """The readout returns z; fitting binary choices throws most of it away."""
+    truth = replace(A.AgentParams(), alpha=A.ALPHA0 + A.MDC["alpha"])
+    rng = np.random.default_rng(17)
+    sim = A.simulate(trials, truth, rng, 0.0, 0.1)
+    fit_logit, _, _ = F.fit(trials, sim["z"], ("alpha",), A.AgentParams(),
+                            observe="logit", sigma=0.1, seed=0)
+    fit_choice, _, _ = F.fit(trials, sim["choice"], ("alpha",), A.AgentParams(),
+                             observe="choice", seed=0)
+    err_logit = abs(fit_logit.alpha - truth.alpha)
+    err_choice = abs(fit_choice.alpha - truth.alpha)
+    assert err_logit < err_choice
+    assert err_logit < 0.5 * A.MDC["alpha"]
+
+
+def test_template_intercepts_improve_parameter_recovery(trials):
+    """Unmodelled template offsets are misfit that decides model comparison.
+
+    The intercepts are not separately identified -- B1 gives each split its own
+    two templates, so a template effect is confounded with that split's reward
+    levels, and only differences matter anyway. What must hold is the reason
+    they were added: with them, the preference parameters come back closer to
+    the truth.
+    """
+    rng = np.random.default_rng(23)
+    truth = replace(A.AgentParams(), alpha=A.ALPHA0 + A.MDC["alpha"])
+    offsets = A.draw_template_offsets(trials, 0.8, rng)
+    sim = A.simulate(trials, truth, rng, 0.8, 0.05, template_offsets=offsets)
+
+    without, _, _ = F.fit(trials, sim["z"], ("alpha", "gamma"), A.AgentParams(),
+                          free_templates=False, observe="logit", sigma=0.05, seed=0)
+    with_tpl, _, _ = F.fit(trials, sim["z"], ("alpha", "gamma"), A.AgentParams(),
+                           free_templates=True, observe="logit", sigma=0.05, seed=0)
+    err_without = abs(without.alpha - truth.alpha)
+    err_with = abs(with_tpl.alpha - truth.alpha)
+    assert err_with < err_without, (err_with, err_without)
+    assert err_with < 0.5 * A.MDC["alpha"]

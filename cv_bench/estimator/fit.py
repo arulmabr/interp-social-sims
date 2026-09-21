@@ -84,11 +84,35 @@ def _apply(par: AgentParams, free: Sequence[str], vec: np.ndarray) -> AgentParam
     return replace(par, **kw) if kw else par
 
 
-def log_likelihood(pk: Packed, choices: np.ndarray,
-                   par: AgentParams, lapse: float = 0.0) -> float:
+def template_index(trials: Sequence[Trial]) -> Tuple[np.ndarray, List[str]]:
+    """Per-trial template index and the template ids, in a stable order."""
+    ids = sorted({t.fmt.template_id for t in trials})
+    lookup = {tid: i for i, tid in enumerate(ids)}
+    return np.array([lookup[t.fmt.template_id] for t in trials], dtype=int), ids
+
+
+def log_likelihood(pk: Packed, observed: np.ndarray,
+                   par: AgentParams, lapse: float = 0.0,
+                   offset: Optional[np.ndarray] = None,
+                   observe: str = "choice", sigma: float = 1.0) -> float:
+    """Log-likelihood of `observed` under `par`.
+
+    Two observation modes, because the two response formats give different data.
+    ``choice`` treats each row as one Bernoulli draw, which is what a sampled
+    generation gives. ``logit`` treats each row as a noisy reading of z itself,
+    which is what the logit readout gives and what the plan's own notation
+    assumes when it writes "z the risky-minus-safe logit and dz its change".
+    Fitting binary choices when z is what the instrument returns throws away
+    most of the information in the measurement.
+    """
     z = latent_z_packed(pk, par)
+    if offset is not None:
+        z = z + offset
+    if observe == "logit":
+        r = np.asarray(observed, dtype=float) - z
+        return float(-0.5 * np.sum(r * r) / max(sigma, 1e-9) ** 2)
     p = np.clip(choice_prob(z, lapse=lapse), 1e-9, 1 - 1e-9)
-    return float(np.sum(choices * np.log(p) + (1 - choices) * np.log(1 - p)))
+    return float(np.sum(observed * np.log(p) + (1 - observed) * np.log(1 - p)))
 
 
 def fit(trials: Sequence[Trial],
@@ -98,15 +122,27 @@ def fit(trials: Sequence[Trial],
         dominated_policy: str = "exclude",
         dominated: Optional[np.ndarray] = None,
         restarts: int = 3,
-        seed: int = 0) -> Tuple[AgentParams, float, float]:
+        seed: int = 0,
+        free_templates: bool = False,
+        template_offsets: Optional[Dict[str, float]] = None,
+        observe: str = "choice",
+        sigma: float = 1.0) -> Tuple[AgentParams, float, float]:
     """Maximum likelihood over `free`. Returns (params, lapse, log-likelihood).
 
     ``dominated_policy`` is fixed in advance by BD9: "exclude" drops the flagged
     dominated trials from the likelihood entirely, "lapse" keeps them and frees
     a lapse rate in the choice rule.
+
+    ``free_templates`` adds one intercept per instruction template, the first
+    held at zero for identifiability. Without it the template-level variation
+    the plan asks B2 to simulate is unmodelled misfit, and the comparison
+    between nested models is decided by which one best absorbs that misfit
+    rather than by the effect under study. ``template_offsets`` supplies
+    already-estimated intercepts instead, which is how the baseline condition's
+    estimates are carried into the intervention fits.
     """
     trials = list(trials)
-    choices = np.asarray(choices, dtype=int)
+    choices = np.asarray(choices, dtype=float if observe == "logit" else int)
     if dominated is None:
         dominated = np.array([t.dominant is not None for t in trials])
 
@@ -123,25 +159,43 @@ def fit(trials: Sequence[Trial],
         raise ValueError(f"unknown dominated_policy {dominated_policy!r}")
 
     pk = pack(use_trials)
-    if not free:
-        return init, 0.0, log_likelihood(pk, use_choices, init)
+    tpl_idx, tpl_ids = template_index(use_trials)
+
+    fixed_offset = None
+    if template_offsets:
+        fixed_offset = np.array([template_offsets.get(t.fmt.template_id, 0.0)
+                                 for t in use_trials], dtype=float)
+
+    n_tpl_free = (len(tpl_ids) - 1) if free_templates else 0
+    if not free and not n_tpl_free:
+        return init, 0.0, log_likelihood(pk, use_choices, init, offset=fixed_offset,
+                                         observe=observe, sigma=sigma)
     if len(use_trials) == 0:
         return init, 0.0, float("-nan")
 
-    bounds = [BOUNDS[name] for name in free]
+    bounds = [BOUNDS[name] for name in free] + [(-4.0, 4.0)] * n_tpl_free
     start = []
     for name in free:
         if name == "lapse":
             start.append(0.02)
         else:
             start.append(float(getattr(init, name)))
+    start += [0.0] * n_tpl_free
+
+    def offsets_from(vec: np.ndarray) -> Optional[np.ndarray]:
+        if not n_tpl_free:
+            return fixed_offset
+        vals = np.concatenate([[0.0], vec[len(free):]])
+        off = vals[tpl_idx]
+        return off if fixed_offset is None else off + fixed_offset
 
     def nll(vec: np.ndarray) -> float:
         lapse = 0.0
         if "lapse" in free:
             lapse = float(vec[free.index("lapse")])
-        par = _apply(init, free, vec)
-        val = -log_likelihood(pk, use_choices, par, lapse=lapse)
+        par = _apply(init, free, vec[:len(free)])
+        val = -log_likelihood(pk, use_choices, par, lapse=lapse,
+                              offset=offsets_from(vec), observe=observe, sigma=sigma)
         return val if np.isfinite(val) else 1e12
 
     rng = np.random.default_rng(seed)
@@ -156,28 +210,44 @@ def fit(trials: Sequence[Trial],
             best = res
 
     lapse = float(best.x[free.index("lapse")]) if "lapse" in free else 0.0
-    return _apply(init, free, best.x), lapse, float(-best.fun)
+    par = _apply(init, free, best.x[:len(free)])
+    if n_tpl_free:
+        vals = np.concatenate([[0.0], best.x[len(free):]])
+        fit.last_template_offsets = {tid: float(v) for tid, v in zip(tpl_ids, vals)}
+    else:
+        fit.last_template_offsets = dict(template_offsets or {})
+    return par, lapse, float(-best.fun)
 
 
 # --------------------------------------------------------------------------
 # model comparison
 # --------------------------------------------------------------------------
 
-def pointwise_ll(pk: Packed, choices: np.ndarray,
-                 par: AgentParams, lapse: float = 0.0) -> np.ndarray:
+def pointwise_ll(pk: Packed, observed: np.ndarray,
+                 par: AgentParams, lapse: float = 0.0,
+                 offset: Optional[np.ndarray] = None,
+                 observe: str = "choice", sigma: float = 1.0) -> np.ndarray:
     z = latent_z_packed(pk, par)
+    if offset is not None:
+        z = z + offset
+    if observe == "logit":
+        r = np.asarray(observed, dtype=float) - z
+        return -0.5 * (r * r) / max(sigma, 1e-9) ** 2
     p = np.clip(choice_prob(z, lapse=lapse), 1e-9, 1 - 1e-9)
-    return choices * np.log(p) + (1 - choices) * np.log(1 - p)
+    return observed * np.log(p) + (1 - observed) * np.log(1 - p)
 
 
 def fit_all_models(trials: Sequence[Trial],
                    choices: np.ndarray,
                    init: AgentParams,
                    dominated_policy: str = "exclude",
-                   seed: int = 0) -> Dict[str, Dict[str, object]]:
+                   seed: int = 0,
+                   template_offsets: Optional[Dict[str, float]] = None,
+                   observe: str = "choice",
+                   sigma: float = 1.0) -> Dict[str, Dict[str, object]]:
     """Fit every nested model on the training levels, score on the held-out ones."""
     trials = list(trials)
-    choices = np.asarray(choices, dtype=int)
+    choices = np.asarray(choices, dtype=float if observe == "logit" else int)
     held = heldout_mask(trials)
     tr = [t for t, h in zip(trials, held) if not h]
     te = [t for t, h in zip(trials, held) if h]
@@ -186,7 +256,9 @@ def fit_all_models(trials: Sequence[Trial],
     out: Dict[str, Dict[str, object]] = {}
     for name, free in FREE_SETS.items():
         par, lapse, ll_train = fit(tr, ctr, free, init,
-                                   dominated_policy=dominated_policy, seed=seed)
+                                   dominated_policy=dominated_policy, seed=seed,
+                                   template_offsets=template_offsets,
+                                   observe=observe, sigma=sigma)
         dom_te = np.array([t.dominant is not None for t in te])
         if dominated_policy == "exclude":
             keep = ~dom_te
@@ -194,7 +266,12 @@ def fit_all_models(trials: Sequence[Trial],
             cte_use = cte[keep]
         else:
             te_use, cte_use = te, cte
-        pw = pointwise_ll(pack(te_use), cte_use, par, lapse=lapse)
+        off_te = None
+        if template_offsets:
+            off_te = np.array([template_offsets.get(t.fmt.template_id, 0.0)
+                               for t in te_use], dtype=float)
+        pw = pointwise_ll(pack(te_use), cte_use, par, lapse=lapse, offset=off_te,
+                          observe=observe, sigma=sigma)
         out[name] = {"params": par, "lapse": lapse, "ll_train": ll_train,
                      "ll_test": float(np.sum(pw)), "pointwise": pw,
                      "n_free": len(free) + (1 if dominated_policy == "lapse" else 0)}

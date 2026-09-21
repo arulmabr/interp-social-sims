@@ -29,13 +29,17 @@ def out_of_frame_check(trials: Sequence[Trial],
                        choices: np.ndarray,
                        init: AgentParams,
                        dominated_policy: str = "exclude",
-                       seed: int = 0) -> Dict[str, float]:
+                       seed: int = 0,
+                       template_offsets: Optional[Dict[str, float]] = None,
+                       observe: str = "choice",
+                       sigma: float = 1.0) -> Dict[str, float]:
     """Fit on core frames, predict the held-out frames (A2).
 
     Parameters the core frame cannot identify -- lambda above all (BD10) -- are
     held at baseline for this prediction, exactly as the plan directs, and would
     be re-estimated on the held-out frames only as a secondary analysis.
     """
+    choices = np.asarray(choices, dtype=float if observe == "logit" else int)
     core = np.array([t.frame_role == "core" for t in trials])
     if core.sum() < 20 or (~core).sum() < 20:
         return {"preference": float("nan"), "action": float("nan"),
@@ -51,8 +55,15 @@ def out_of_frame_check(trials: Sequence[Trial],
                        ("action", ("action",)),
                        ("belief", ("kappa",))):
         par, lapse, _ = FIT.fit(tr, ctr, free, init,
-                                dominated_policy=dominated_policy, seed=seed)
-        out[name] = FIT.log_likelihood(pk_te, cte, par, lapse=lapse)
+                                dominated_policy=dominated_policy, seed=seed,
+                                template_offsets=template_offsets,
+                                observe=observe, sigma=sigma)
+        off_te = None
+        if template_offsets:
+            off_te = np.array([template_offsets.get(t.fmt.template_id, 0.0)
+                               for t in te], dtype=float)
+        out[name] = FIT.log_likelihood(pk_te, cte, par, lapse=lapse, offset=off_te,
+                                       observe=observe, sigma=sigma)
     out["preference_wins"] = float(
         out["preference"] > out["action"] and out["preference"] > out["belief"])
     return out

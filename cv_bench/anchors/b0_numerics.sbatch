@@ -20,5 +20,9 @@ cd "${SLURM_SUBMIT_DIR}"
 export HF_HOME=/orcd/data/gabrieli/001/guna23/hf_cache
 echo "host=$(hostname) job=${SLURM_JOB_ID} gpus=${SLURM_GPUS_ON_NODE:-?} start=$(date -Is)"
 nvidia-smi --query-gpu=index,name,memory.total --format=csv,noheader
-python -m cv_bench.anchors.numerics_fp32 --n-prompts 200 --scale 0.5
+# One process per dtype: 282 GB of fp32 weights must be gone before bf16 loads,
+# and only process exit guarantees that.
+python -m cv_bench.anchors.numerics_fp32 --stage fp32 --n-prompts 200 --scale 0.5
+python -m cv_bench.anchors.numerics_fp32 --stage bf16 --n-prompts 200 --scale 0.5
+python -m cv_bench.anchors.numerics_fp32 --stage compare --n-prompts 200 --scale 0.5
 echo "done=$(date -Is)"

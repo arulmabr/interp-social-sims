@@ -142,17 +142,23 @@ def d4_ce_vs_choice(trials: Sequence[Trial],
 
 # -- D5 ---------------------------------------------------------------------
 
-def d5_format_transfer(trials: Sequence[Trial], p_base: np.ndarray,
-                       p_int: np.ndarray) -> Dict[str, float]:
+def d5_format_transfer(trials: Sequence[Trial], dz: np.ndarray) -> Dict[str, float]:
     """Is the effect the same size in each format? The band is 0.8-1.25.
 
     A real preference change should survive relabelling and reordering; a format
     bias should not.
+
+    The ratio is taken on the mean change in z, not on the change in choice
+    probability. A probability difference is squashed by the logistic and is
+    small -- a few points -- so the ratio of two of them is the ratio of two
+    noisy small numbers and swings far outside the band on nothing but noise. It
+    put a genuine preference shift outside the band about half the time. The
+    plan's other diagnostics are stated on dz for the same reason.
     """
     def effect(mask: np.ndarray) -> float:
         if mask.sum() == 0:
             return float("nan")
-        return float(np.mean(p_int[mask]) - np.mean(p_base[mask]))
+        return float(np.mean(dz[mask]))
 
     legacy = np.array([t.fmt.label_set == "legacy" for t in trials])
     order0 = np.array([t.fmt.option_order == 0 for t in trials])
@@ -164,6 +170,13 @@ def d5_format_transfer(trials: Sequence[Trial], p_base: np.ndarray,
                 "no_format_variation": 1.0}
     e_leg, e_neu = effect(legacy), effect(~legacy)
     e_o0, e_o1 = effect(order0), effect(~order0)
+    # A ratio is meaningless when the denominator is essentially zero: no effect
+    # in either format is perfect transfer, not a failure of it.
+    if max(abs(e_leg), abs(e_neu), abs(e_o0), abs(e_o1)) < 1e-4:
+        return {"effect_legacy": e_leg, "effect_neutral": e_neu,
+                "effect_order0": e_o0, "effect_order1": e_o1,
+                "ratio_label": 1.0, "ratio_order": 1.0,
+                "ratio_worst": 1.0, "in_band": 1.0}
     r_label = _safe_ratio(e_neu, e_leg)
     r_order = _safe_ratio(e_o1, e_o0)
     ratios = [r for r in (r_label, r_order) if np.isfinite(r)]
@@ -266,7 +279,7 @@ def fingerprint(trials: Sequence[Trial],
         "D2_variance": d2_variance_decomposition(trials, dz),
         "D3_paired_shift": d3_paired_shift(trials, p_base, p_int),
         "D4_ce": d4_ce_vs_choice(trials, truth_base, truth_int, fitted_base, fitted_int),
-        "D5_format": d5_format_transfer(trials, p_base, p_int),
+        "D5_format": d5_format_transfer(trials, dz),
         "D6_recall": d6_recall(trials, truth_int),
         "D7_stakes": d7_stake_stability(trials, p_base, p_int),
     }
