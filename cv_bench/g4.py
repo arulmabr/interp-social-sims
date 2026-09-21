@@ -85,12 +85,44 @@ N_AGENTS = 40                      # config.LOTTERY["n_agents"], the paper's pro
 LEGACY_LAMBDAS = (0.0, 0.3, 0.5, 1.0, 2.0, 3.0, 4.5, 6.0)
 NORM_DOSES = (0.25, 0.50, 1.00)
 
+# Every steering effect is compared with a random direction of the same norm at
+# the same layer and position, and with a direction trained to encode the reward
+# stated in the prompt (mech_interp_paper_ICLR_extension_plan.docx). Without
+# those two, a dose-response curve says an intervention did something, not that
+# what it did was preference-like.
+#
+# The probe direction is swept at full resolution. The controls only have to
+# establish a band, so they run at four doses and a coarser level grid; that is
+# the difference between a 1.5x job and a 3x one.
+CONTROL_DIRECTIONS = ("reward", "rand0", "rand1")
+ALL_DIRECTIONS = ("probe",) + CONTROL_DIRECTIONS
+
 # the legacy grids, from Probes/config.py
 LOTTERY_GRID = list(range(20, 245, 5))
 ULTIMATUM_GRID = list(range(10, 105, 5))
 # the sampled arm runs every other lottery level; the readout runs all of them
 SAMPLED_LOTTERY = LOTTERY_GRID[::2]
 SAMPLED_ULTIMATUM = ULTIMATUM_GRID
+CONTROL_LOTTERY = LOTTERY_GRID[::6]
+CONTROL_ULTIMATUM = ULTIMATUM_GRID[::2]
+
+
+def control_dose_ids(doses: List[dict]) -> List[int]:
+    """Zero, the largest legacy lambda, and the two largest norm-anchored doses."""
+    zero = [i for i, d in enumerate(doses) if d["dose"] == 0.0]
+    legacy = [i for i, d in enumerate(doses) if d["anchor"].startswith("legacy")]
+    norm = [i for i, d in enumerate(doses) if "norm" in d["anchor"]]
+    want = set(zero[:1])
+    if legacy:
+        want.add(max(legacy, key=lambda i: doses[i]["dose"]))
+    want.update(sorted(norm, key=lambda i: doses[i]["dose"])[-2:])
+    return sorted(want)
+
+
+def sampled_levels(game: str, direction: str) -> List[int]:
+    if direction == "probe":
+        return SAMPLED_LOTTERY if game == "lottery" else SAMPLED_ULTIMATUM
+    return CONTROL_LOTTERY if game == "lottery" else CONTROL_ULTIMATUM
 
 PROBE_PARAMS = {"lottery": LOTTERY_GRID, "ultimatum": ULTIMATUM_GRID}
 PROBE_SAMPLES = 8                  # n_samples_per_param in the legacy builder
@@ -206,6 +238,7 @@ def phase_train(model_key: str, variant: str, layer: int, loaded=None) -> dict:
     try:
         for game in ("lottery", "ultimatum"):
             acts, labels, drops, kept = [], [], 0, 0
+            levels_of: List[int] = []
             norms = []
             for v in PROBE_PARAMS[game]:
                 text = render(tok, game, v, cfg)
@@ -234,6 +267,7 @@ def phase_train(model_key: str, variant: str, layer: int, loaded=None) -> dict:
                         continue
                     acts.append(h)
                     labels.append(c)
+                    levels_of.append(int(v))
                     kept += 1
             y = np.asarray(labels, dtype=int)
             rec = dict(game=game, n_kept=kept, n_dropped=drops,
@@ -259,12 +293,36 @@ def phase_train(model_key: str, variant: str, layer: int, loaded=None) -> dict:
             # the reconstruction maps it back first
             w_raw = w_std / np.clip(sc.scale_, 1e-8, None)
             w_raw = w_raw / (np.linalg.norm(w_raw) + 1e-12)
+            # The reward probe: the same activations, labelled by whether the
+            # prompt's own payoff is above the grid median. It is the control
+            # that asks whether a "preference" direction is a payoff code.
+            lvl = np.asarray(levels_of, dtype=float)
+            y_rw = (lvl > np.median(lvl)).astype(int)
+            rw_std = rw_raw = None
+            rw_acc = float("nan")
+            if len(set(y_rw.tolist())) == 2:
+                lr_rw = LogisticRegression(penalty="l2", C=1.0, max_iter=2000)
+                lr_rw.fit(sc.transform(X), y_rw)
+                rw_acc = float(lr_rw.score(sc.transform(X), y_rw))
+                rw_std = lr_rw.coef_[0] / (np.linalg.norm(lr_rw.coef_[0]) + 1e-12)
+                rw_raw = rw_std / np.clip(sc.scale_, 1e-8, None)
+                rw_raw = rw_raw / (np.linalg.norm(rw_raw) + 1e-12)
+            cos = (float(np.dot(w_std, rw_std)) if rw_std is not None
+                   else float("nan"))
             rec.update(trained=True,
                        train_accuracy=float(lr.score(sc.transform(X), y)),
                        base_rate=float(y.mean()),
                        direction_standardised=[float(x) for x in w_std],
                        direction_raw=[float(x) for x in w_raw],
+                       reward_probe_accuracy=rw_acc,
+                       cos_choice_reward=cos,
+                       reward_standardised=([float(x) for x in rw_std]
+                                            if rw_std is not None else None),
+                       reward_raw=([float(x) for x in rw_raw]
+                                   if rw_raw is not None else None),
                        scaler_scale_median=float(np.median(sc.scale_)))
+            print(f"[g4] {variant} L{layer} {game}: reward probe acc "
+                  f"{rw_acc:.3f}, cos(choice, reward) = {cos:+.3f}", flush=True)
             result[game] = rec
             print(f"[g4] {variant} L{layer} {game}: kept {kept}, dropped {drops} "
                   f"({rec['drop_rate']:.1%}), train acc "
@@ -303,21 +361,37 @@ def phase_sweep(model_key: str, variant: str, layer: int, loaded=None) -> None:
                         legacy_lambdas=list(LEGACY_LAMBDAS),
                         norm_doses=list(NORM_DOSES))))
 
-    sink_s = JsonlSink(OUT / f"sampled_{variant}_L{layer}.jsonl",
-                       key=lambda r: f"{r['game']}|{r['dose_id']}|{r['value']}")
-    sink_r = JsonlSink(OUT / f"readout_{variant}_L{layer}.jsonl",
-                       key=lambda r: f"{r['game']}|{r['dose_id']}|{r['value']}")
+    ctrl_ids = control_dose_ids(doses)
+    print(f"[g4] control doses at ids {ctrl_ids} "
+          f"({[round(doses[i]['dose'], 4) for i in ctrl_ids]})", flush=True)
 
-    def direction(game):
+    sink_s = JsonlSink(OUT / f"sampled_{variant}_L{layer}.jsonl",
+                       key=lambda r: f"{r['direction']}|{r['game']}|{r['dose_id']}|{r['value']}")
+    sink_r = JsonlSink(OUT / f"readout_{variant}_L{layer}.jsonl",
+                       key=lambda r: f"{r['direction']}|{r['game']}|{r['dose_id']}|{r['value']}")
+
+    std = cfg["direction_space"] == "standardised"
+
+    def direction(game, which):
+        """Unit vector for one of the four directions, in the variant's space."""
         g = probe["games"][game]
         if not g.get("trained"):
             return None
-        key = ("direction_standardised" if cfg["direction_space"] == "standardised"
-               else "direction_raw")
-        return np.asarray(g[key], dtype=np.float32)
+        if which == "probe":
+            key = "direction_standardised" if std else "direction_raw"
+        elif which == "reward":
+            key = "reward_standardised" if std else "reward_raw"
+        else:
+            # A random direction of the same norm, drawn once per (layer, game,
+            # draw) and fixed by seed so it is the same vector in every cell.
+            seed = abs(hash((layer, game, which))) % (2**31)
+            v = np.random.default_rng(seed).normal(size=len(g["direction_raw"]))
+            return (v / np.linalg.norm(v)).astype(np.float32)
+        vec = g.get(key)
+        return None if vec is None else np.asarray(vec, dtype=np.float32)
 
-    def iv_for(game, d):
-        vec = direction(game)
+    def iv_for(game, d, which):
+        vec = direction(game, which)
         if vec is None:
             return None
         return Intervention(layer=layer, vectors=vec, scale=d["dose"],
@@ -325,18 +399,20 @@ def phase_sweep(model_key: str, variant: str, layer: int, loaded=None) -> None:
                             norm_unit=M, sign=-1)      # legacy lambdas are negative
 
     # ---- sampled ----
-    s_units = [(g, i, v) for g in ("lottery", "ultimatum")
-               for i in range(len(doses))
-               for v in (SAMPLED_LOTTERY if g == "lottery" else SAMPLED_ULTIMATUM)]
+    s_units = [(w, g, i, v) for w in ALL_DIRECTIONS
+               for g in ("lottery", "ultimatum")
+               for i in (range(len(doses)) if w == "probe" else ctrl_ids)
+               for v in sampled_levels(g, w)]
 
     def s_work(u):
-        game, di, v = u
+        which, game, di, v = u
         d = doses[di]
-        iv = iv_for(game, d)
+        iv = iv_for(game, d, which)
         if iv is None:
             return dict(model=model_key, variant=variant, layer=layer, game=game,
-                        dose_id=di, dose=d["dose"], lam_raw=d["lam_raw"],
-                        anchor=d["anchor"], value=int(v), skipped="probe not trainable")
+                        direction=which, dose_id=di, dose=d["dose"],
+                        lam_raw=d["lam_raw"], anchor=d["anchor"], value=int(v),
+                        skipped="direction unavailable")
         text = render(tok, game, v, cfg)
         enc = tok(text, return_tensors="pt").to(model.device)
         plen = int(enc["input_ids"].shape[1])
@@ -357,7 +433,8 @@ def phase_sweep(model_key: str, variant: str, layer: int, loaded=None) -> None:
             dk.append(dd["kind"])
             dc.append(dd["choice"])
         return dict(model=model_key, variant=variant, layer=layer, game=game,
-                    dose_id=di, dose=d["dose"], lam_raw=d["lam_raw"],
+                    direction=which, dose_id=di, dose=d["dose"],
+                    lam_raw=d["lam_raw"],
                     anchor=d["anchor"], value=int(v), n_agents=N_AGENTS,
                     prompt_len=plen, max_new_tokens=cfg["max_new_tokens"],
                     positions=cfg["positions"], delta_norm=iv.delta_norm,
@@ -365,36 +442,39 @@ def phase_sweep(model_key: str, variant: str, layer: int, loaded=None) -> None:
                     decision_kind=dk, decision_choice=dc)
 
     # ---- readout ----
-    r_units = [(g, i, v) for g in ("lottery", "ultimatum")
+    # the readout is cheap, so every direction gets every dose and every level
+    r_units = [(w, g, i, v) for w in ALL_DIRECTIONS
+               for g in ("lottery", "ultimatum")
                for i in range(len(doses))
                for v in (LOTTERY_GRID if g == "lottery" else ULTIMATUM_GRID)]
 
     def r_work(u):
-        game, di, v = u
+        which, game, di, v = u
         d = doses[di]
-        iv = iv_for(game, d)
+        iv = iv_for(game, d, which)
         if iv is None:
             return dict(model=model_key, variant=variant, layer=layer, game=game,
-                        dose_id=di, dose=d["dose"], value=int(v),
-                        skipped="probe not trainable")
+                        direction=which, dose_id=di, dose=d["dose"], value=int(v),
+                        skipped="direction unavailable")
         spec = TrialSpec(prompt=prompt_for(game, v), labels=LABELS[game], stem=STEM,
                          use_chat_template=cfg["chat_template"])
         r = rd.score(spec, intervention=iv)
         return dict(model=model_key, variant=variant, layer=layer, game=game,
-                    dose_id=di, dose=d["dose"], lam_raw=d["lam_raw"],
+                    direction=which, dose_id=di, dose=d["dose"],
+                    lam_raw=d["lam_raw"],
                     anchor=d["anchor"], value=int(v), stem=STEM,
                     positions=cfg["positions"], delta_norm=iv.delta_norm,
                     p_positive=r.prob[LABELS[game][1]], logit_diff=r.logit_diff,
                     valid_mass=r.valid_mass)
 
     install_stop_handler()
-    run_units(r_units, sink_r, lambda u: f"{u[0]}|{u[1]}|{u[2]}", r_work,
+    run_units(r_units, sink_r, lambda u: f"{u[0]}|{u[1]}|{u[2]}|{u[3]}", r_work,
               f"readout/{variant}/L{layer}", 50)
     sink_r.close()
-    run_units(s_units, sink_s, lambda u: f"{u[0]}|{u[1]}|{u[2]}", s_work,
+    run_units(s_units, sink_s, lambda u: f"{u[0]}|{u[1]}|{u[2]}|{u[3]}", s_work,
               f"sampled/{variant}/L{layer}", 10)
-    done_r = complete(r_units, sink_r, lambda u: f"{u[0]}|{u[1]}|{u[2]}")
-    done_s = complete(s_units, sink_s, lambda u: f"{u[0]}|{u[1]}|{u[2]}")
+    done_r = complete(r_units, sink_r, lambda u: f"{u[0]}|{u[1]}|{u[2]}|{u[3]}")
+    done_s = complete(s_units, sink_s, lambda u: f"{u[0]}|{u[1]}|{u[2]}|{u[3]}")
     sink_s.close()
     if done_r and done_s:
         mark_done(OUT / f"done_g4_{variant}_L{layer}.json",

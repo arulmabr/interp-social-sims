@@ -101,7 +101,7 @@ for _v in ("as_written", "reconstruction"):
         _g = "gpu:a100:2" if _l == 48 else "gpu:h100:2"
         EXPECTED[f"cvb_g4_{_v[:5]}_L{_l}"] = dict(
             sbatch=REPO_SLURM / "cvb_g4.sbatch",
-            args=PREEMPT + [f"--gres={_g}", "--time=08:00:00",
+            args=PREEMPT + [f"--gres={_g}", "--time=16:00:00",
                             f"--job-name=cvb_g4_{_v[:5]}_L{_l}",
                             f"--export=ALL,V={_v},L={_l}"],
             outputs={f"g4/readout_{_v}_L{_l}.jsonl": None,

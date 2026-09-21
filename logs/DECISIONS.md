@@ -470,3 +470,37 @@ chat64 lottery arm the first two disagree on **737 of 1800** trials, every disag
 direction, and in all of them the response is still enumerating the prompt's own two options when
 the cap lands. The legacy rule then reads "Risky" off option 2 and the strict rule reads "Safe" off
 option 1; neither has seen a decision. 68.0% of that arm's responses never state one.
+
+**D56. G4 carries the extension plan's control directions, at a dose and level subset.**
+`mech_interp_paper_ICLR_extension_plan.docx` requires every steering effect to be compared with a
+random direction of the same norm at the same layer and position, and with a direction trained to
+encode the reward stated in the prompt. G4 as first specified swept the choice probe alone, which
+can show that an intervention moved behaviour but not that what moved was preference-like. Four
+directions now run in every cell:
+
+| direction | what it is | doses | levels |
+|---|---|---|---|
+| `probe` | the rebuilt choice probe | all 11 | 23 lottery / 19 ultimatum |
+| `reward` | a probe on the same activations labelled by whether the prompt's payoff is above the grid median | 4 | 8 / 10 |
+| `rand0`, `rand1` | unit vectors, seeded by (layer, game, draw), fixed across cells | 4 | 8 / 10 |
+
+The controls only have to establish a band, so they run coarser: 678 sampled cells against 462,
+a 1.47x cost rather than 3x. The **readout** arm is cheap enough (6.5 forward passes per second)
+that all four directions get all 11 doses and the full grid — 2,816 cells for 0.12 h.
+The control doses are chosen by rule, not by hand: zero, the largest legacy lambda, and the two
+largest norm-anchored doses. `cos(choice probe, reward probe)` is recorded at training time, which
+is the extension plan's hypothesis 1 measured directly.
+
+**D57. G4's wall clock is measured, not assumed, and batching does not help at the long cap.**
+One real cell, timed on the model (`g4/bench_cell.json`):
+
+| variant | cap | 1 sequence | 40 sequences | per-replica projection |
+|---|---|---|---|---|
+| `as_written` | 12 | 0.145 s | 3.40 s | 0.65 h |
+| `reconstruction` | 256 | 0.357 s | 34.6 s | 6.5 h |
+
+The 40-way batch is **slower per sequence** than one at a time, and the reason matters: a single
+sequence stops at EOS after about ten tokens, while a batch of 40 runs until the last of them
+stops, so one straggler drags all 40 to the full cap. Batching is kept because the alternative is
+worse for the readout arm and because the cost is affordable, but no speed-up is claimed for it,
+and the token cap — not the batch size — is the lever that decides G4's runtime.
