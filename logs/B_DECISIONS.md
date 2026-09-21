@@ -462,7 +462,7 @@ currently uses 20..240 by my choice rather than by instruction.
 The ultimatum comparison is less ambiguous and worse for Track B: **all three** legacy stacks state the
 proposer, the pie and that rejection gives both parties zero. Track B states none of them (BD31).
 
-**BD32. A checkpoint keyed on trial ids would have silently reused stale reads after the prompt
+**BD33. A checkpoint keyed on trial ids would have silently reused stale reads after the prompt
 rewrite.** Caught before rerunning B2-cal. A `trial_id` hashes the trial's content and format — domain,
 family, parameters, label *set name*, order, template — but not the words the model is shown. Renaming
 the legacy labels from "Safe Option"/"Risky Option" to "Safe"/"Risky" and the currency from dollars to
@@ -473,7 +473,7 @@ prompts that no longer exist — a silent, total contamination of the refit, wit
 invalidates the checkpoint. A test asserts exactly that. The same fix applies to the gradient and
 numerics jobs.
 
-**BD33. External check 2(a): the G2 arm named in the instruction cannot serve as the reference; chat64
+**BD34. External check 2(a): the G2 arm named in the instruction cannot serve as the reference; chat64
 can.** Author item 2(a) asks that the rebuilt legacy cell reproduce "G2's chat-arm unsteered curve"
 within one grid step at the crossing. Measured on the Friday session's data:
 
