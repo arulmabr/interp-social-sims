@@ -1,0 +1,49 @@
+Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [00:09<00:28,  9.61s/it]Loading checkpoint shards:  50%|█████     | 2/4 [00:31<00:33, 16.55s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [00:48<00:17, 17.20s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:53<00:00, 12.07s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:53<00:00, 13.30s/it]
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/orcd/home/002/guna23/shrey/risk-trackB/cv_bench/anchors/gradient.py", line 260, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/orcd/home/002/guna23/shrey/risk-trackB/cv_bench/anchors/gradient.py", line 224, in main
+    res = average_gradient(model, tok, ro, trials, layer, hb,
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/orcd/home/002/guna23/shrey/risk-trackB/cv_bench/anchors/gradient.py", line 153, in average_gradient
+    g = z_gradient(model, tok, ro, trials[i], layer)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/orcd/home/002/guna23/shrey/risk-trackB/cv_bench/anchors/gradient.py", line 105, in z_gradient
+    out = model(**enc, use_cache=False)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guna23/.local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guna23/.local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guna23/.local/lib/python3.11/site-packages/transformers/utils/deprecation.py", line 172, in wrapped_func
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guna23/.local/lib/python3.11/site-packages/transformers/models/llama/modeling_llama.py", line 853, in forward
+    outputs = self.model(
+              ^^^^^^^^^^^
+  File "/home/guna23/.local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guna23/.local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guna23/.local/lib/python3.11/site-packages/transformers/models/llama/modeling_llama.py", line 601, in forward
+    layer_outputs = decoder_layer(
+                    ^^^^^^^^^^^^^^
+  File "/home/guna23/.local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guna23/.local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1844, in _call_impl
+    return inner()
+           ^^^^^^^
+  File "/home/guna23/.local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1803, in inner
+    hook_result = hook(self, args, result)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/orcd/home/002/guna23/shrey/risk-trackB/cv_bench/anchors/gradient.py", line 98, in hook
+    hs.retain_grad()
+RuntimeError: can't retain_grad on Tensor that has requires_grad=False

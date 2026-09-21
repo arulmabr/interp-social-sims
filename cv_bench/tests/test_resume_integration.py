@@ -60,8 +60,10 @@ def test_b2_cal_read_z_resumes_to_the_same_answer(trials, tmp_path):
         CAL.read_z(FakeReadout(die_after=55), trials, ckpt=ckpt)
 
     from cv_bench.estimator import checkpoint as CK
+    # Same key construction read_z uses: ids AND rendered prompt text.
     mid = CK.Partial(ckpt, len(trials), chunk=50, n_cols=2,
-                     key=CK.items_key([t.trial_id for t in trials]))
+                     key=CK.items_key([t.trial_id for t in trials],
+                                      [core.prompt_text(t) for t in trials]))
     assert 0 < mid.n_done < len(trials), "nothing was checkpointed"
 
     # A fresh reader finishes the job.

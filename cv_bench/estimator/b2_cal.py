@@ -104,7 +104,8 @@ def read_z(ro, trials: Sequence[core.Trial], heartbeat: Optional[Path] = None,
     disk, so a preemption on `ou_bcs_low` costs at most one chunk of reads
     rather than the whole pass.
     """
-    key = CK.items_key([t.trial_id for t in trials])
+    key = CK.items_key([t.trial_id for t in trials],
+                       [core.prompt_text(t) for t in trials])
     part = CK.Partial(ckpt, len(trials), chunk=50, n_cols=2, key=key)
     if part.n_done:
         print(f"  resuming {tag}: {part.n_done}/{len(trials)} already done", flush=True)

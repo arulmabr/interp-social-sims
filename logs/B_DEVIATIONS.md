@@ -50,3 +50,17 @@ rerun, and no threshold was relaxed to accommodate an outcome.
   mean-variance failed because it genuinely violates stochastic dominance, so D1 flagged it correctly
   and the gate counted that as a failure. Under the amended text that same behaviour is scored against
   the mean-variance baseline, where it is not an anomaly at all.
+
+**B1 rebuilt with the social framing defect unfixed.** Author reply "audit ok", 22 Sept, after
+`reports/B_PROMPT_AUDIT.md` flagged it (BD31).
+- *Planned:* the social families state their game, as `Probes/tasks/prompts.py` does for the ultimatum.
+- *Done:* they render as bare payoff pairs — `Reject: nothing` / `Accept: 90 tokens for sure` — with no
+  proposer, no pie and no "both of you get 0".
+- *Why it is acceptable here:* nothing in the current chain reads them. B2-cal, B3.1, B3.2 and the B2
+  recovery study are risk-domain only. The defect is confined to the social families and to any future
+  result that uses them.
+- *Standing caveat:* **no social number from this build may be reported as a social preference.** With
+  the framing absent, rejecting a low offer is an arithmetic error rather than inequity aversion, and
+  the mini-ultimatum's alternatives never reach the model. Free-text cells carry the same caveat: they
+  are scored by the first-token readout, not by sequence log-probability, so they are a second
+  multiple-choice arm.

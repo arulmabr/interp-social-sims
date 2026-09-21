@@ -112,3 +112,25 @@ def test_no_checkpoint_mode_works_without_a_path():
     assert a.complete and a.n_done == 4
     z, w = a.columns()
     assert np.allclose(z, [0, 1, 2, 3]) and np.allclose(w, [0, 3, 6, 9])
+
+
+def test_checkpoint_key_changes_when_the_prompt_wording_changes(tmp_path):
+    """A trial id hashes content and format, not the words shown to the model.
+
+    Renaming a label from "Safe Option" to "Safe" leaves every id identical
+    while every prompt differs, so a key built from ids alone would resume into
+    stale reads of prompts that no longer exist.
+    """
+    ids = [f"id{i}" for i in range(20)]
+    old = ["Safe Option: $20 for sure"] * 20
+    new = ["Safe: 20 tokens for sure"] * 20
+    assert CK.items_key(ids, old) != CK.items_key(ids, new)
+    assert CK.items_key(ids, old) == CK.items_key(ids, old)
+
+    path = tmp_path / "ck.npz"
+    a = CK.Partial(path, 20, chunk=5, key=CK.items_key(ids, old))
+    for i in range(20):
+        a.append(float(i))
+    a.flush()
+    b = CK.Partial(path, 20, chunk=5, key=CK.items_key(ids, new))
+    assert b.n_done == 0, "a checkpoint for different prompt text must not be reused"

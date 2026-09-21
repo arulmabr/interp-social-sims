@@ -99,15 +99,23 @@ class Partial:
         return self.data[:, i]
 
 
-def items_key(ids: Sequence[str]) -> str:
-    """A short fingerprint of the item list a checkpoint belongs to.
+def items_key(ids: Sequence[str], texts: Optional[Sequence[str]] = None) -> str:
+    """A fingerprint of the item list a checkpoint belongs to.
 
-    Guards against resuming into a checkpoint written for a different set of
-    prompts, which would silently mix two runs.
+    The ids alone are not enough. A trial id hashes the trial's *content and
+    format*, not the words the model is shown, so changing a label from
+    "Safe Option" to "Safe" or a currency from dollars to tokens leaves every id
+    identical while every prompt differs. A checkpoint keyed on ids alone would
+    then be silently reused and half the run would be stale reads of prompts
+    that no longer exist. `texts` folds the rendered prompts into the key so a
+    change of wording invalidates the checkpoint, which is what it must do.
     """
     import hashlib
-    h = hashlib.sha256("\n".join(ids).encode()).hexdigest()[:16]
-    return f"{len(ids)}:{h}"
+    h = hashlib.sha256("\n".join(ids).encode()).hexdigest()[:12]
+    if texts is None:
+        return f"{len(ids)}:{h}"
+    t = hashlib.sha256("\n".join(texts).encode()).hexdigest()[:12]
+    return f"{len(ids)}:{h}:{t}"
 
 
 def stage_done(out: Path, name: str) -> bool:

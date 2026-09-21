@@ -461,3 +461,32 @@ currently uses 20..240 by my choice rather than by instruction.
 
 The ultimatum comparison is less ambiguous and worse for Track B: **all three** legacy stacks state the
 proposer, the pie and that rejection gives both parties zero. Track B states none of them (BD31).
+
+**BD32. A checkpoint keyed on trial ids would have silently reused stale reads after the prompt
+rewrite.** Caught before rerunning B2-cal. A `trial_id` hashes the trial's content and format — domain,
+family, parameters, label *set name*, order, template — but not the words the model is shown. Renaming
+the legacy labels from "Safe Option"/"Risky Option" to "Safe"/"Risky" and the currency from dollars to
+tokens changed **every prompt** while leaving **every trial id identical**. The resume logic would have
+matched its key, declared 872 of 872 rows already done, and returned the previous run's z values for
+prompts that no longer exist — a silent, total contamination of the refit, with no error anywhere.
+`items_key` now folds a hash of the rendered prompt text into the key, so a change of wording
+invalidates the checkpoint. A test asserts exactly that. The same fix applies to the gradient and
+numerics jobs.
+
+**BD33. External check 2(a): the G2 arm named in the instruction cannot serve as the reference; chat64
+can.** Author item 2(a) asks that the rebuilt legacy cell reproduce "G2's chat-arm unsteered curve"
+within one grid step at the crossing. Measured on the Friday session's data:
+
+| arm | max_new_tokens | answered | crossing | levels with <20/40 answering |
+|---|---|---|---|---|
+| legacy | 12 | 234/1800 = **13.0%** | — | — |
+| chat | 12 | 576/1800 = **32.0%** | 68.4 | **13 of 25** |
+| **chat64** | 64 | **1800/1800 = 100%** | **110.0** | **0 of 45** |
+
+The chat arm answers on a third of trials, and its answer rate collapses above n = 60 — at n = 65 only
+**2 of 40** agents answer. Its apparent crossing at 68.4 is an artefact of those two rows, not a
+measurement. The chat64 arm answers every trial and crosses at **n = 110**. So the reference for 2(a)
+is taken as **chat64, crossing n = 110**, and the substitution is flagged rather than made silently:
+`reports/G2_legacy_format.md` labels chat64 a departure because it raises `max_new_tokens` from 12, but
+it is the only arm whose curve is supported by data at every level. The 12-token budget, not the chat
+template, is what truncates the answers.

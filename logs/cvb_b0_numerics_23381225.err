@@ -1,0 +1,33 @@
+Loading checkpoint shards:   0%|          | 0/30 [00:00<?, ?it/s]Loading checkpoint shards:   3%|▎         | 1/30 [00:21<10:30, 21.75s/it]Loading checkpoint shards:   7%|▋         | 2/30 [00:46<11:01, 23.62s/it]Loading checkpoint shards:  10%|█         | 3/30 [01:15<11:39, 25.90s/it]Loading checkpoint shards:  13%|█▎        | 4/30 [01:51<12:54, 29.77s/it]Loading checkpoint shards:  17%|█▋        | 5/30 [02:15<11:36, 27.87s/it]Loading checkpoint shards:  20%|██        | 6/30 [02:37<10:24, 26.01s/it]Loading checkpoint shards:  23%|██▎       | 7/30 [03:00<09:31, 24.84s/it]Loading checkpoint shards:  27%|██▋       | 8/30 [03:18<08:19, 22.70s/it]Loading checkpoint shards:  30%|███       | 9/30 [03:36<07:24, 21.15s/it]Loading checkpoint shards:  33%|███▎      | 10/30 [03:57<07:04, 21.22s/it]Loading checkpoint shards:  37%|███▋      | 11/30 [04:11<06:00, 18.95s/it]Loading checkpoint shards:  40%|████      | 12/30 [04:21<04:52, 16.22s/it]Loading checkpoint shards:  43%|████▎     | 13/30 [04:26<03:36, 12.75s/it]Loading checkpoint shards:  47%|████▋     | 14/30 [04:30<02:44, 10.29s/it]Loading checkpoint shards:  50%|█████     | 15/30 [04:35<02:07,  8.49s/it]Loading checkpoint shards:  53%|█████▎    | 16/30 [04:39<01:40,  7.20s/it]Loading checkpoint shards:  57%|█████▋    | 17/30 [04:43<01:21,  6.29s/it]Loading checkpoint shards:  60%|██████    | 18/30 [04:48<01:09,  5.83s/it]Loading checkpoint shards:  63%|██████▎   | 19/30 [04:52<01:00,  5.46s/it]Loading checkpoint shards:  67%|██████▋   | 20/30 [04:57<00:51,  5.11s/it]Loading checkpoint shards:  70%|███████   | 21/30 [05:01<00:43,  4.84s/it]Loading checkpoint shards:  73%|███████▎  | 22/30 [05:05<00:37,  4.64s/it]Loading checkpoint shards:  77%|███████▋  | 23/30 [05:10<00:32,  4.62s/it]Loading checkpoint shards:  80%|████████  | 24/30 [05:14<00:27,  4.56s/it]Loading checkpoint shards:  83%|████████▎ | 25/30 [05:18<00:22,  4.51s/it]Loading checkpoint shards:  87%|████████▋ | 26/30 [05:22<00:17,  4.40s/it]Loading checkpoint shards:  90%|█████████ | 27/30 [05:27<00:13,  4.35s/it]Loading checkpoint shards:  93%|█████████▎| 28/30 [05:31<00:08,  4.46s/it]Loading checkpoint shards:  97%|█████████▋| 29/30 [05:36<00:04,  4.45s/it]Loading checkpoint shards: 100%|██████████| 30/30 [05:39<00:00,  3.98s/it]Loading checkpoint shards: 100%|██████████| 30/30 [05:39<00:00, 11.31s/it]
+Loading checkpoint shards:   0%|          | 0/30 [00:00<?, ?it/s]Loading checkpoint shards:   3%|▎         | 1/30 [00:01<00:45,  1.57s/it]Loading checkpoint shards:   7%|▋         | 2/30 [00:03<00:43,  1.57s/it]Loading checkpoint shards:  10%|█         | 3/30 [00:04<00:43,  1.60s/it]Loading checkpoint shards:  10%|█         | 3/30 [00:05<00:45,  1.68s/it]
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/orcd/home/002/guna23/shrey/risk-trackB/cv_bench/anchors/numerics_fp32.py", line 212, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/orcd/home/002/guna23/shrey/risk-trackB/cv_bench/anchors/numerics_fp32.py", line 171, in main
+    model, tok, devices = load(dtype)
+                          ^^^^^^^^^^^
+  File "/orcd/home/002/guna23/shrey/risk-trackB/cv_bench/anchors/numerics_fp32.py", line 74, in load
+    model = AutoModelForCausalLM.from_pretrained(
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guna23/.local/lib/python3.11/site-packages/transformers/models/auto/auto_factory.py", line 573, in from_pretrained
+    return model_class.from_pretrained(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guna23/.local/lib/python3.11/site-packages/transformers/modeling_utils.py", line 272, in _wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guna23/.local/lib/python3.11/site-packages/transformers/modeling_utils.py", line 4455, in from_pretrained
+    ) = cls._load_pretrained_model(
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guna23/.local/lib/python3.11/site-packages/transformers/modeling_utils.py", line 4884, in _load_pretrained_model
+    disk_offload_index, cpu_offload_index = _load_state_dict_into_meta_model(
+                                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guna23/.local/lib/python3.11/site-packages/torch/utils/_contextlib.py", line 116, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guna23/.local/lib/python3.11/site-packages/transformers/modeling_utils.py", line 852, in _load_state_dict_into_meta_model
+    {param_type: param.to(param_device)},
+                 ^^^^^^^^^^^^^^^^^^^^^^
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 448.00 MiB. GPU 0 has a total capacity of 79.25 GiB of which 279.94 MiB is free. Including non-PyTorch memory, this process has 78.97 GiB memory in use. Of the allocated memory 78.19 GiB is allocated by PyTorch, and 294.45 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)

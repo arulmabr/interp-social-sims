@@ -93,7 +93,8 @@ def score_all(model, tok, trials: Sequence[core.Trial],
     """Unbatched z for every trial (amendment item 5a). Resumable."""
     from cv_bench.readout import Readout
     ro = Readout(model, tok)
-    key = CK.items_key([t.trial_id for t in trials])
+    key = CK.items_key([t.trial_id for t in trials],
+                       [core.prompt_text(t) for t in trials])
     part = CK.Partial(ckpt, len(trials), chunk=25, n_cols=1, key=key) if ckpt else None
     start = part.n_done if part else 0
     if part and start:

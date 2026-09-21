@@ -161,7 +161,8 @@ def average_gradient(model, tok, ro, trials: Sequence[core.Trial], layer: int,
     mean is the only thing the anchor needs.
     """
     hidden = int(model.config.hidden_size)
-    key = CK.items_key([t.trial_id for t in trials])
+    key = CK.items_key([t.trial_id for t in trials],
+                       [core.prompt_text(t) for t in trials])
     part = CK.Partial(ckpt, len(trials), chunk=20, n_cols=hidden + 2, key=key) \
         if ckpt else None
     start = part.n_done if part else 0
