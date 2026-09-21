@@ -407,3 +407,66 @@ across allocations. Consequences: the floor has to be measured **in the run that
 from another; and a single measurement of it is not a property of the model. Until `phase_slope`
 returns, the operative figure for the five-times rule is the larger of the two, **0.094**, giving a
 threshold of **0.47 in z** — deliberately the conservative choice.
+
+**D51. The legacy stem is frozen at `Answer:` for the legacy label set; the neutral set is not
+frozen and goes back for rework.**
+Chosen on the unsteered model and on calibration prompts only (n % 5 in (2,3), off the legacy grid),
+before any steered readout, on valid mass first and the calibration slope second:
+
+| label set | stem | valid mass, lottery | valid mass, ultimatum | slope | r |
+|---|---|---|---|---|---|
+| legacy | `My choice:` | 0.646 | 0.259 | — | — |
+| legacy | `I choose the` | 0.910 | 0.000 | — | — |
+| **legacy** | **`Answer:`** | **1.0000** | **1.0000** | 1.091 / 1.003 | 0.982 / 1.000 |
+| neutral A/B | `Option` | 1.0000 | 1.0000 | — / 0.317 | — / 0.860 |
+
+`I choose the` collapses on the ultimatum because "I choose the Accept" is not English. The neutral
+A/B set reaches full valid mass and still fails: on the lottery the sampled choice is **constant**
+across the whole calibration range, and on the ultimatum the slope is 0.317. A label set the model
+answers without reading the payoff measures a label prior, so it is not frozen. Rework in
+`cv_bench/neutral.py` (FRIDAY amendment item 4).
+
+**D52. The two slope numbers above do not establish that the readout measures free generation, and
+are not cited as if they did.**
+`s21_fix.phase_slope` generates its 20 samples per prompt from `rd.render(spec)` — the same string
+the readout scores, ending in the same stem. Both columns therefore come from a prompt that forces
+an immediate label token, so the slope shows internal consistency under a forced answer and cannot
+distinguish that from a label prior. The non-circular comparison is against G2's free generation
+(`cv_bench/instr.py`, FRIDAY amendment item 2), and it decides which of G4's two measurements is
+primary.
+
+**D53. G4's dose grid, fixed in advance and before any steered run.**
+Doses are in units of **M**, the median residual-stream norm at the steered layer, first token
+excluded, measured on calibration prompts. Two anchors, 11 points, deduplicated:
+
+- **legacy-anchored** — λ ∈ {0, 0.3, 0.5, 1.0, 2.0, 3.0, 4.5, 6.0}, the endpoints and interior of
+  `Probes/config.py::CALIBRATION["coarse_grid"]`, the raw-unit grid every published λ was searched
+  on (observed |λ| run 0.31 → 5.27). Dose = λ / M.
+- **norm-anchored** — dose ∈ {0.25, 0.50, 1.00} of M.
+
+The second anchor exists because the first may be tiny: if M is of order 100, every published λ is
+under 6% of the residual-stream norm, and a null there would mean only that the dose was small. With
+both anchors, "no effect at the doses the paper used" and "no effect at any dose" are separable.
+The grid contains 0 and is identical for both variants, both layers and both games. It is **not**
+calibrated to any target (CLAUDE.md rule 4): no dose is chosen, moved or added because of what a
+result looks like.
+
+**D54. G4's two variants, and what differs between them.**
+
+| | `as_written` | `reconstruction` |
+|---|---|---|
+| prompt | raw string, no chat template | chat template |
+| new tokens | 12 (`DECODING_DEFAULTS`) | the cap the instrument check selects |
+| steering positions | `legacy_ramp` — last 20% of **prompt** tokens, ramp 0.5→1.0, and zero generated tokens | `all` — prompt and generated, which is what `STEERING["apply_during_generation"]=True` claims |
+| direction | added in raw space although fitted in standardised space, as the legacy code does | mapped back to raw space first |
+| probe labelling | the legacy last-match parser | a stated decision only |
+
+Both are run at every dose, both layers, both games. Neither is a sensitivity analysis of the other.
+
+**D55. Every generation in G4 is coded three ways and all three are kept.**
+`legacy` (last mention), `strict` (first mention) and `decision` (a choice only when the response
+says what it chose). The third exists because of a measurement, not a preference: on G2's Llama
+chat64 lottery arm the first two disagree on **737 of 1800** trials, every disagreement in the same
+direction, and in all of them the response is still enumerating the prompt's own two options when
+the cap lands. The legacy rule then reads "Risky" off option 2 and the strict rule reads "Safe" off
+option 1; neither has seen a decision. 68.0% of that arm's responses never state one.
