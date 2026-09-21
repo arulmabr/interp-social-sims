@@ -76,3 +76,21 @@ We used generative AI tools to obtain feedback on methodology and experiments (a
    lottery targets 49 and 68, and Llama layer-50 ultimatum target 30.
 4. **X1 deny-list** gains `gunahn`, `sk1609` and the pattern `hf_[A-Za-z0-9]{20,}`.
 5. **The Hugging Face token lives at `~/.hf_token`**, outside the repository. Read it from there.
+
+### 22 Sept — author amendments (6–10)
+
+6. **Submit G2 now**, without waiting for G3's code.
+7. **Qwen2-7B's G2 is its own 1-GPU job**, so it can start sooner.
+8. **G2 arms per model.** (a) *legacy exactly*: raw strings, legacy sampling, legacy max tokens and N;
+   (b) *chat template*, otherwise identical; (c) *chat template with `max_new_tokens=64`*, labelled a
+   departure, in case 12 tokens cuts the answer off. **Save every raw generation.** Code each one with
+   the legacy last-match rule **and** with a strict rule (first stated option; `no answer` and
+   `both/unclear` are their own categories, never forced into a choice). Report the agreement between
+   the two codings per arm.
+9. **The GPU order becomes G2, G4, G3, G5.** G4 now also runs, at each dose and at layers 48 and 50, a
+   generation arm under the legacy settings with raw text saved and both codings, because V5 shows the
+   legacy curves cannot be audited and steering may change wording as well as choices. G4 and G3 are
+   submitted together in one allocation once their code is ready.
+10. **No excess number, and no probe-stack curve described as a shift in choices, enters a patch until
+    G4's coding agreement is known.** If G4 misses the freeze, the paper states that raw generations
+    were not retained and the coding could not be audited.

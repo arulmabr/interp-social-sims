@@ -168,3 +168,39 @@ token that reaches a file. The supplement build fails on a match rather than scr
 back to the in-repo file and then to `HF_TOKEN`, so nothing breaks while the move happens.
 **At the time of writing `~/.hf_token` does not exist and `hf_token.txt` is still in the working
 tree** — flagged to the authors rather than worked around.
+
+---
+
+## 2026-09-22 — author amendments 6–10
+
+**D26. G2 is submitted as two jobs, and the Qwen arm is its own 1-GPU allocation.**
+`g2_qwen` (job 23379474, 1 GPU, 4 h) and `g2_llama` (job 23379475, 2 GPUs, 12 h), both on
+`ou_bcs_low` with `--account=mit_general --qos=normal --requeue`. Splitting them lets the 7B start
+without waiting for a 2-GPU slot, and it keeps a preemption on one from costing the other.
+
+**D27. Three arms, and the third is labelled a departure.** `legacy` reproduces the legacy pipeline
+with the hook off — raw prompt strings, temperature 0.7, top-p 0.95, `max_new_tokens=12`, 40 agents,
+the legacy grids and the legacy per-agent seeding. `chat` changes exactly one thing, the chat template.
+`chat64` additionally raises `max_new_tokens` to 64; it is recorded in every row as
+`legacy_settings=false` so it can never be mistaken for a legacy number. The legacy path is *imported*
+(`Probes.models.Wrapped`, `Probes.tasks.prompts`, `Probes.config`), never edited, and the run asserts
+that no steering hook is installed.
+
+**D28. Every raw generation is saved and coded twice.** `legacy_code` is the last-match rule that
+produced every published probe curve; `strict_code` takes the first stated option and keeps
+`no_answer` and `unclear` as categories rather than forcing a choice. The divergence is not
+hypothetical: `"Safe. The risky option is worse."` codes **Risky** under the legacy rule and **safe**
+under the strict one. Rows are written after every reward level so a preempted job resumes.
+
+**D29. The GPU order becomes G2, G4, G3, G5.** G4 moves ahead of G3 because it now carries the
+audit that gates the excess results, which is on the critical path for what the paper may claim; G3's
+label-neutral test is valuable but claims nothing that is currently blocked.
+
+**D30. The "survives regardless" line in `reports/V5_parse_audit.md` is withdrawn.** It asserted that
+the layer-48 versus layer-50 dissociation could not be a parser artefact, on the grounds that a
+mis-coding would have to act differently between layers. That symmetry argument does not hold: the two
+layers are different interventions, steering can change verbosity as well as choices, and a direction
+that makes the model append a rationale would move the last-match coding without moving a decision.
+The finding is now stated as a difference in **coded outputs**, with the question of whether it is a
+difference in **choices** deferred to G4. A section was also added recording that the hosted-stack
+curves in S1 and in Figure 3 come from EDSL's recorded answer, not from a regex over the text.

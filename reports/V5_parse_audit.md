@@ -101,10 +101,32 @@ interpolated crossing of 32.9, because that curve is non-monotone in the tail. A
 observed grid cannot imply a staircase rate, so the excess for that curve is not computed
 (`fit_inside_grid = False`). Its raw responses are still audited above along with the rest.
 
-## 5. One thing that is safe to say now
+## 5. What the layer-48 versus layer-50 difference is, and is not
 
-The *direction* of the layer-48 versus layer-50 dissociation does not depend on the parser. Both
-layers were coded by the same rule, on the same grid, at matched λ and matched switching points. A
-parser that mis-codes some fraction of generations would have to do so **differently between the two
-layers** to manufacture the difference, and there is no mechanism for that. The dissociation is
-therefore more robust than the absolute excess values are.
+**Corrected 22 Sept at the authors' instruction.** An earlier version of this section said the
+dissociation "survives regardless" of the parser. That claimed more than the data supports, and the
+claim is withdrawn.
+
+What is established is a **difference in coded outputs**: the same last-match rule, applied to the same
+grid at matched λ and matched switching points, assigns different catch-trial rates at layer 48 and at
+layer 50. That is a fact about the coded data.
+
+Whether it is a **difference in choices** is not established. Steering changes wording as well as
+choices, and a direction that makes the model more verbose — more likely to append a rationale
+mentioning the other label — would move the last-match coding without moving a single decision. The two
+layers are different interventions, so there is no reason to assume they affect verbosity identically;
+the symmetry argument the earlier text relied on does not hold.
+
+**This waits on G4**, which now runs a generation arm at each dose and at both layers under the legacy
+settings, with raw text saved and both codings. Until its coding agreement is known, the difference is
+described as a difference in coded outputs and nothing in a patch calls a probe-stack curve a shift in
+choices.
+
+## 6. One thing that is settled: the hosted-stack curves do not use a regex
+
+The hosted-stack curves in S1 and in the paper's Figure 3 are built from EDSL's recorded answer —
+the `answer.safe_risky_choice` and `answer.ultimatum_response` columns, produced by EDSL's
+multiple-choice validation against `['Safe Option', 'Risky Option']` and `['Accept', 'Reject']`. They
+are **not** produced by a regex over the generated text. The 55% and 34% figures in §2 are the rate at
+which the *legacy probe-stack regex would have disagreed* had it been applied to that text; they are a
+measurement of the regex's fragility, not a defect in the hosted data or in Figure 3.
