@@ -10,6 +10,7 @@
 #SBATCH --mem=256G
 #SBATCH --time=06:00:00
 #SBATCH --requeue
+#SBATCH --open-mode=append
 #SBATCH --output=logs/cvb_b0_numerics_%j.out
 #SBATCH --error=logs/cvb_b0_numerics_%j.err
 

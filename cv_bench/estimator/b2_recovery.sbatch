@@ -9,6 +9,7 @@
 #SBATCH --mem=8G
 #SBATCH --time=02:00:00
 #SBATCH --requeue
+#SBATCH --open-mode=append
 #SBATCH --array=0-17
 #SBATCH --output=logs/cvb_b2_recovery_%A_%a.out
 #SBATCH --error=logs/cvb_b2_recovery_%A_%a.err

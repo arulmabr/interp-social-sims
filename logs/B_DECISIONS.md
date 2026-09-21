@@ -194,3 +194,57 @@ thresholds.
   about nine independent reads per prompt to average the numerical noise down. That is a grid decision
   and a budget decision for the authors: nine reads of the current grid is a real cost, and the
   alternative — widening the band — is an AUTHOR DECISION frozen at B6 and is not Track B's to make.
+
+**BD16. B2-cal: the agents are calibrated to the model before any power number is believed.** Author
+item 1. The B2 agents were scaled without a model, so every power number the recovery study reported
+is a statement about an assumed choice function rather than about this one. The Friday session's
+diagnostics put the unsteered z near **-9.7** at one prompt with a crossing near **n = 242**, which is
+far steeper than the agents' TAU0 = 0.25 implies; if that holds, an alpha shift of 0.10 is worth
+tenths of a logit near indifference rather than the **0.0109** the uncalibrated agents gave, and both
+Gate B2 failures may simply dissolve. `cv_bench/estimator/b2_cal.py` reads the unmodified 70B
+unbatched on the calibration split and returns theta0, the temperature, the template-level noise, the
+numerical-noise floor **measured in that same run**, and a test of whether the slope of z against
+log x is constant across sure amounts. The 18-configuration study is then rerun at the fitted scale
+and noise, reporting sensitivity per criterion and jointly. **No conclusion from the current study is
+carried forward until this lands.**
+
+**BD17. B2-cal runs on legacy labels only, and carries the readout-versus-generation check.** Author
+item 7. The Friday session found that under neutral A/B labels the unsteered readout ignores the
+payoff, so the neutral half would calibrate against a readout that is not measuring the choice. The
+stem is `Answer:`, which their D47 measured at valid mass **1.0000** on both games with the legacy
+labels. The readout-versus-free-generation comparison is part of the same job and the same report:
+greedy decoding, first stated option wins, and an output that states neither is counted rather than
+dropped. `iclr-extension` is merged again when the label work is committed.
+
+**BD18. BD12's 0.95 bootstrap threshold is approved, with Vuong beside it.** Author item 4. Both are
+reported together and both are frozen in `PREREG.md`. This closes BD12's open flag.
+
+**BD19. The D5 band stays at 0.8-1.25.** Author item 5. BD15's arithmetic said the band needs about
+nine times the rows at the uncalibrated scale; the band does not move to accommodate that. Power is
+revisited only after BD16, because the effect size that arithmetic divides by is exactly the thing
+B2-cal is about to replace. If it is still short at the calibrated scale, the remedy is more rows or
+repeated reads.
+
+**BD20. A failed Gate B2 stops evaluation, not construction.** Author item 6. B3.1 and B3.2 are built
+in parallel with the B2 rework, but **no anchor is scored with the decision rule until Gate B2
+passes**. B3.1 computes and saves the gradient direction at layers 48 and 50; the gradient is taken
+with respect to the output of `model.model.layers[L]`, because that is exactly the tensor
+`steer.SteeringHook` adds to — a gradient taken anywhere else would not be the direction a dose
+actually moves. B3.2 waits on theta0 and the temperature from B2-cal, dry-runs on the 8B, and trains
+the 70B in bf16 on 4 GPUs with the cloning check. `b0_numerics` is re-run against the real gradient
+anchor once it exists, replacing the labelled random stand-in.
+
+**BD21. Every long job now checkpoints and resumes, and the resume is tested by interrupting it.**
+Amendment item 4 required it and the first implementation only wrote heartbeats. Slurm jobs already
+survive a dropped connection — they run on a compute node with no tie to the submitting shell — but
+they do not survive preemption, and `ou_bcs_low` is the low-priority partition where preemption is
+expected. `cv_bench/estimator/checkpoint.py` adds an append-only on-disk array that a loop resumes
+from, flushed every chunk and written atomically through a temporary file and a rename, so a job
+killed mid-flush leaves the previous good checkpoint rather than a truncated one. A checkpoint carries
+a fingerprint of the item list it belongs to and is refused if the prompts, the shape or the run
+differ, because silently resuming into another run's partial results is worse than starting over.
+`b2_cal`, `gradient` and `numerics_fp32` resume within a pass; `numerics_fp32` also skips a dtype
+stage that already finished, so a requeue after fp32 does not pay 346 seconds to load it again; and a
+`recovery` array task whose output file exists returns immediately. Eight tests in
+`cv_bench/tests/test_checkpoint.py` cover resuming mid-pass, losing at most one chunk, refusing a
+foreign or corrupt checkpoint, and a heartbeat that cannot take the job down.

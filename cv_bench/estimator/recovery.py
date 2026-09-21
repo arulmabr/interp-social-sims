@@ -193,6 +193,16 @@ def main(argv=None) -> int:
                     help="cap the expanded grid, for a fast smoke run")
     args = ap.parse_args(argv)
 
+    args.out.mkdir(parents=True, exist_ok=True)
+    tag_early = (f"t{args.template_noise}_n{args.numerical_noise}"
+                 f"_{args.policy}_{args.observe}")
+    done_path = args.out / f"recovery_{tag_early}.json"
+    if done_path.exists():
+        # Requeue-safe: a configuration that finished is not recomputed. Each
+        # array task owns exactly one output file, so this is unambiguous.
+        print(f"config {tag_early}: already complete at {done_path}, skipping")
+        return 0
+
     trials = build_trials(expand=True)
     if args.max_rows:
         # Stride rather than truncate, so every format and cell stays present.

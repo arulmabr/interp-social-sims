@@ -9,6 +9,7 @@
 #SBATCH --mem=8G
 #SBATCH --time=00:20:00
 #SBATCH --requeue
+#SBATCH --open-mode=append
 #SBATCH --output=logs/cvb_b1_build_%j.out
 #SBATCH --error=logs/cvb_b1_build_%j.err
 

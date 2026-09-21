@@ -431,3 +431,115 @@ def latent_z_packed(pk: Packed, par: AgentParams) -> np.ndarray:
     z = (u_risky - u_safe) / spread / max(par.tau, 1e-9)
     z = z + par.action + par.position * pk.order_sign + par.label * pk.legacy
     return z
+
+
+# --------------------------------------------------------------------------
+# bases crossed with interventions (author item 3)
+# --------------------------------------------------------------------------
+# The two misspecified agents are *base* agents, not interventions. A
+# mean-variance agent is not "an intervention that looks odd"; it is a different
+# model of the underlying subject, on which the same five interventions can be
+# applied. Treating them as interventions asked the wrong question -- whether
+# they look like a preference shift -- when the question is whether the
+# diagnostics still work when the parametric model is wrong about the subject.
+
+BASES: Tuple[str, ...] = ("cpt", "mean_variance", "monotone")
+INTERVENTIONS: Tuple[str, ...] = ("preference", "action", "belief", "noise", "format")
+MISSPECIFIED_BASES: Tuple[str, ...] = ("mean_variance", "monotone")
+
+#: The parameter each family expresses a preference change through. CPT shifts
+#: alpha, which is what the first preference anchor of B3.2 shifts; the other
+#: families have no alpha, so each shifts its own shape parameter.
+PREFERENCE_KNOB: Dict[str, str] = {
+    "cpt": "alpha", "mean_variance": "mv_b", "monotone": "mono_scale",
+}
+
+
+def base_params(base: str) -> AgentParams:
+    """The unmodified agent of each family."""
+    if base == "cpt":
+        return AgentParams()
+    if base in ("mean_variance", "monotone"):
+        return replace(AgentParams(), kind=base)
+    raise ValueError(f"unknown base {base!r}")
+
+
+def _set(par: AgentParams, knob: str, value: float) -> AgentParams:
+    return replace(par, **{knob: value})
+
+
+def _solve_for_effect(trials, par0: AgentParams, knob: str,
+                      lo: float, hi: float, target: float,
+                      tol: float = 0.0015, max_iter: int = 48) -> float:
+    """Bisect `knob` until the agent moves behaviour by `target` against `par0`.
+
+    Matching on behavioural effect size rather than on parameter size is what
+    makes the comparison between a preference shift and a bias fair: Gate B2
+    asks the rule to reject a bias that moves behaviour as much as a preference
+    shift does.
+    """
+    for _ in range(max_iter):
+        mid = 0.5 * (lo + hi)
+        eff = behavioural_effect(trials, _set(par0, knob, mid), par0)
+        if abs(eff - target) < tol:
+            return mid
+        if eff < target:
+            lo = mid
+        else:
+            hi = mid
+    return 0.5 * (lo + hi)
+
+
+def build_crossed_zoo(trials, target_effect: Optional[float] = None
+                      ) -> Tuple[Dict[Tuple[str, str], AgentParams],
+                                 Dict[str, AgentParams],
+                                 Dict[str, float]]:
+    """Every (base, intervention) pair, matched on behavioural effect size.
+
+    The target effect is CPT's alpha shift at its minimum detectable change, so
+    every cell of the grid moves behaviour by about the same amount and any
+    difference in how it is classified is a difference in *kind*, not in size.
+
+    Returns (crossed, bases, effects).
+    """
+    cpt0 = base_params("cpt")
+    if target_effect is None:
+        target_effect = behavioural_effect(
+            trials, replace(cpt0, alpha=ALPHA0 + MDC["alpha"]), cpt0)
+
+    bases = {b: base_params(b) for b in BASES}
+    crossed: Dict[Tuple[str, str], AgentParams] = {}
+    effects: Dict[str, float] = {}
+
+    #: search ranges per family for the preference knob
+    pref_range = {"cpt": (ALPHA0, ALPHA0 + 0.60),
+                  "mean_variance": (AgentParams().mv_b, AgentParams().mv_b * 40.0),
+                  "monotone": (AgentParams().mono_scale, AgentParams().mono_scale * 6.0)}
+
+    for base, par0 in bases.items():
+        for iv in INTERVENTIONS:
+            if iv == "preference":
+                knob = PREFERENCE_KNOB[base]
+                lo, hi = pref_range[base]
+                val = _solve_for_effect(trials, par0, knob, lo, hi, target_effect)
+                par = _set(par0, knob, val)
+            elif iv == "action":
+                val = _solve_for_effect(trials, par0, "action", 0.0, 8.0, target_effect)
+                par = _set(par0, "action", val)
+            elif iv == "belief":
+                val = _solve_for_effect(trials, par0, "kappa", 1.0, 8.0, target_effect)
+                par = _set(par0, "kappa", val)
+            elif iv == "noise":
+                val = _solve_for_effect(trials, par0, "tau", TAU0, TAU0 * 40.0,
+                                        target_effect)
+                par = _set(par0, "tau", val)
+            elif iv == "format":
+                val = _solve_for_effect(trials, par0, "position", 0.0, 8.0, target_effect)
+                par = replace(par0, position=val, label=val)
+            else:
+                raise ValueError(iv)
+            crossed[(base, iv)] = par
+            effects[f"{base}/{iv}"] = behavioural_effect(trials, par, par0)
+
+    effects["_target"] = float(target_effect)
+    return crossed, bases, effects

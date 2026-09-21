@@ -29,6 +29,7 @@ os.environ.setdefault("HF_HOME", "/orcd/data/gabrieli/001/guna23/hf_cache")
 import numpy as np
 import torch
 
+from cv_bench.estimator import checkpoint as CK
 from cv_bench.tasks import core, risk
 
 MODEL_ID = "meta-llama/Llama-3.3-70B-Instruct"
@@ -88,19 +89,27 @@ def load(dtype: torch.dtype):
 
 def score_all(model, tok, trials: Sequence[core.Trial],
               intervention=None, heartbeat: Optional[Path] = None,
-              tag: str = "") -> np.ndarray:
-    """Unbatched z for every trial (amendment item 5a)."""
+              tag: str = "", ckpt: Optional[Path] = None) -> np.ndarray:
+    """Unbatched z for every trial (amendment item 5a). Resumable."""
     from cv_bench.readout import Readout
     ro = Readout(model, tok)
-    out = np.empty(len(trials), dtype=np.float64)
-    for i, t in enumerate(trials):
-        spec = core.to_trial_spec(t)
-        res = ro.score(spec, intervention=intervention)
-        out[i] = res.logit_diff
+    key = CK.items_key([t.trial_id for t in trials])
+    part = CK.Partial(ckpt, len(trials), chunk=25, n_cols=1, key=key) if ckpt else None
+    start = part.n_done if part else 0
+    if part and start:
+        print(f"  resuming {tag}: {start}/{len(trials)} already done", flush=True)
+    out = part.column(0) if part else np.empty(len(trials), dtype=np.float64)
+    for i in range(start, len(trials)):
+        res = ro.score(core.to_trial_spec(trials[i]), intervention=intervention)
+        if part:
+            part.append(res.logit_diff)
+        else:
+            out[i] = res.logit_diff
         if heartbeat is not None and i % 20 == 0:
-            heartbeat.write_text(json.dumps(
-                {"utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-                 "stage": tag, "done": i + 1, "total": len(trials)}) + "\n")
+            CK.heartbeat(heartbeat, stage=tag, done=i + 1, total=len(trials))
+    if part:
+        part.flush()
+        out = part.column(0)
     return out
 
 
@@ -141,9 +150,17 @@ def summarise(a: np.ndarray, b: np.ndarray) -> Dict[str, float]:
 
 
 def run_dtype(dtype_name: str, args) -> None:
-    """Score one dtype and write its z arrays. One process per dtype."""
+    """Score one dtype and write its z arrays. One process per dtype.
+
+    Skipped outright if this dtype already finished, so a requeue after the
+    fp32 stage does not pay 346 seconds to load fp32 again.
+    """
     dtype = {"fp32": torch.float32, "bf16": torch.bfloat16}[dtype_name]
     args.out.mkdir(parents=True, exist_ok=True)
+    if (args.out / f"z_{dtype_name}.npz").exists() and \
+            (args.out / f"meta_{dtype_name}.json").exists():
+        print(f"{dtype_name}: already complete, skipping", flush=True)
+        return
     hb = args.out / f"heartbeat_{dtype_name}.json"
     trials = select_prompts(args.n_prompts, args.seed)
     print(f"{len(trials)} calibration-split trials, "
@@ -158,8 +175,10 @@ def run_dtype(dtype_name: str, args) -> None:
           flush=True)
 
     iv, kind, unit = build_dose(model, tok, trials, args.scale, args.direction, args.seed)
-    z_base = score_all(model, tok, trials, None, hb, f"{dtype_name}_baseline")
-    z_dose = score_all(model, tok, trials, iv, hb, f"{dtype_name}_dose")
+    z_base = score_all(model, tok, trials, None, hb, f"{dtype_name}_baseline",
+                       ckpt=args.out / f"ckpt_{dtype_name}_baseline.npz")
+    z_dose = score_all(model, tok, trials, iv, hb, f"{dtype_name}_dose",
+                       ckpt=args.out / f"ckpt_{dtype_name}_dose.npz")
 
     np.savez(args.out / f"z_{dtype_name}.npz", baseline=z_base, dose=z_dose)
     (args.out / f"meta_{dtype_name}.json").write_text(json.dumps({
