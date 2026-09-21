@@ -86,8 +86,7 @@ def read_z(ro, trials: Sequence[core.Trial], heartbeat: Optional[Path] = None,
     rather than the whole pass.
     """
     key = CK.items_key([t.trial_id for t in trials])
-    part = CK.Partial(ckpt, len(trials), chunk=50, n_cols=2, key=key) \
-        if ckpt else CK.Partial(Path(os.devnull + ".npz"), len(trials), n_cols=2)
+    part = CK.Partial(ckpt, len(trials), chunk=50, n_cols=2, key=key)
     if part.n_done:
         print(f"  resuming {tag}: {part.n_done}/{len(trials)} already done", flush=True)
     for i in range(part.n_done, len(trials)):

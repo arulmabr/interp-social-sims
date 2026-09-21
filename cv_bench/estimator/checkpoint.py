@@ -38,9 +38,13 @@ def _atomic_savez(path: Path, **arrays) -> None:
 class Partial:
     """A resumable 1-D float array, keyed by position in a fixed item list."""
 
-    def __init__(self, path: Path, total: int, chunk: int = 50,
+    def __init__(self, path: Optional[Path], total: int, chunk: int = 50,
                  n_cols: int = 1, key: Optional[str] = None):
-        self.path = Path(path)
+        # `path=None` means "no checkpoint": the array lives in memory and every
+        # flush is a no-op. Callers that do not want to checkpoint must get a
+        # working object rather than an exception, or the no-checkpoint branch
+        # becomes a crash that only appears when someone takes it.
+        self.path = Path(path) if path is not None else None
         self.total = int(total)
         self.chunk = int(chunk)
         self.n_cols = int(n_cols)
@@ -51,7 +55,7 @@ class Partial:
         self._load()
 
     def _load(self) -> None:
-        if not self.path.exists():
+        if self.path is None or not self.path.exists():
             return
         try:
             z = np.load(self.path, allow_pickle=False)
@@ -67,6 +71,9 @@ class Partial:
         self.n_done = int(z["n_done"])
 
     def flush(self) -> None:
+        if self.path is None:
+            self._since_flush = 0
+            return
         payload = {"data": self.data, "n_done": np.array(self.n_done)}
         if self.key:
             payload["key"] = np.array(self.key)

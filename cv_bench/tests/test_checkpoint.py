@@ -101,3 +101,14 @@ def test_heartbeat_is_written_and_survives_a_bad_path(tmp_path):
     assert rec["stage"] == "baseline" and rec["done"] == 5 and "utc" in rec
     # An unwritable path must not take the job down with it.
     CK.heartbeat(tmp_path / "no" / "such" / "dir" / "hb.json", stage="x")
+
+
+def test_no_checkpoint_mode_works_without_a_path():
+    """The no-checkpoint branch must be usable, not a latent crash."""
+    a = CK.Partial(None, 4, chunk=2, n_cols=2)
+    for i in range(4):
+        a.append([float(i), float(i) * 3])
+    a.flush()                       # a no-op, and must not raise
+    assert a.complete and a.n_done == 4
+    z, w = a.columns()
+    assert np.allclose(z, [0, 1, 2, 3]) and np.allclose(w, [0, 3, 6, 9])
