@@ -94,3 +94,44 @@ We used generative AI tools to obtain feedback on methodology and experiments (a
 10. **No excess number, and no probe-stack curve described as a shift in choices, enters a patch until
     G4's coding agreement is known.** If G4 misses the freeze, the paper states that raw generations
     were not retained and the coding could not be audited.
+
+### 22 Sept — author amendment: scheduling by estimate (in force until the cutoff)
+
+**CUTOFF: Wed 23 Sept 23:00 PDT = Thu 24 Sept 06:00 UTC.** This replaces the results freeze.
+Scheduling is by estimate, not by the fixed now/later lists above.
+
+1. **Estimate first, by measurement.** For every remaining task in this file (V, G) and in
+   `ICLR_PLAN.md` (S3.1–S3.5, Track B through B5), run a benchmark of at most 10 minutes per job type
+   on the real hardware: generations/s, forward passes/s, LoRA s/step, model load time. Estimate =
+   load + items ÷ throughput, × 1.5, plus the queue wait Slurm currently predicts, plus dependencies.
+   Write `reports/SCHEDULE.md`: task, depends on, GPUs, estimated run time, estimated finish,
+   GPU-hours, run now / after submission. Post it, then start without waiting for approval; the
+   authors may veto.
+2. **Run now** everything whose estimated finish, including dependencies and verification, is before
+   the cutoff. Order: **G2, then G4, then by value to the Sept 25 paper per GPU-hour.** Everything
+   else is scheduled for **Sat 26 Sept**. It may start earlier at very low priority (`--nice=10000`)
+   if GPUs would otherwise sit idle, but it must never delay a run-now job, and its results do not go
+   in the Sept 25 PDF.
+3. **Throughput.** Use as many GPUs and CPU workers at once as this account's Slurm limits allow —
+   read them, do not guess. Job arrays; data-parallel replicas of the 70B at 2 GPUs each; CPU work as
+   Slurm array jobs and **never on the login node**. **Total cap before the cutoff: 400 GPU-hours**,
+   replacing the earlier 40 and 60. Ask only before exceeding it. Report once how many GPUs are
+   actually being obtained.
+4. **Failures.** Every job checkpoints, is requeue-safe and writes a heartbeat. A monitor runs under
+   `tmux` (one thread) and every 10 minutes checks `squeue`/`sacct`, scans logs for `Traceback`,
+   `CUDA out of memory`, `NaN` and preemption, compares output row counts against expected counts, and
+   rewrites `reports/STATUS.md`. Technical failures are resubmitted automatically **at most twice**,
+   with the cause and any technical change (batch size, for example) logged in `logs/DEVIATIONS.md`;
+   after that the task stops and the authors are told. **Never change seeds, prompts, doses,
+   thresholds or metrics on a retry.** Check outputs, not only exit codes: valid answer mass,
+   agreement between the two codings, no empty or constant columns.
+5. **Gates until the cutoff.** Gates whose criteria are numbers become automatic checks: evaluate
+   **Gate B2** and **Gate B3** exactly as written in `ICLR_PLAN.md` with plan v4's thresholds. Pass
+   means continue and report; fail means stop that branch and report (for B2, iterate on the synthetic
+   grid only). Unchanged: **the test split stays locked** until a human unlocks it after `PREREG.md`
+   is tagged; **rule 4** (no rerun because a result is unhelpful); **rule 1** (no number without a
+   file).
+6. **What may enter the Sept 25 PDF:** only results finished, verified and committed before the
+   cutoff. A Track B result additionally needs Gate B2 and Gate B3 passed, the label *"exploratory,
+   selection split, not pre-registered"*, and an author having read its report. Everything else waits
+   for the discussion-period revision.

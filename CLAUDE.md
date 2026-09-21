@@ -31,3 +31,29 @@ Research code for "Interpreting and Steering LLM Agents for Social Simulations",
 - Reports in `reports/`, figures in `figures/<id>.{pdf,png}` with the generating script beside them as `figures/make_<id>.py`.
 - Record decisions and their reasons in `logs/DECISIONS.md` as you go.
 - Left-padded batches need explicit `position_ids`; a test must show that batched and unbatched logits agree before any batched result is trusted.
+
+---
+
+## Amendment, 22 Sept 2026 — in force until the cutoff (Thu 24 Sept 06:00 UTC)
+
+Authors' amendment to **rules 6 and 7**, recorded here because this file outranks the plans and a
+reader must not apply the originals by mistake. The full text is in `FRIDAY_PLAN.md` under
+"scheduling by estimate"; `logs/DECISIONS.md` records what changed and why.
+
+**Rule 6 (Stop at gates) — amended.** Gates whose criteria are numbers become automatic checks until
+the cutoff. Gate B2 and Gate B3 are evaluated exactly as written in `ICLR_PLAN.md`, with plan v4's
+thresholds: pass means continue and report, fail means stop that branch and report, and for B2
+iteration happens on the synthetic grid only. Every other gate still stops and waits. **The test split
+stays locked** until a human unlocks it after `PREREG.md` is tagged.
+
+**Rule 7 (Ask before spending) — amended.** The 8 GPU-hour threshold is replaced, until the cutoff, by
+a **total cap of 400 GPU-hours**. Work proceeds without per-job approval inside that cap; the authors
+are asked only before exceeding it. Paid API batches and downloads above the storage rule's threshold
+still need approval, unchanged.
+
+**Unchanged and explicitly reaffirmed:** rule 1 (no number without a file behind it), rule 2 (existing
+results are read-only), rule 4 (the outcome never decides a rerun — technical reasons only, logged in
+`logs/DEVIATIONS.md`, and never a change of seeds, prompts, doses, thresholds or metrics on a retry),
+rule 5 (every arm that runs is reported), rule 9 (secrets and anonymity), rule 12 (the authors decide).
+
+After the cutoff, rules 6 and 7 apply as originally written.

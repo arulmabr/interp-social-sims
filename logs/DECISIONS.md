@@ -250,3 +250,45 @@ invisible to a mock. Measured on that model: batched and unbatched logit differe
 plan's 0.98 bar. The last number is expected on a 0.5B model with this stem and is reported, not
 asserted; `Readout.check_valid_mass` enforces the bar before any 70B result is used, and if the stem
 fails there it gets revised, as S2.1 instructs.
+
+---
+
+## 2026-09-22 — scheduling by estimate, to a cutoff of Thu 24 Sept 06:00 UTC
+
+Appended to `FRIDAY_PLAN.md` and, for rules 6 and 7, to `CLAUDE.md`.
+
+**D35. The cutoff replaces the results freeze.** Wed 23 Sept 23:00 PDT = **Thu 24 Sept 06:00 UTC**,
+about **68 hours** from this entry. Only work finished, verified and committed before it may enter the
+Sept 25 PDF.
+
+**D36. Scheduling is by measured estimate, and the measurements come from the live runs.** G2 is
+already producing exactly the numbers a benchmark would: Llama-3.3-70B at 2 GPUs loads in **4.5 min**
+and generates at **1.25 generations/s** at the legacy settings; Qwen2-7B at 1 GPU loads in 0.5 min and
+generates at **6.90/s**, completing all of G2 in 9.2 minutes. Those are real allocations under real
+contention, so they are used in preference to a synthetic benchmark. A separate 8-minute benchmark
+(job 23379816) measures the **forward-pass** path, which G3 and G4 depend on and which G2 does not
+exercise.
+
+**D37. The budget binds before Slurm does.** Read, not guessed: QOS `ou_bcs_low` caps a user at
+`gres/gpu=64` (32 a100 + 32 h100) with 256 submitted jobs, but this account's association permits only
+QOS **`normal`** on that partition, which carries no GPU cap; the association cap is
+`MaxSubmit=500`, and `MaxArraySize` is 25,000. So Slurm would allow tens of GPUs. **400 GPU-hours over
+68 hours is ~5.9 GPUs sustained**, and at 2 GPUs per 70B replica that is about **three concurrent
+replicas**. The schedule is therefore budget-shaped, not limit-shaped, and asking for 32 GPUs would
+exhaust the cap in half a day.
+
+**D38. Two items in the amendment do not exist in the repository, and are not invented.**
+- **G4b and G6** are named as remaining tasks. `FRIDAY_PLAN.md` defines only **G1–G5**. They are absent
+  from `reports/SCHEDULE.md` with that stated, rather than guessed at.
+- The cap is described as "replacing the earlier 40 and 60". The only budget communicated to this
+  session was **40** GPU-hours (`GATE_S0_RESPONSE.md` §1.2). No 60 was ever recorded here.
+
+**D39. Gate B2 and Gate B3 become automatic checks; every other gate still stops.** This is a genuine
+change to rule 6 and is recorded as such. It is bounded: the criteria for B2 and B3 are numeric and
+written out in `ICLR_PLAN.md`, so "evaluate exactly as written" is well defined. The test split
+remains locked behind a human unlock and the `prereg-v1` tag, rule 4 still forbids any rerun motivated
+by an unhelpful result, and rule 1 still forbids any number without a file.
+
+**D40. `peft` is not installed**, so the LoRA anchors of B3.2 cannot run as things stand. The
+benchmark records `lora_seconds_per_step = null` rather than estimating it. Installing `peft` is a
+small change but it is a dependency addition, so it is reported rather than made silently.
