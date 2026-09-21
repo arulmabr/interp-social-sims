@@ -257,6 +257,15 @@ def phase_batch(model_key: str, dtype: str) -> dict:
     stem = os.environ.get("S21_STEM", "My choice:")
     vals, specs = cal_specs("lottery", labels, stem)
     specs = specs[:16]
+    # The calibration prompts all tokenise to the same length -- Llama's BPE gives
+    # one token to most 2- and 3-digit numbers -- so a left-padded batch of them has
+    # pad length 0 everywhere and does not exercise padding at all. Prepend filler
+    # of increasing length to a copy of the set, so pad length varies from 0 to
+    # several hundred tokens and the regression below has something to regress on.
+    FILLER = ("This is a decision-making experiment. Please read the following "
+              "scenario carefully before answering. ")
+    varied = [TrialSpec(prompt=(FILLER * (i * 3)) + s.prompt, labels=s.labels,
+                        stem=s.stem) for i, s in enumerate(specs)]
 
     single = np.array([rd.score(s).logit_diff for s in specs])
 
@@ -308,6 +317,30 @@ def phase_batch(model_key: str, dtype: str) -> dict:
         companions = [specs[(k + j + 1) % len(specs)] for j in range(k + 1)]
         grp = [probe] + companions
         zs.append(rd.score_batch(grp, batch_size=len(grp))[0].logit_diff)
+    # the padding test proper, on prompts of deliberately different lengths
+    v_single = np.array([rd.score(s).logit_diff for s in varied])
+    v_lens = [len(tok(rd.render(s))["input_ids"]) for s in varied]
+    v_batch = np.array([r.logit_diff for r in rd.score_batch(varied, batch_size=len(varied))])
+    v_pad = np.array([max(v_lens) - L for L in v_lens], dtype=float)
+    v_d = np.abs(v_batch - v_single)
+    A = np.vstack([v_pad, np.ones_like(v_pad)]).T
+    sl3, ic3 = np.linalg.lstsq(A, v_d, rcond=None)[0]
+    out["padding_test_varied_lengths"] = dict(
+        token_lengths=v_lens, max_pad=int(v_pad.max()),
+        max_abs_diff=round(float(v_d.max()), 6),
+        mean_abs_diff=round(float(v_d.mean()), 6),
+        slope_per_pad_token=round(float(sl3), 8),
+        intercept=round(float(ic3), 6),
+        r=round(float(np.corrcoef(v_pad, v_d)[0, 1]), 4),
+        per_item=[dict(pad=int(v_pad[i]), abs_diff_z=round(float(v_d[i]), 6))
+                  for i in range(len(varied))],
+        verdict=("grows with pad length -- masking bug" if float(np.corrcoef(v_pad, v_d)[0, 1]) > 0.5
+                 and float(v_d.max()) > 1e-3 else "no growth with pad length"))
+    print("padding test:", out["padding_test_varied_lengths"]["verdict"],
+          "max|diff|=", out["padding_test_varied_lengths"]["max_abs_diff"],
+          "slope/pad token=", out["padding_test_varied_lengths"]["slope_per_pad_token"],
+          flush=True)
+
     out["noise_floor"] = dict(
         n_batchings=len(zs), sd_of_z=round(float(np.std(zs, ddof=1)), 6),
         values=[round(float(v), 6) for v in zs],
@@ -317,16 +350,134 @@ def phase_batch(model_key: str, dtype: str) -> dict:
     return out
 
 
+def locate_switching_region(rd, game, labels, stem, lo=20, hi=1200, n_probe=40):
+    """Find where the unsteered readout crosses 0.5, by a coarse sweep then a bisect.
+
+    A calibration slope is the regression of sampled choice frequency on readout
+    probability. It is only defined where the choice actually varies, so the
+    calibration set has to straddle the switching point. Locating it costs one
+    forward pass per probe value and removes the guesswork.
+    """
+    import numpy as np
+    from cv_bench.readout import TrialSpec
+    fn = lottery_prompt if game == "lottery" else ultimatum_prompt
+    xs = np.unique(np.round(np.geomspace(lo, hi, n_probe)).astype(int))
+    ps = []
+    for v in xs:
+        r = rd.score(TrialSpec(prompt=fn(int(v), labels), labels=labels, stem=stem))
+        ps.append(r.prob[labels[1]])
+    ps = np.array(ps)
+    cross = None
+    for i in range(len(xs) - 1):
+        if (ps[i] - 0.5) * (ps[i + 1] - 0.5) <= 0 and ps[i] != ps[i + 1]:
+            cross = float(xs[i] + (0.5 - ps[i]) * (xs[i + 1] - xs[i]) / (ps[i + 1] - ps[i]))
+            break
+    # the band where the readout is genuinely uncertain
+    band = [int(v) for v, q in zip(xs, ps) if 0.05 <= q <= 0.95]
+    return dict(probe_values=[int(v) for v in xs],
+                probe_p_positive=[round(float(q), 5) for q in ps],
+                crossing=cross, uncertain_band=[min(band), max(band)] if band else None,
+                p_at_min=round(float(ps[0]), 5), p_at_max=round(float(ps[-1]), 5))
+
+
+def spanning_calibration_set(region, game, n=50):
+    """50 off-grid values spanning the switching region, still never on the legacy grid."""
+    import numpy as np
+    if region.get("uncertain_band"):
+        lo, hi = region["uncertain_band"]
+    elif region.get("crossing"):
+        c = region["crossing"]
+        lo, hi = max(1, int(c * 0.5)), int(c * 1.5)
+    else:
+        return (CAL_LOTTERY if game == "lottery" else CAL_ULTIMATUM), False
+    lo, hi = int(max(1, lo * 0.8)), int(hi * 1.2)
+    cand = [v for v in range(lo, hi + 1) if v % 5 in (2, 3)]
+    if len(cand) < 5:
+        cand = [v for v in range(lo, hi + 1)]
+    idx = np.unique(np.round(np.linspace(0, len(cand) - 1, min(n, len(cand)))).astype(int))
+    return [cand[i] for i in idx], True
+
+
+def phase_slope(model_key: str) -> dict:
+    """Re-do the calibration slope on a set that spans the switching region."""
+    import torch, re
+    import numpy as np
+    from cv_bench.readout import Readout, TrialSpec
+
+    stems = json.loads(os.environ.get(
+        "S21_STEMS", '{"legacy": "Answer:", "neutral": "Option"}'))
+    model, tok = load(model_key, "bf16")
+    rd = Readout(model, tok)
+    out: Dict[str, object] = dict(model=model_key, stems=stems, per_label_set={})
+
+    for lset, games in LABEL_SETS.items():
+        stem = stems[lset]
+        for game, labels in games.items():
+            region = locate_switching_region(rd, game, labels, stem)
+            vals, spanned = spanning_calibration_set(region, game)
+            fn = lottery_prompt if game == "lottery" else ultimatum_prompt
+            specs = [TrialSpec(prompt=fn(v, labels), labels=labels, stem=stem)
+                     for v in vals]
+            x = np.array([rd.score(s).prob[labels[1]] for s in specs])
+            pat = re.compile(r"\b(%s)\b" % "|".join(labels), re.I)
+            y = []
+            for s in specs:
+                enc = tok(rd.render(s), return_tensors="pt").to(model.device)
+                hits = 0
+                for k in range(20):
+                    torch.manual_seed(k)
+                    with torch.inference_mode():
+                        g = model.generate(**enc, max_new_tokens=6, do_sample=True,
+                                           temperature=0.7, top_p=0.95,
+                                           pad_token_id=tok.pad_token_id)
+                    t = tok.decode(g[0, enc["input_ids"].shape[1]:],
+                                   skip_special_tokens=True)
+                    m = pat.search(t)
+                    if m and m.group(1).lower() == labels[1].lower():
+                        hits += 1
+                y.append(hits / 20)
+            y = np.array(y)
+            rec = dict(stem=stem, labels=list(labels), region=region,
+                       spans_switching_region=spanned,
+                       calibration_values=[int(v) for v in vals],
+                       readout_p=[round(float(v), 5) for v in x],
+                       sampled_freq=[round(float(v), 4) for v in y],
+                       readout_sd=round(float(x.std()), 5),
+                       sampled_sd=round(float(y.std()), 5),
+                       readout_constant=bool(x.std() < 1e-6),
+                       sampled_constant=bool(y.std() < 1e-6))
+            if x.std() > 1e-6 and y.std() > 1e-6:
+                A = np.vstack([x, np.ones_like(x)]).T
+                sl, ic = np.linalg.lstsq(A, y, rcond=None)[0]
+                rec.update(slope=round(float(sl), 4), intercept=round(float(ic), 4),
+                           r=round(float(np.corrcoef(x, y)[0, 1]), 4),
+                           slope_in_0_8_to_1_2=bool(0.8 <= sl <= 1.2))
+            else:
+                which = ("readout" if x.std() <= 1e-6 else "") + \
+                        ("+sampled" if y.std() <= 1e-6 else "")
+                rec.update(slope=None, r=None,
+                           constant_column=which.strip("+"),
+                           note="slope undefined: a constant column")
+            out["per_label_set"][f"{lset}/{game}"] = rec
+            print(f"{lset}/{game}: crossing={region['crossing']} "
+                  f"band={region['uncertain_band']} spans={spanned} "
+                  f"slope={rec.get('slope')} r={rec.get('r')} "
+                  f"sd(x)={rec['readout_sd']} sd(y)={rec['sampled_sd']}", flush=True)
+    return out
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default="llama", choices=list(MODELS))
     ap.add_argument("--phase", default="stem",
-                    choices=["stem", "batch", "batch_fp32"])
+                    choices=["stem", "batch", "batch_fp32", "slope"])
     a = ap.parse_args()
     OUT.mkdir(parents=True, exist_ok=True)
     t0 = time.time()
     if a.phase == "stem":
         res = phase_stem(a.model)
+    elif a.phase == "slope":
+        res = phase_slope(a.model)
     elif a.phase == "batch":
         res = phase_batch(a.model, "bf16")
     else:

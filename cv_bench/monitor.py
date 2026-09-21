@@ -45,7 +45,8 @@ CYCLE_SECONDS = int(os.environ.get("MONITOR_CYCLE", "600"))
 FAILURE_PATTERNS = [
     ("traceback", re.compile(r"^Traceback \(most recent call last\)", re.M)),
     ("cuda_oom", re.compile(r"CUDA out of memory|torch\.cuda\.OutOfMemoryError")),
-    ("nan", re.compile(r"\bnan\b|\bNaN\b")),
+    # standalone word only: matches "nan"/"NaN"/"-nan" but not "finance" or "tenant"
+    ("nan", re.compile(r"(?<![A-Za-z0-9_])(?:nan|NaN|NAN)(?![A-Za-z0-9_])")),
     ("preempted", re.compile(r"PREEMPT|DUE TO PREEMPTION|CANCELLED AT .* DUE TO")),
     ("oom_killed", re.compile(r"Out Of Memory|oom-kill|Killed")),
 ]
@@ -147,13 +148,14 @@ def scan_log(p: Optional[Path]) -> List[str]:
         text = p.read_text(errors="ignore")
     except Exception:
         return []
-    # "nan" appears inside ordinary words; require it standalone and not in a path
+    # "nan" appears inside ordinary words (finance, tenant, banana), so the pattern
+    # below requires it standalone. It used to ALSO require the word "loss"
+    # somewhere in the log, which meant a standalone nan in any log that never
+    # mentions loss -- a readout sweep, a calibration pass, an attribution run --
+    # was dropped silently. The word boundary is the filter; nothing else is
+    # needed. Reported by the Track B session, 22 Sept.
     hits = []
     for tag, pat in FAILURE_PATTERNS:
-        if tag == "nan":
-            if re.search(r"(?<![A-Za-z])nan(?![A-Za-z])", text) and "loss" in text.lower():
-                hits.append(tag)
-            continue
         if pat.search(text):
             hits.append(tag)
     return hits

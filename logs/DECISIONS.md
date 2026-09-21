@@ -335,3 +335,75 @@ the same job, and any effect smaller than five times it will be flagged.
 notes and the schedule must respect: **`bitsandbytes` 0.43.2 is present but was compiled without GPU
 support**, so 4-bit is not available here. B3.2 should train its LoRA in bf16; if that does not fit,
 a GPU-enabled build is needed first, and that is a request, not something to work around.
+
+---
+
+## 2026-09-22 — S2.1-fix results, and two corrections from the Track B session
+
+**D46. The monitor's NaN check was dropping real failures; fixed, with a test.** `scan_log` reported a
+standalone `nan` only when the log also contained the word "loss", so a NaN in any log that is not a
+training log — a readout sweep, a calibration pass, an attribution run — was silently ignored. The
+standalone-word boundary was always the filter that mattered; the extra condition only narrowed it.
+Removed, the pattern tightened to `(?<![A-Za-z0-9_])(?:nan|NaN|NAN)(?![A-Za-z0-9_])`, and
+`cv_bench/tests/test_monitor.py` added: 17 tests, including the exact regression (a log with a
+standalone `nan` and no "loss" anywhere) and the false positives the boundary must reject —
+*finance*, *tenant*, *banana*, *nanometre*, *covariance*, *Kernighan*. Reported by the Track B
+session.
+
+**D47. The stem is settled, and the trailing space was only half the story.**
+Mean valid mass on 50 calibration prompts per game, unbatched, unsteered:
+
+| label set | stem | lottery | ultimatum |
+|---|---|---:|---:|
+| legacy | `My choice:` | 0.646 | 0.259 |
+| legacy | `I choose the` | 0.910 | **0.000** |
+| legacy | **`Answer:`** | **1.0000** | **1.0000** |
+| neutral | `My choice: Option` | 1.0000 | 1.0000 |
+| neutral | `Answer: Option` | 1.0000 | 0.9996 |
+| neutral | **`Option`** | **1.0000** | **1.0000** |
+
+Removing the trailing space lifted `My choice:` from 0.371 to 0.646 on the lottery — real, and not
+enough. The rest is that `My choice:` invites a sentence, while `Answer:` invites a token. And
+`I choose the` collapses to **zero** on the ultimatum, because "I choose the Accept" is not English:
+a stem has to fit its labels grammatically, which is not a consideration the plan anticipated.
+
+Top tokens after `Answer:` are ` Safe`, `Safe`, ` '`, ` Risk`, `.Safe`, ` SAFE`, ` Saf`, ` safe` —
+the leading-space spelling is reachable again, which is exactly what the trailing space had blocked.
+
+**Both winners pass the 0.98 bar outright**, so no recorded deviation is needed for selection. For the
+neutral set three stems tie at ~1.0000, so the tie-break is the calibration slope, which is why D48
+matters for selection and not only for validation.
+
+**D48. The constant column: the calibration set did not span the switching region.** The stem job
+ended `legacy: slope=0.000 r=nan`. The constant column is the **sampled choice frequency**: the
+calibration values ran 22–143, and the unsteered model answers Safe across all of them, so y was 0
+everywhere and a regression of y on x is undefined. The readout probability is not the problem — a
+slope is a statement about how sampled behaviour tracks the readout, and it has no content where
+behaviour does not vary. `phase_slope` now locates the crossing by a geometric readout sweep from 20
+to 1200, takes the band where the readout sits between 0.05 and 0.95, widens it 20%, and draws 50
+values from it — still congruent to 2 or 3 mod 5, so still off the legacy grid. Job 23380708.
+Caught by the Track B session from the log; amendment item 4's "no constant columns" check is what
+should have caught it here, and the monitor only applies that check to `.jsonl` outputs, not to a
+job's own summary.
+
+**D49. The batch discrepancy is bf16 numerics, not a masking bug — the padding test says so.**
+The first two batch runs could not answer the question: every calibration prompt tokenises to exactly
+112 tokens, so pad length was 0 for all 16 and the "left-padded" condition was a second equal-length
+run. With filler prepended so lengths run 112 → 832 and pad reaches 720 tokens:
+
+- slope of |discrepancy| per pad token: **−5.3e-05**, r = **−0.089** — no growth, and if anything a
+  slight decline;
+- max |diff| 0.500, mean 0.172, i.e. the same magnitude at pad 0 as at pad 720;
+- fp32 on Llama-3.1-8B, same code: **3.2e-05**, inside the 1e-4 bar.
+
+So the masking, the `position_ids` and the attention mask are correct, and the 0.125–0.50 spread on
+the 70B is bf16 accumulation. **A tolerance is not being loosened to accommodate a bug.**
+
+**D50. The noise floor is not stable across runs, and that is reported rather than averaged.**
+The SD of z for one prompt across six batch compositions measured **0.094** in the first 70B run and
+**0.000** in the second, from identical code on the same model. The plausible cause is kernel
+selection: batch shape decides which cuBLAS kernel and reduction order run, and that is not fixed
+across allocations. Consequences: the floor has to be measured **in the run that uses it**, not quoted
+from another; and a single measurement of it is not a property of the model. Until `phase_slope`
+returns, the operative figure for the five-times rule is the larger of the two, **0.094**, giving a
+threshold of **0.47 in z** — deliberately the conservative choice.
