@@ -161,7 +161,7 @@ def s1_1_dominated():
         lo_level = 50 - step * n_below
         pred = np.clip((50 - np.maximum(gx, lo_level)) / (50 - lo_level), 0, 1)
         ax.plot(gx, pred, color=MUTED, linewidth=1.4, linestyle=(0, (4, 3)), zorder=2,
-                label="implied by the switching point alone")
+                label="implied by the switching point alone (P13)")
         missing = []
         for r in sorted(sub, key=lambda r: f(r["switching_point_interp"], 1e9)):
             x = f(r["switching_point_interp"])
@@ -171,6 +171,11 @@ def s1_1_dominated():
                 missing.append(r["condition"])
                 continue
             c = colour(r["condition"])
+            # P13: the gap to the staircase is the excess over a clean translation.
+            imp = f(r.get("implied_by_translation", ""))
+            if np.isfinite(imp) and abs(y - imp) > 0.015:
+                ax.plot([x, x], [imp, y], color=c, linewidth=1.1, alpha=0.8, zorder=3)
+                ax.plot([x], [imp], "_", color=c, markersize=9, zorder=3)
             ax.errorbar(x, y, yerr=[[max(0, y - lo)], [max(0, hi - y)]],
                         fmt=marker(r["condition"]),
                         color=c, markersize=8, capsize=3, elinewidth=1.6,
@@ -191,7 +196,8 @@ def s1_1_dominated():
         ax.set_ylim(-0.04, 1.04)
     axes[0].legend(loc="upper right", bbox_to_anchor=(0.99, 0.88), fontsize=7.5,
                    frameon=False, labelcolor=INK2)
-    fig.suptitle("S1.1  Dominated choices restate the switching point; the stacks are not compared",
+    fig.suptitle("S1.1  Dominated choices against the rate a clean translation implies "
+                 "(P13); the stacks are not compared",
                  fontsize=11.5, color=INK, x=0.02, ha="left")
     fig.tight_layout(rect=(0, 0, 1, 0.94))
     save(fig, "s1_1_dominated")
@@ -218,6 +224,11 @@ def s1_2_catch():
                 ax.annotate(f"{r['condition']}\n(threshold not identified)", (2, y),
                             fontsize=7, color=INK2, va="bottom")
                 continue
+            imp = f(r.get("implied_by_translation", ""))
+            if np.isfinite(imp):
+                ax.plot([x], [imp], "_", color=c, markersize=10, zorder=3)
+                if abs(y - imp) > 0.008:
+                    ax.plot([x, x], [imp, y], color=c, linewidth=1.1, alpha=0.8, zorder=3)
             ax.errorbar(x, y, yerr=[[max(0, y - lo)], [max(0, hi - y)]], fmt=m, color=c,
                         markersize=8, capsize=3, elinewidth=1.6,
                         markeredgecolor=SURFACE, markeredgewidth=1.4, zorder=4)
@@ -233,7 +244,8 @@ def s1_2_catch():
               "P(reject | offer $\\geq$ 50)" if stack == "hosted" else "")
         ax.set_xlim(0, 70)
         ax.set_ylim(-0.012, 0.32)
-    fig.suptitle("S1.2  Hyper-fair rejections: absent on the hosted stack, present under probe steering",
+    fig.suptitle("S1.2  Hyper-fair rejections, against the rate a clean translation implies "
+                 "(P13); dash = implied, marker = observed",
                  fontsize=11.5, color=INK, x=0.02, ha="left")
     fig.tight_layout(rect=(0, 0, 1, 0.94))
     save(fig, "s1_2_catch")

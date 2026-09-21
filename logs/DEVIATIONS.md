@@ -152,3 +152,65 @@ model and is not substituted.
 **Recorded as a limitation, not a deviation:** the probe run records carry `ModelConfig.name`, a
 display string, not `hf_id`, so for Stack C the checkpoint is attested by one line of configuration
 rather than by the logs. Stacks A, B and D record the id itself.
+
+---
+
+## D-2026-09-21-07 — P12 replaces the primary interval for the sampled legacy data
+
+**Instruction.** `GATE_S0_RESPONSE.md` §3 P12, now signed. The reward levels are a fixed design and the
+randomness lives in the sampled responses, so forty draws at one level *are* forty independent
+observations of that level's choice probability — they are simply not forty agents. The primary
+statistics for every contrast become (a) a permutation test of the condition label stratified by reward
+level and (b) a bootstrap that holds the levels fixed and resamples responses within them. The
+level-resampling interval is kept as a **sensitivity** column. Shifts are given in grid steps as well as
+tokens.
+
+**This reverses D11**, which made the level-resampling interval primary. D11 was reasoning from B6's
+rule ("resample reward levels and templates, never trials"), and P12 is right that B6 is written for
+logit readouts, which have no trial noise. Sampled text does. D11 is superseded; both intervals are
+retained so the difference is visible rather than argued.
+
+**Implementation.** `cv_bench/s1_data.py` gains `permutation_shift_test` (exact stratified relabelling,
+which for binomial counts is a hypergeometric redraw within each level),
+`bootstrap_shift_within_level`, `bootstrap_switch_within_level` and `grid_step`.
+`results/S/s1/s1_3_switching_points.csv` and `s1_3_pairwise_differences.csv` and
+`s1_8_persona_cross_stack.csv` gain the new columns; the old ones are renamed to
+`*_levels_resampled` so nothing is silently reinterpreted.
+
+**Consequence for finding 1 of `PHASE1_FINDINGS.md`.** It flips, as P12 anticipated. Under the
+level-resampling interval the hosted SAE ultimatum shift was 3.4 tokens, 95% CI [0.0, 7.6] — not
+distinguishable from zero. Under P12's primary statistics it is distinguishable
+(stratified permutation p ≈ 0.002, within-level interval well clear of zero), and the honest framing is
+the one P12 gives: **3.4 tokens is under one 5-token grid step, against 25.1 tokens — five steps — for
+the persona.** The finding is rewritten as a statement about size, not about significance.
+
+---
+
+## D-2026-09-21-08 — P13: excess over the staircase, in both games
+
+**Instruction.** `GATE_S0_RESPONSE.md` §3 P13. P2 applies to the ultimatum too, so every catch-trial
+rate is reported beside the rate a clean translation implies — a step at the fitted switching point —
+with the difference and an interval. Zero excess means the rate is the switching point restated;
+positive excess means responses the threshold does not explain.
+
+**Implementation.** `staircase_excess` in `cv_bench/s1_data.py`; new columns
+`implied_by_translation`, `excess_over_staircase`, `excess_ci`, `excess_excludes_zero` in
+`s1_1_dominated_lottery.csv` and `s1_2_catch_ultimatum.csv`; rendered as a drop line to the staircase in
+`figures/s1_1_dominated` and `figures/s1_2_catch`.
+
+**One correction to P13's own examples, flagged per this file's header rule.** P13 names two cases as
+the signature of an added action bias. The data agrees with one and not the other:
+
+- **Layer 50's hyper-fair rejections at target 30: confirmed.** Excess **+0.061**, 95% CI
+  [0.041, 0.084], excluding zero, where layer 48 at the same target and essentially the same λ has an
+  excess of exactly 0.000. The dissociation survives the correction and is strengthened by it.
+- **Qwen's 0.400 at target 60: not confirmed.** Its excess is **0.000**, 95% CI [−0.045, 0.050]. With
+  five catch levels on the Qwen grid and a fitted threshold of 65.0, a clean translation implies
+  rejecting exactly the two levels at 50 and 60 — 2/5 = 0.400. The observed rate *is* the arithmetic.
+  P13's own reasoning applied to this case gives 0, and the 0.400 headline in `PHASE1_FINDINGS.md`
+  finding 4 has to be restated accordingly.
+
+**A gating fix found while implementing it.** The implied rate is a step at the *fitted* switching
+point, so it is meaningless where the measured curve never crosses 0.5 — the fit is then extrapolating.
+Unguarded, the vLLM persona reported an implied rate of 1.0 and an excess of −0.997. The excess is now
+computed only for curves with `crosses_half_on_grid = True`; the rest are blank.

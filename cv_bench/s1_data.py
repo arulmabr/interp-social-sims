@@ -559,6 +559,18 @@ def staircase_excess(
     if obs_n == 0:
         return {}
     _, _, s_hat = _fit_agg(xs, k, n, scale=scale)
+    # The implied rate is a step at the fitted switching point, so the fit has to
+    # describe the curve. Where the logistic lands outside the observed grid it is
+    # extrapolating -- probe-llama-l50 lottery target30 returns -13.0 against an
+    # interpolated crossing of 32.9, because that curve is non-monotone in the tail
+    # -- and the implied rate it produces is an artefact of the extrapolation.
+    inside = bool(np.isfinite(s_hat) and xs.min() <= s_hat <= xs.max())
+    if not inside:
+        return dict(n_catch_levels=int(catch.sum()), n_catch_trials=int(obs_n),
+                    observed_rate=float(obs_k / obs_n), switching_point=s_hat,
+                    fit_inside_grid=False, implied_rate=float("nan"),
+                    excess=float("nan"), excess_ci_lo=float("nan"),
+                    excess_ci_hi=float("nan"), n_bootstrap=0)
     observed = float(obs_k / obs_n)
     implied = implied_of(s_hat)
     p_hat = np.divide(k, n, out=np.zeros_like(k), where=n > 0)
@@ -567,7 +579,7 @@ def staircase_excess(
     for _ in range(n_boot):
         kb = rng.binomial(n.astype(int), p_hat).astype(float)
         _, _, s = _fit_agg(xs, kb, n, scale=scale)
-        if not np.isfinite(s):
+        if not np.isfinite(s) or not (xs.min() <= s <= xs.max()):
             continue
         if game == "lottery":
             o = float(kb[catch].sum() / obs_n)
@@ -575,7 +587,8 @@ def staircase_excess(
             o = float((n[catch] - kb[catch]).sum() / obs_n)
         draws.append(o - implied_of(s))
     out = dict(n_catch_levels=int(catch.sum()), n_catch_trials=int(obs_n),
-               observed_rate=observed, switching_point=s_hat, implied_rate=implied,
+               observed_rate=observed, switching_point=s_hat, fit_inside_grid=True,
+               implied_rate=implied,
                excess=observed - implied if np.isfinite(implied) else float("nan"))
     if len(draws) >= 50:
         lo, hi = np.percentile(draws, [2.5, 97.5])

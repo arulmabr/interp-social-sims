@@ -107,3 +107,64 @@ and Fig. 5 panels. Those panels are Stack A. The same persona text moves Stack A
 strategies when it is mostly a difference between stacks. The figure draws Stack A's baseline as a
 separately labelled reference line and differences nothing against it. Recorded as a deviation from the
 plan's wording, with the reason, rather than done silently.
+
+---
+
+## 2026-09-21 — G1, the download
+
+**D17. The model is fetched with a second account's token, and that is recorded rather than hidden.**
+The environment's `HF_TOKEN` belongs to `gunahn`, which holds meta-llama access for Llama-3.1-70B and
+3.1-8B but **not** for 3.3-70B — a 403 that exactly explains the 239 KB stub already on the share. An
+author supplied a token for a second account, `sk1609`, whose access to
+`meta-llama/Llama-3.3-70B-Instruct` and to the Goodfire SAE was verified before anything was fetched.
+Both tokens are read-only for this work; nothing is ever pushed to the hub. The reproducibility
+statement should say the weights came from the official `meta-llama` repository at the revision
+recorded in `results/S/g1_download_verification.json`, not which account fetched them.
+
+**D18. `original/` is not downloaded.** The model repo is 282 GB because it ships the weights twice:
+30 sharded safetensors (141.1 GB), which `transformers` loads, and a consolidated `original/*.pth`
+copy of the same parameters (141.1 GB). Only the safetensors, the index, the config and the tokenizer
+are fetched — 141.1 GB — plus the SAE at 4.3 GB. Total 145.4 GB, which is what the gate approved.
+
+**D19. The SAE is pinned to the revision the legacy runs used**,
+`128ee921ecd1b8b3a87d776cbcc357c0855da134`, recovered by V3 from the `sae_path` field of the logged
+open-SAE runs. New SAE work therefore matches the logged runs exactly. The model itself has no such
+pin — no stack recorded one — so G1 records the revision it fetched and the paper should say the
+legacy revision is unknown.
+
+**D20. The token file is excluded from git locally, not by editing `.gitignore`.**
+`hf_token.txt` sits in the working tree. `.gitignore` is a tracked file belonging to the legacy
+repository, so instead `hf_token.txt` and `*token*.txt` were added to `.git/info/exclude`, which is
+local and untracked. The file is in no commit on any branch. It should still be moved out of the
+repository: X1's deny-list scan is a backstop, not a reason to leave a credential in a working tree.
+
+---
+
+## 2026-09-22 — author amendments 1–5 to `FRIDAY_PLAN.md`
+
+Appended verbatim to `FRIDAY_PLAN.md` under "Amendments". Effect on the work:
+
+**D21. V4 moves ahead of the remaining verification tasks, and G2 is queued on G1's verification.**
+G1 verified at 36/36 files, 30 shards, 141.12 GB, revision `6f6073b42301`, no missing or wrong-sized
+file, sha256 matching the hub on the two sampled shards, and the SAE loading under
+`weights_only=True`. V1 and V2 are CPU-only and run while the GPU job waits in the queue.
+
+**D22. The Qwen arm is downloaded, and it is `Qwen/Qwen2-7B-Instruct`.** That is the id V3 recovered
+from `Probes/config.py:34`, and it is *not* the `Qwen2.5-7B-Instruct` already on the share, which is a
+different model. Roughly 15 GB into the same cache on the lab share.
+
+**D23. V5 gates every excess result.** No "excess over the staircase" number enters a patch until the
+raw responses behind it have been audited for parse failures. This is the right order: the excess is a
+difference between an observed rate and a rate implied by a fit, and a parser that codes a malformed
+generation as a choice would inflate the observed rate without touching the fit — which is exactly the
+shape of a spurious positive excess. Where malformed outputs were coded as choices, both the original
+and the clean-only excess are reported.
+
+**D24. The X1 deny-list gains `gunahn`, `sk1609` and `hf_[A-Za-z0-9]{20,}`.** The first two are
+account names that now appear in `logs/` and in run provenance; the third catches any Hugging Face
+token that reaches a file. The supplement build fails on a match rather than scrubbing silently.
+
+**D25. The token moves to `~/.hf_token`.** `cv_bench/g1_download.py` reads that path first and falls
+back to the in-repo file and then to `HF_TOKEN`, so nothing breaks while the move happens.
+**At the time of writing `~/.hf_token` does not exist and `hf_token.txt` is still in the working
+tree** — flagged to the authors rather than worked around.

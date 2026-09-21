@@ -78,7 +78,13 @@ def s1_1_and_1_2(curves: List[Curve]):
             ys = [float(np.mean(bx[x])) for x in xs]
             sw_interp = interp_crossing(xs, ys)
             _, _, sw_logit = fit_logistic(c.trials)
-            exc = staircase_excess(c.trials, game, n_boot=N_BOOT) or {}
+            # P13's implied rate is a step at the *fitted* switching point, so it is
+            # only meaningful where the measured curve actually crosses 0.5. Where it
+            # does not, the fit extrapolates and the implied rate is an artefact of
+            # the extrapolation -- the vLLM persona, whose curve never falls to 0.5,
+            # otherwise reports an "implied" 1.0 and an excess of -1.
+            exc = (staircase_excess(c.trials, game, n_boot=N_BOOT) or {}) \
+                if sw_interp is not None else {}
 
             if game == "lottery":
                 k_dom, n_dom = _rate(c.trials, lambda x: x < SURE_AMOUNT)
@@ -108,6 +114,8 @@ def s1_1_and_1_2(curves: List[Curve]):
                     n_trials_negative_premium=n_neg, k_risky_negative_premium=k_neg,
                     p_risky_negative_premium=_fmt(p_neg),
                     ci_risky_negative_premium=f"[{_fmt(lo_neg)}, {_fmt(hi_neg)}]",
+                    switching_point_used_for_implied=_fmt(exc.get("switching_point")),
+                    fit_inside_grid=str(exc.get("fit_inside_grid", "")),
                     implied_by_translation=_fmt(exc.get("implied_rate")),
                     excess_over_staircase=_fmt(exc.get("excess")),
                     excess_ci=f"[{_fmt(exc.get('excess_ci_lo'))}, {_fmt(exc.get('excess_ci_hi'))}]",
@@ -162,6 +170,8 @@ def s1_1_and_1_2(curves: List[Curve]):
                     n_trials_offer_le_10=n_low, k_accept_offer_le_10=k_low,
                     p_accept_offer_le_10=_fmt(p_acc),
                     ci_accept_offer_le_10=f"[{_fmt(lo_acc)}, {_fmt(hi_acc)}]",
+                    switching_point_used_for_implied=_fmt(exc.get("switching_point")),
+                    fit_inside_grid=str(exc.get("fit_inside_grid", "")),
                     implied_by_translation=_fmt(exc.get("implied_rate")),
                     excess_over_staircase=_fmt(exc.get("excess")),
                     excess_ci=f"[{_fmt(exc.get('excess_ci_lo'))}, {_fmt(exc.get('excess_ci_hi'))}]",
@@ -202,15 +212,20 @@ def s1_3(curves: List[Curve], n_boot: int = 2000):
     rows, manifest = [], []
     for c in sorted(curves, key=lambda c: (c.stack, c.game, c.condition)):
         b0, b1, sw = fit_logistic(c.trials)
+        # P12: the primary interval holds the reward levels fixed and resamples the
+        # responses within them, which is the scheme that generated the data.
+        pt_w, lo_w, hi_w, nv_w = bootstrap_switch_within_level(c.trials, n_boot=n_boot, seed=13)
+        # sensitivity: resampling the levels themselves
         pt_c, lo_c, hi_c, nv_c = bootstrap_switch(c.trials, n_boot=n_boot, cluster=True, seed=0)
         pt_t, lo_t, hi_t, _ = bootstrap_switch(c.trials, n_boot=n_boot, cluster=False, seed=1)
+        step = grid_step(c.trials)
         bx = c.by_x()
         crossed = interp_crossing(list(bx), [float(np.mean(bx[x])) for x in bx]) is not None
         if not crossed:
             # The measured curve never reaches 0.5 inside the grid, so the logistic
             # is extrapolating past the data. Report the fit as unidentified rather
             # than printing a number the data does not contain.
-            sw = lo_c = hi_c = lo_t = hi_t = float("nan")
+            sw = lo_c = hi_c = lo_t = hi_t = lo_w = hi_w = float("nan")
         rows.append(dict(
             stack=c.stack, game=c.game, condition=c.condition,
             crosses_half_on_grid=str(crossed),
@@ -218,6 +233,10 @@ def s1_3(curves: List[Curve], n_boot: int = 2000):
             n_trials=c.n, n_reward_levels=len(bx), n_per_level=c.n // max(1, len(bx)),
             logistic_b0=_fmt(b0), logistic_b1_per_100=_fmt(b1),
             switching_point_logistic=_fmt(sw),
+            grid_step_tokens=_fmt(step),
+            ci_lo_within_level=_fmt(lo_w), ci_hi_within_level=_fmt(hi_w),
+            ci_width_within_level=(_fmt(hi_w - lo_w)
+                                   if np.isfinite(hi_w) and np.isfinite(lo_w) else ""),
             ci_lo_cluster=_fmt(lo_c), ci_hi_cluster=_fmt(hi_c),
             ci_width_cluster=_fmt(hi_c - lo_c) if np.isfinite(hi_c) and np.isfinite(lo_c) else "",
             ci_lo_trial=_fmt(lo_t), ci_hi_trial=_fmt(hi_t),
@@ -228,8 +247,9 @@ def s1_3(curves: List[Curve], n_boot: int = 2000):
         manifest.append((
             f"S1.3.{c.stack}.{c.game}.{c.condition}.switch", _fmt(sw), SCRIPT,
             [rel(BEHAVIOURAL) if c.stack in ("hosted", "vllm") else rel(PROBE_JSON)],
-            f"logistic switching point; reward-level cluster bootstrap 95% CI "
-            f"[{_fmt(lo_c)},{_fmt(hi_c)}] from {nv_c} draws; n={c.n}",
+            f"logistic switching point; PRIMARY 95% CI (levels fixed, responses "
+            f"resampled within level) [{_fmt(lo_w)},{_fmt(hi_w)}] from {nv_w} draws; "
+            f"sensitivity, levels resampled [{_fmt(lo_c)},{_fmt(hi_c)}]; n={c.n}",
         ))
     write_csv("s1_3_switching_points.csv", rows)
 
@@ -254,18 +274,45 @@ def s1_3(curves: List[Curve], n_boot: int = 2000):
         for i, j in pairs:
             both = _crosses(cs[i]) and _crosses(cs[j])
             if both:
-                d, lo, hi = bootstrap_switch_diff(cs[i].trials, cs[j].trials,
-                                                  n_boot=n_boot, seed=2)
+                # P12 primary: a permutation test of the condition label stratified
+                # by reward level, and an interval with the levels held fixed.
+                d, p_perm, n_valid = permutation_shift_test(
+                    cs[i].trials, cs[j].trials, n_perm=N_PERM, seed=11)
+                _, lo_w, hi_w, _ = bootstrap_shift_within_level(
+                    cs[i].trials, cs[j].trials, n_boot=n_boot, seed=12)
+                # sensitivity: the level-resampling interval
+                _, lo_c, hi_c = bootstrap_switch_diff(
+                    cs[i].trials, cs[j].trials, n_boot=n_boot, seed=2)
             else:
-                d = lo = hi = float("nan")
+                d = p_perm = lo_w = hi_w = lo_c = hi_c = float("nan")
+                n_valid = 0
+            step = grid_step(cs[i].trials)
             diff_rows.append(dict(
-                both_identified_on_grid=str(both),
                 stack=stack, game=game,
                 condition_a=cs[i].condition, condition_b=cs[j].condition,
-                diff_switch_a_minus_b=_fmt(d), ci_lo=_fmt(lo), ci_hi=_fmt(hi),
-                excludes_zero=("" if not (np.isfinite(lo) and np.isfinite(hi))
-                               else str(lo > 0 or hi < 0)),
+                both_identified_on_grid=str(both),
+                diff_switch_a_minus_b=_fmt(d),
+                diff_in_grid_steps=(_fmt(d / step) if np.isfinite(d) and step else ""),
+                grid_step_tokens=_fmt(step),
+                permutation_p=_fmt(p_perm), n_permutations=n_valid,
+                ci_lo_within_level=_fmt(lo_w), ci_hi_within_level=_fmt(hi_w),
+                within_level_excludes_zero=(
+                    "" if not (np.isfinite(lo_w) and np.isfinite(hi_w))
+                    else str(lo_w > 0 or hi_w < 0)),
+                ci_lo_levels_resampled=_fmt(lo_c), ci_hi_levels_resampled=_fmt(hi_c),
+                levels_resampled_excludes_zero=(
+                    "" if not (np.isfinite(lo_c) and np.isfinite(hi_c))
+                    else str(lo_c > 0 or hi_c < 0)),
             ))
+            if both:
+                manifest.append((
+                    f"S1.3.{stack}.{game}.{cs[i].condition}_minus_{cs[j].condition}.shift",
+                    _fmt(d), SCRIPT,
+                    [rel(BEHAVIOURAL) if stack in ("hosted", "vllm") else rel(PROBE_JSON)],
+                    f"{_fmt(d / step) if step else '?'} grid steps; stratified permutation "
+                    f"p={_fmt(p_perm)}; within-level 95% CI [{_fmt(lo_w)},{_fmt(hi_w)}]; "
+                    f"levels-resampled sensitivity [{_fmt(lo_c)},{_fmt(hi_c)}]",
+                ))
     write_csv("s1_3_pairwise_differences.csv", diff_rows)
     append_manifest(manifest)
     return rows, diff_rows
@@ -322,13 +369,19 @@ def s1_8(curves: List[Curve]):
             u = rp.get(usrk, "")
             labels = ('"Final answer: safe" / "Final answer: risky"' if game == "lottery"
                       else '"Final answer: accept" / "Final answer: reject"') if "Final answer" in u else "?"
-        d, lo, hi = bootstrap_switch_diff(pers.trials, base.trials, n_boot=2000, seed=3)
+        d, p_perm, n_perm_valid = permutation_shift_test(
+            pers.trials, base.trials, n_perm=N_PERM, seed=11)
+        _, lo, hi, _ = bootstrap_shift_within_level(
+            pers.trials, base.trials, n_boot=N_BOOT, seed=12)
+        _, lo_c, hi_c = bootstrap_switch_diff(
+            pers.trials, base.trials, n_boot=N_BOOT, seed=3)
+        step = grid_step(base.trials)
         # A switching point exists only where the measured curve actually crosses
         # 0.5 inside the grid. Where it does not, the logistic is extrapolating
         # past the data and neither the point nor its interval means anything.
         ident = sw(base) is not None and sw(pers) is not None
         if not ident:
-            d = lo = hi = float("nan")
+            d = lo = hi = lo_c = hi_c = p_perm = float("nan")
         rows.append(dict(
             stack=stack, stack_service=rp.get("model.inference_service", ""), game=game,
             baseline_condition=base_cond, persona_condition=persona_cond,
@@ -345,14 +398,20 @@ def s1_8(curves: List[Curve]):
             shift=_fmt((sw(pers) - sw(base)) if sw(pers) is not None and sw(base) is not None else None),
             switch_identified_on_grid=str(ident),
             shift_logistic=_fmt(d),
-            shift_ci=(f"[{_fmt(lo)}, {_fmt(hi)}]" if ident else NA),
+            shift_in_grid_steps=(_fmt(d / step) if np.isfinite(d) and step else NA),
+            grid_step_tokens=_fmt(step),
+            permutation_p=(_fmt(p_perm) if ident else NA),
+            shift_ci_within_level=(f"[{_fmt(lo)}, {_fmt(hi)}]" if ident else NA),
+            shift_ci_levels_resampled=(f"[{_fmt(lo_c)}, {_fmt(hi_c)}]" if ident else NA),
             crosses_utility_floor_50=("n/a (ultimatum)" if game == "ultimatum"
                                       else str(sw(pers) is not None and sw(pers) < 50)),
         ))
         manifest.append((
             f"S1.8.{stack}.{game}.{persona_cond}.shift", _fmt(d), SCRIPT, [rel(BEHAVIOURAL)],
-            f"persona minus baseline switching point, same stack; cluster bootstrap "
-            f"95% CI [{_fmt(lo)},{_fmt(hi)}]",
+            f"persona minus baseline switching point, same stack; "
+            f"{_fmt(d / step) if step else '?'} grid steps; stratified permutation "
+            f"p={_fmt(p_perm)}; within-level 95% CI [{_fmt(lo)},{_fmt(hi)}]; "
+            f"levels-resampled sensitivity [{_fmt(lo_c)},{_fmt(hi_c)}]",
         ))
     write_csv("s1_8_persona_cross_stack.csv", rows)
     append_manifest(manifest)
