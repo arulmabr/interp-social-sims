@@ -65,9 +65,14 @@ def test_split_is_a_pure_function_of_content():
 # -- the grid --------------------------------------------------------------
 
 def test_legacy_cell_is_always_present_and_exact():
+    """20..240 step 5, 45 levels, per Probes/config.py reward_grid_tokens.
+
+    ICLR_PLAN.md B1 says "10...240 in steps of 5", which is not the grid the
+    published runs used; the code follows the paper (BD29).
+    """
     grid = risk.x_grid(0.5, 50.0)
-    assert grid == tuple(float(n) for n in range(10, 245, 5))
-    assert len(grid) == 47
+    assert grid == tuple(float(n) for n in range(20, 245, 5))
+    assert len(grid) == 45
 
 
 def test_x_grid_is_log_spaced_around_the_risk_neutral_point():
@@ -417,12 +422,12 @@ def test_every_label_pair_differs_at_its_scored_token():
     """
     for label_set, (neg, pos) in core.LABEL_SETS.items():
         stem = core.STEM_BY_LABEL_SET[label_set]
-        if neg.split()[0] == pos.split()[0]:
-            # the labels share a leading word, so the stem must consume it
-            assert stem.rstrip().endswith(neg.split()[0]), \
-                f"{label_set}: labels share {neg.split()[0]!r} but stem is {stem!r}"
-        else:
-            assert not stem.rstrip().endswith(neg.split()[0])
+        # With the plan's labels no pair shares a leading word, so no stem
+        # needs to consume one. If a future label set does share one, the
+        # distinguishability test below is what must catch it.
+        assert neg.split()[0] != pos.split()[0], \
+            f"{label_set}: {neg!r} and {pos!r} share a leading word"
+        assert stem == "Answer:"
 
 
 def test_stem_for_picks_by_label_set():
@@ -431,7 +436,9 @@ def test_stem_for_picks_by_label_set():
     assert core.stem_for(t) == "Answer:"
     t2 = next(x for x in core.expand_formats(list(risk.generate_risk()))
               if x.fmt.label_set == "neutral")
-    assert core.stem_for(t2) == "Answer: Option"
+    # The plan's "A"/"B" do not share a first token, so the stem workaround
+    # that "Option A"/"Option B" needed is gone.
+    assert core.stem_for(t2) == "Answer:"
 
 
 def test_option_order_reorders_lines_and_never_relabels():
@@ -471,3 +478,80 @@ def test_risky_label_is_independent_of_presentation_order():
     for t in core.expand_formats(list(risk.generate_risk(splits=("cal",)))):
         assert t.risky_label == t.labels[1]
         assert t.safe_label == t.labels[0]
+
+
+# -- the rendered prompt must be self-consistent (author item 1) -----------
+
+def _cell_examples():
+    """One trial per (family x label set x order x response format x template)."""
+    seen, out = set(), []
+    pools = (list(core.expand_formats(list(risk.generate_risk())))
+             + list(core.expand_formats(list(social.generate_social())))
+             + list(core.expand_formats(list(transfer.generate_transfer("unmodified")))))
+    for t in pools:
+        key = (t.family, t.fmt.label_set, t.fmt.option_order,
+               t.fmt.response_format, t.fmt.template_id)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(t)
+    return out
+
+
+def test_every_cell_type_renders_a_self_consistent_prompt():
+    """Read only the rendered text: does each label name the right option?
+
+    This is the check that was missing. Every earlier test compared the code
+    against itself -- `risky_label` agreed with `body_text` because both applied
+    the same rule -- so a rule that was wrong in both places passed. Here the
+    assertion is made from the prompt string alone.
+    """
+    cells = _cell_examples()
+    assert len(cells) > 100, f"expected many cell types, got {len(cells)}"
+    checked = 0
+    for t in cells:
+        if t.family not in ("sure_gain", "sure_loss"):
+            continue
+        body = core.body_text(t)
+        lines = body.splitlines()
+        safe_line = [l for l in lines if l.startswith(t.safe_label + ":")]
+        risky_line = [l for l in lines if l.startswith(t.risky_label + ":")]
+        assert len(safe_line) == 1 and len(risky_line) == 1, body
+        # the safe label's line states a certainty; the risky label's a chance
+        assert "for sure" in safe_line[0], f"safe label does not name the sure amount:\n{body}"
+        assert "chance of" in risky_line[0], f"risky label does not name the gamble:\n{body}"
+        assert "chance of" not in safe_line[0]
+        assert "for sure" not in risky_line[0]
+        checked += 1
+    assert checked > 20
+
+
+def test_every_cell_types_labels_are_scoreable_and_distinct():
+    """The two labels must differ at their first token, for every cell type."""
+    import os
+    os.environ.setdefault("HF_HOME", "/orcd/data/gabrieli/001/guna23/hf_cache")
+    pytest.importorskip("transformers")
+    from transformers import AutoTokenizer
+    try:
+        tok = AutoTokenizer.from_pretrained("meta-llama/Llama-3.1-8B-Instruct")
+    except Exception:
+        pytest.skip("tokenizer unavailable")
+    first = lambda s: {tok.encode(v, add_special_tokens=False)[0] for v in (s, " " + s)}
+    for label_set, (neg, pos) in core.LABEL_SETS.items():
+        assert not (first(neg) & first(pos)), \
+            f"{label_set}: {neg!r} and {pos!r} share a first token, so z is identically zero"
+
+
+def test_legacy_cell_matches_the_published_grid():
+    """Probes/config.py: reward_grid_tokens = range(20, 245, 5), 45 levels."""
+    g = risk.x_grid(0.5, 50.0)
+    assert g == tuple(float(n) for n in range(20, 245, 5))
+    assert len(g) == 45
+
+
+def test_labels_and_currency_follow_the_plan_and_the_paper():
+    assert core.LABEL_SETS["legacy"] == ("Safe", "Risky")      # ICLR_PLAN.md:153
+    assert core.LABEL_SETS["neutral"] == ("A", "B")            # ICLR_PLAN.md:153
+    t = next(iter(risk.generate_risk()))
+    assert t.currency == "tokens"                              # Probes/tasks/prompts.py
+    assert "tokens" in core.body_text(t)

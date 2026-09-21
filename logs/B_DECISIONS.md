@@ -376,3 +376,41 @@ affected; "Option A"/"Option B" are arbitrary, so the neutral set was always fin
 None of this was caught earlier because every test compared the code against itself: the label
 properties agreed with `body_text` because both applied the same wrong rule. The check that found it
 compared the *rendered prompt* against what the readout claimed to be scoring.
+
+**BD29. The prompts diverged from the plan and the paper for no reason, and one of the divergences
+caused a bug I then "discovered".** Asked whether the prompts matched the paper, and they did not.
+`ICLR_PLAN.md:153` specifies the label sets as legacy **"Safe/Risky"** and neutral **"A/B"**;
+`Probes/tasks/prompts.py` uses `'Safe'`/`'Risky'` and denominates everything in **tokens**. This file
+had `"Safe Option"/"Risky Option"` and `"Option A"/"Option B"` in dollars. None of that was a decision;
+it was written without checking the spec and never recorded as a deviation.
+
+The neutral divergence is the one that cost time. `Option A` and `Option B` share their first token, so
+z was log p(Option) - log p(Option) = 0 on every neutral trial. The plan's `A` and `B` tokenise
+distinctly ([32, 362] and [33, 426]). I found the zero gradients, reported them as a finding about the
+readout, and built a per-label-set stem to work around them — **the fix was to use the labels the plan
+already specified.** The stem workaround is removed; the `assert_labels_distinguishable` guard stays,
+because it would have caught this on the first run had it existed.
+
+Corrections, all now in code and under test:
+
+| item | was | now | source |
+|---|---|---|---|
+| legacy labels | `Safe Option`/`Risky Option` | `Safe`/`Risky` | `ICLR_PLAN.md:153` |
+| neutral labels | `Option A`/`Option B` | `A`/`B` | `ICLR_PLAN.md:153` |
+| currency | `$` | `tokens` | `Probes/tasks/prompts.py` |
+| legacy cell | 10..240, 47 levels | **20..240, 45 levels** | `Probes/config.py:91` |
+
+**A discrepancy for the authors:** `ICLR_PLAN.md` B1 says the legacy cell is "10...240 in steps of 5",
+but the published grid is `reward_grid_tokens=list(range(20, 245, 5))` — 20..240, 45 columns. The code
+now follows the paper. The plan's figure appears to be wrong, and my earlier claim in
+`reports/B_B1.md` that the legacy cell "lines up with the published runs" was false in two ways at once:
+wrong range and wrong wording.
+
+**BD30. Prompts are now audited as text, not as code.** Author item 1. Both prompt bugs survived a
+full test suite because every test compared the implementation against itself: `risky_label` agreed
+with `body_text` because both applied the same wrong rule, and no test ever read a rendered prompt.
+`reports/B_PROMPT_AUDIT.md` now renders two prompts verbatim for every (family x label set x option
+order x response format x template) cell, after the chat template, with the stem and the exact token
+ids scored for each label. A test asserts **from the rendered text alone** that the safe label's line
+states a certainty and the risky label's line states a chance, and another asserts no label pair shares
+a first token. B1 is not rebuilt until an author replies "audit ok".

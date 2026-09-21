@@ -33,8 +33,12 @@ LABEL_SETS: Dict[str, Tuple[str, str]] = {
     # (option shown first in canonical order, option shown second). Index 0 is
     # always the passive/less risky option, so a positive logit difference means
     # more risk taking (risk domain) or more accepting (social domain).
-    "legacy": ("Safe Option", "Risky Option"),
-    "neutral": ("Option A", "Option B"),
+    # ICLR_PLAN.md:153 specifies legacy "Safe/Risky" and neutral "A/B". Earlier
+    # this file used "Safe Option"/"Risky Option" and "Option A"/"Option B",
+    # an undocumented deviation that also made the neutral pair share its first
+    # token and score z identically zero (BD29).
+    "legacy": ("Safe", "Risky"),
+    "neutral": ("A", "B"),
     "accept_reject": ("Reject", "Accept"),
     "yes_no": ("No", "Yes"),
 }
@@ -93,7 +97,7 @@ TEMPLATES: Dict[str, Dict[str, str]] = {
 #: this is the reason they were the only ones that could work.
 STEM_BY_LABEL_SET: Dict[str, str] = {
     "legacy": "Answer:",
-    "neutral": "Answer: Option",
+    "neutral": "Answer:",
     "accept_reject": "Answer:",
     "yes_no": "Answer:",
 }
@@ -228,7 +232,7 @@ class Trial:
     fmt: Format
     is_catch: bool = False
     dominant: Optional[int] = None    # index into `canonical`, if one dominates
-    currency: str = "$"
+    currency: str = "tokens"
 
     @property
     def param_dict(self) -> Dict[str, float]:
@@ -365,15 +369,20 @@ def _append_test_access(caller: str, offered: Optional[str], sha: Optional[str],
 
 def describe(lot: Lottery, currency: str = "$") -> str:
     """One clause describing a lottery, in the plan's own wording."""
+    def money(mag: float) -> str:
+        """A symbol prefixes ("$50"); a unit word follows ("50 tokens")."""
+        shown = f"{mag:,.0f}" if float(mag).is_integer() else f"{mag:,.2f}"
+        return f"{currency}{shown}" if currency in ("$", "£", "€") \
+            else f"{shown} {currency}"
+
     def amount(a: float, gerund: bool = False) -> str:
         """`gerund` gives the form that fits after "a 50% chance of ..."."""
         mag = abs(a)
-        shown = f"{mag:,.0f}" if float(mag).is_integer() else f"{mag:,.2f}"
         if a < 0:
-            return f"{'losing' if gerund else 'lose'} {currency}{shown}"
+            return f"{'losing' if gerund else 'lose'} {money(mag)}"
         if a == 0:
             return "nothing"
-        return f"{currency}{shown}"
+        return money(mag)
 
     if lot.is_sure:
         only = [a for p, a in lot.outcomes if p > 0][0]

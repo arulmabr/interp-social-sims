@@ -35,9 +35,13 @@ def mixed_ratio_grid(n: int) -> Tuple[float, ...]:
     return tuple(round(0.5 * 10.0 ** (i / (n - 1)), 4) for i in range(n))
 
 
-#: p = 0.5, s = 50, x = 10..240 in steps of 5 (the cell every legacy curve used).
+#: p = 0.5, s = 50, x = 20..240 in steps of 5 (45 levels) -- the cell every
+#: legacy curve used, taken from `Probes/config.py`:
+#:     reward_grid_tokens=list(range(20, 245, 5))   # Llama: 20..240 step 5 (45 cols)
+#: `ICLR_PLAN.md` B1 says "10...240 in steps of 5", which does not match the
+#: published runs; the code follows the paper and the discrepancy is reported.
 LEGACY_CELL = (0.5, 50.0)
-LEGACY_X: Tuple[float, ...] = tuple(float(n) for n in range(10, 245, 5))
+LEGACY_X: Tuple[float, ...] = tuple(float(n) for n in range(20, 245, 5))
 
 
 def x_grid(p: float, s: float, n_levels: int = N_LEVELS) -> Tuple[float, ...]:
