@@ -90,6 +90,27 @@ def squeue_rows() -> List[dict]:
     return rows
 
 
+JOB_PREFIX = "cvb_"
+
+
+def sacct_all_prefixed() -> List[dict]:
+    """Every job of this account whose name starts with the shared prefix.
+
+    Amendment C: both sessions prefix their jobs `cvb_`, and the 400 GPU-hour cap
+    is evaluated on sacct totals for that prefix. This is therefore the whole
+    project's spend, not this session's.
+    """
+    out = sh(["sacct", "-n", "-X", "-P", "--starttime", "2026-09-20",
+              "--format", "JobID,JobName,State,Elapsed,ExitCode,AllocTRES"])
+    rows = []
+    for line in out.splitlines():
+        p = line.split("|")
+        if len(p) >= 6 and p[1].startswith(JOB_PREFIX):
+            rows.append(dict(jobid=p[0], name=p[1], state=p[2], elapsed=p[3],
+                             exit=p[4], tres=p[5]))
+    return rows
+
+
 def sacct_rows(names: List[str]) -> List[dict]:
     out = sh(["sacct", "-n", "-X", "-P", "--starttime", "now-2days",
               "--format", "JobID,JobName,State,Elapsed,ExitCode,AllocTRES"])
@@ -252,8 +273,8 @@ def write_status(cycle: int, live: List[dict], hist: List[dict],
              f"Cycle {cycle}.\n")
     L.append(f"**{now:%Y-%m-%d %H:%M UTC}** — cutoff Thu 24 Sept 06:00 UTC, "
              f"**{left:.1f} h remaining**.\n")
-    L.append(f"**GPU-hours consumed by this project so far: {gpu_h:.2f}** of the "
-             f"400 approved.\n")
+    L.append(f"**GPU-hours consumed, both sessions, `sacct` on job names starting "
+             f"`{JOB_PREFIX}`: {gpu_h:.2f}** of the 400 approved.\n")
     L.append("\n## Live jobs\n")
     if live:
         L.append("| job | name | state | elapsed | left | reason |")
@@ -311,8 +332,9 @@ def main() -> int:
         cycle += 1
         live = [r for r in squeue_rows() if r["name"] in names]
         hist = sacct_rows(names)
+        # Project-wide spend, both sessions, via the shared cvb_ prefix.
         gpu_h = 0.0
-        for r in hist:
+        for r in sacct_all_prefixed():
             gpu_h += gpu_seconds(r.get("tres", ""), r.get("elapsed", "")) / 3600.0
         checks = {}
         for task in names:

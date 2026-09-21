@@ -1,24 +1,24 @@
 # STATUS.md
 
-Rewritten by `cv_bench/monitor.py` every 10 minutes. Cycle 1.
+Rewritten by `cv_bench/monitor.py` every 10 minutes. Cycle 2.
 
-**2026-09-21 09:51 UTC** — cutoff Thu 24 Sept 06:00 UTC, **68.1 h remaining**.
+**2026-09-21 10:01 UTC** — cutoff Thu 24 Sept 06:00 UTC, **68.0 h remaining**.
 
-**GPU-hours consumed by this project so far: 1.02** of the 400 approved.
+**GPU-hours consumed by this project so far: 1.35** of the 400 approved.
 
 
 ## Live jobs
 
 | job | name | state | elapsed | left | reason |
 |---|---|---|---|---|---|
-| 23379475 | g2_llama | RUNNING | 21:39 | 11:38:21 | node3807 |
+| 23379475 | g2_llama | RUNNING | 31:40 | 11:28:20 | node3807 |
 
 ## Recent jobs
 
 | job | name | state | elapsed | exit |
 |---|---|---|---|---|
 | 23379474 | g2_qwen | COMPLETED | 00:09:28 | 0:0 |
-| 23379475 | g2_llama | RUNNING | 00:21:40 | 0:0 |
+| 23379475 | g2_llama | RUNNING | 00:31:40 | 0:0 |
 | 23379816 | bench70b | COMPLETED | 00:04:10 | 0:0 |
 
 ## Outputs
@@ -34,8 +34,8 @@ Rewritten by `cv_bench/monitor.py` every 10 minutes. Cycle 1.
 
 | output | rows | expected |
 |---|---:|---:|
-| `g2_lambda0/llama_legacy_lottery.jsonl` | 1280 | 1800 |
-| `g2_lambda0/llama_legacy_ultimatum.jsonl` | — | 760 |
+| `g2_lambda0/llama_legacy_lottery.jsonl` | 1800 | 1800 |
+| `g2_lambda0/llama_legacy_ultimatum.jsonl` | 200 | 760 |
 | `g2_lambda0/llama_chat_lottery.jsonl` | — | 1800 |
 | `g2_lambda0/llama_chat_ultimatum.jsonl` | — | 760 |
 | `g2_lambda0/llama_chat64_lottery.jsonl` | — | 1800 |
@@ -43,7 +43,8 @@ Rewritten by `cv_bench/monitor.py` every 10 minutes. Cycle 1.
 
 | file | n | legacy vs strict agreement | blank gens | constant? |
 |---|---:|---:|---:|---|
-| `llama_legacy_lottery.jsonl` | 1280 | 0.9969 | 591 | no |
+| `llama_legacy_lottery.jsonl` | 1800 | 0.9961 | 844 | no |
+| `llama_legacy_ultimatum.jsonl` | 200 | 0.9950 | 52 | no |
 
 ### g2_qwen — complete
 

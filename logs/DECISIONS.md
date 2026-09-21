@@ -292,3 +292,46 @@ by an unhelpful result, and rule 1 still forbids any number without a file.
 **D40. `peft` is not installed**, so the LoRA anchors of B3.2 cannot run as things stand. The
 benchmark records `lora_seconds_per_step = null` rather than estimating it. Installing `peft` is a
 small change but it is a dependency addition, so it is reported rather than made silently.
+
+---
+
+## 2026-09-22 — S2.1-fix: the stem, the batch gap, and the environment
+
+The amendment's diagnosis of the stem is correct and is worth writing down, because it explains a
+number that had no explanation an hour ago.
+
+**D41. `"My choice: "` ends in a space, and that is why the valid mass was 0.371.** These tokenizers
+attach a leading space to the following word. After a trailing space, the spelling `" Safe"` is
+unreachable and the model must emit the rarer bare `"Safe"` — so most of the probability sits on
+tokens the readout was not counting. Every candidate stem now ends **without** a space, and
+`Readout.label_token_ids` counts four spellings per label (`Safe`, ` Safe`, `safe`, ` safe`, plus the
+upper-case form) instead of two.
+
+**D42. The calibration split is defined off the legacy grid, and this is a choice worth defending.**
+`ICLR_PLAN.md` B1 splits by reward-level index within a grid that does not exist yet, and the legacy
+grid is the one every published curve uses, so selecting on it would contaminate exactly the cells the
+paper reports. The calibration prompts are therefore reward values **congruent to 2 or 3 mod 5**,
+where the legacy grid uses multiples of 5: 50 per game, off every published curve and off any future
+split defined on the legacy grid. Recorded here because the stem is selected on them and then frozen.
+
+**D43. Selection rule, exactly as instructed.** Per label set, the stem with the highest mean valid
+mass; ties broken by the calibration slope of the readout probability against the sampled choice
+frequency (20 samples per prompt). `mean ≥ 0.98` passes. `mean` in 0.95–0.98 with `min ≥ 0.80` and
+slope in 0.8–1.2 passes **as a recorded deviation**. Below that the job stops and reports the top ten
+tokens carrying the remaining mass. Jobs `cvb_s21_stem` (23380336).
+
+**D44. Every number that can reach the paper is read unbatched until the batch gap is settled.**
+That costs little — 6.35 readouts/s unbatched against 11.6/s at batch 16 — and it removes the
+question from the critical path. Two diagnostics are running: `cvb_s21_fp32` (23380334) checks
+Llama-3.1-8B in **fp32**, where batched and unbatched must agree to ≤ 1e-4 if the machinery is
+correct; `cvb_s21_batch` (23380335) compares unbatched, equal-length batches with no padding, and
+left-padded batches on the 70B in bf16, and regresses the discrepancy on **pad length** and on **batch
+position**. A discrepancy that grows with pad length is a masking bug to fix, not a tolerance to
+loosen. The noise floor — the SD of z for one prompt across six batch compositions — is measured in
+the same job, and any effect smaller than five times it will be flagged.
+
+**D45. `peft` installed, pinned, and locked.** `peft==0.13.2`, into the user environment, with
+`env/requirements-lock.txt` recording every version this work depends on. One thing the lock file
+notes and the schedule must respect: **`bitsandbytes` 0.43.2 is present but was compiled without GPU
+support**, so 4-bit is not available here. B3.2 should train its LoRA in bf16; if that does not fit,
+a GPU-enabled build is needed first, and that is a request, not something to work around.
