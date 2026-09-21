@@ -77,12 +77,18 @@ EXPECTED: Dict[str, dict] = {
 # job writes only when every unit is present -- a row count cannot stand in for
 # it here, because the number of doses depends on a norm measured at run time.
 REPO_SLURM = ROOT / "slurm"
-PREEMPT = ["--partition=mit_preemptable", "--qos=normal", "--account=mit_general"]
+# ou_bcs_low is the partition V4 established for this project, and the only one
+# whose QOS has no per-user GPU cap. The caps elsewhere are the binding
+# constraint, not the hardware: mit_preemptable allows 4 GPUs per user,
+# mit_normal_gpu 2, and that pool is shared with the Track B session and with an
+# unrelated project of the same user. A resubmission goes where the work can
+# actually start.
+PREEMPT = ["--partition=ou_bcs_low", "--qos=normal", "--account=mit_general"]
 
 EXPECTED.update({
     "cvb_instr": dict(
         sbatch=REPO_SLURM / "cvb_instr.sbatch",
-        args=PREEMPT + ["--gres=gpu:a100:2", "--time=03:00:00"],
+        args=PREEMPT + ["--gres=gpu:2", "--time=03:00:00"],
         outputs={"instr/norms_llama.jsonl": 50,
                  "instr/readout_grid_llama.jsonl": 128,
                  "instr/freegen_llama.jsonl": 840},
@@ -90,7 +96,7 @@ EXPECTED.update({
     ),
     "cvb_neutral": dict(
         sbatch=REPO_SLURM / "cvb_neutral.sbatch",
-        args=PREEMPT + ["--gres=gpu:a100:2", "--time=03:00:00"],
+        args=PREEMPT + ["--gres=gpu:2", "--time=03:00:00"],
         outputs={"neutral/mass_llama.jsonl": 344,   # 50 lottery + 36 ultimatum: CAL_ULTIMATUM has 36 values, not 50
                  "neutral/free_llama.jsonl": 640},
         done="neutral/done_neutral_llama.json",
@@ -98,7 +104,7 @@ EXPECTED.update({
 })
 for _v in ("as_written", "reconstruction"):
     for _l in (48, 50):
-        _g = "gpu:a100:2" if _l == 48 else "gpu:h100:2"
+        _g = "gpu:2"
         EXPECTED[f"cvb_g4_{_v[:5]}_L{_l}"] = dict(
             sbatch=REPO_SLURM / "cvb_g4.sbatch",
             args=PREEMPT + [f"--gres={_g}", "--time=16:00:00",
