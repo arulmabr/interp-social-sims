@@ -1,0 +1,308 @@
+"""G4b -- direction geometry.
+
+Which of the directions G4 steers along are the same direction?
+
+The measurement is a cosine table over every direction in play at one layer and
+game, together with the null that two unrelated directions in d dimensions have
+a cosine of about 1/sqrt(d), so a "small" cosine can be read against something.
+
+  probe      the rebuilt choice probe                      (cv_bench/g4.py)
+  reward     a probe on the same activations, labelled by
+             whether the prompt's payoff is above the grid
+             median -- the extension plan's hypothesis 1    (cv_bench/g4.py)
+  rand0/1    seeded unit vectors                            (cv_bench/g4.py)
+  gradient   B3.1's answer-readout anchor: grad of z with
+             respect to the residual stream at the
+             intervention layer, final prompt token,
+             averaged over calibration-split core prompts   (Track B, B3.1)
+
+**The gradient anchor belongs to Track B (ICLR_PLAN.md B3.1, amendment A5) and
+is not built here.** This module loads Track B's saved direction from `trackB/`
+on the lab share once its hash is committed on `iclr-trackB`. If it is not there
+when G4 is committed, `--fallback` computes one to the same definition and every
+row carrying it is labelled `duplicate_to_reconcile`, because two independently
+computed anchors are two numbers until someone reconciles them. The fallback
+also records which prompt set it used: Track B's calibration-split core prompts
+are defined by B1/B2 and are not available on this side, so the fallback uses
+this session's off-grid calibration set and says so in the same field.
+
+    python -m cv_bench.g4b                    # geometry from what exists
+    python -m cv_bench.g4b --fallback --layer 48   # GPU; only if B3.1 is absent
+"""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import os
+import subprocess
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
+
+import numpy as np
+
+os.environ.setdefault("HF_HOME", "/orcd/data/gabrieli/001/guna23/hf_cache")
+os.environ.setdefault("HF_HUB_OFFLINE", "1")
+os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
+
+ROOT = Path(__file__).resolve().parents[1]
+RUNROOT = Path(os.environ.get("ICLR_RUNROOT",
+                              "/orcd/data/gabrieli/001/guna23/iclr_risk_2027"))
+G4DIR = RUNROOT / "g4"
+TRACKB = RUNROOT / "trackB"
+OUT = RUNROOT / "g4b"
+
+LAYERS = (48, 50)
+GAMES = ("lottery", "ultimatum")
+VARIANTS = ("as_written", "reconstruction")
+
+
+# ---------------------------------------------------------------------------
+# Track B's gradient anchor
+# ---------------------------------------------------------------------------
+def _sha256(p: Path) -> str:
+    h = hashlib.sha256()
+    with open(p, "rb") as fh:
+        for chunk in iter(lambda: fh.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _hash_is_committed(digest: str) -> Tuple[bool, str]:
+    """Is this file's hash recorded anywhere in the repository's history?
+
+    Track B commits the hash of the artefact rather than the artefact, so the
+    direction we load can be tied to a commit. A direction on the share whose
+    hash is not committed is not yet the anchor of record.
+    """
+    for args in (["git", "log", "--all", "-S", digest, "--oneline"],
+                 ["git", "grep", "-l", digest, "--all-match"]):
+        try:
+            out = subprocess.run(args, cwd=ROOT, capture_output=True, text=True,
+                                 timeout=60)
+            if out.returncode == 0 and out.stdout.strip():
+                return True, out.stdout.strip().splitlines()[0]
+        except Exception:
+            continue
+    return False, ""
+
+
+def trackB_gradient(layer: int, game: str) -> Optional[dict]:
+    """Track B's B3.1 direction, if it is on the share and its hash is committed."""
+    if not TRACKB.exists():
+        return None
+    pats = [f"b3*/gradient_L{layer}_{game}*.npy",
+            f"b3*/gradient_L{layer}_{game}*.json",
+            f"b3*/*grad*L{layer}*{game}*.npy"]
+    hits: List[Path] = []
+    for pat in pats:
+        hits.extend(sorted(TRACKB.glob(pat)))
+    for p in hits:
+        digest = _sha256(p)
+        committed, where = _hash_is_committed(digest)
+        if not committed:
+            print(f"[g4b] {p.name} is on the share but its hash is not committed; "
+                  f"not using it", flush=True)
+            continue
+        vec = (np.load(p) if p.suffix == ".npy"
+               else np.asarray(json.loads(p.read_text())["direction"], dtype=np.float32))
+        vec = np.asarray(vec, dtype=np.float32).ravel()
+        return dict(direction=vec / (np.linalg.norm(vec) + 1e-12),
+                    source="trackB/B3.1", path=str(p.relative_to(RUNROOT)),
+                    sha256=digest, committed_at=where,
+                    duplicate_to_reconcile=False)
+    return None
+
+
+def fallback_gradient(layer: int, game: str, model_key: str = "llama") -> dict:
+    """B3.1's definition, computed here because Track B's is not yet committed.
+
+    grad of z with respect to the residual stream at `layer`, final prompt token,
+    averaged over calibration prompts. Two versions: within one format, and
+    averaged over option orders and label sets. Both are unit vectors.
+
+    z is the logit difference between the two option tokens -- the same z the
+    readout reports (ICLR_PLAN.md S2.1).
+    """
+    import torch
+    from cv_bench.s21_fix import load, CAL_LOTTERY, CAL_ULTIMATUM
+    from cv_bench.readout import Readout, TrialSpec
+    from cv_bench.neutral import build as build_neutral
+
+    model, tok = load(model_key, "bf16")
+    rd = Readout(model, tok)
+    from cv_bench.instr import LABELS, STEM, prompt_for
+
+    vals = (CAL_LOTTERY if game == "lottery" else CAL_ULTIMATUM)[:25]
+    grabbed: Dict[str, torch.Tensor] = {}
+
+    def hook(_m, _i, out):
+        h = out[0] if isinstance(out, tuple) else out
+        h.retain_grad()
+        grabbed["h"] = h
+        return out
+
+    handle = model.model.layers[layer].register_forward_hook(hook)
+
+    def one(text: str, labels) -> np.ndarray:
+        enc = tok(text, return_tensors="pt").to(model.device)
+        model.zero_grad(set_to_none=True)
+        out = model(**enc, use_cache=False)          # no inference_mode: we need grad
+        neg = rd.label_token_ids(labels[0])
+        pos = rd.label_token_ids(labels[1])
+        last = out.logits[0, -1, :].float()
+        z = torch.logsumexp(last[pos], 0) - torch.logsumexp(last[neg], 0)
+        z.backward()
+        g = grabbed["h"].grad[0, -1, :].detach().float().cpu().numpy()
+        return g
+
+    try:
+        # version 1: one format
+        acc = np.zeros(model.config.hidden_size, dtype=np.float64)
+        for v in vals:
+            spec = TrialSpec(prompt=prompt_for(game, v), labels=LABELS[game],
+                             stem=STEM, use_chat_template=True)
+            acc += one(rd.render(spec), LABELS[game])
+        v1 = acc / len(vals)
+
+        # version 2: averaged over option orders and label sets
+        acc2 = np.zeros_like(acc)
+        n2 = 0
+        for framing, flips in (("counterbalanced", (False, True)),):
+            for flip in flips:
+                for v in vals:
+                    prompt, labels = build_neutral(framing, game, int(v), flip)
+                    spec = TrialSpec(prompt=prompt, labels=labels, stem="Answer:",
+                                     use_chat_template=True)
+                    acc2 += one(rd.render(spec), labels)
+                    n2 += 1
+        for v in vals:
+            spec = TrialSpec(prompt=prompt_for(game, v), labels=LABELS[game],
+                             stem=STEM, use_chat_template=True)
+            acc2 += one(rd.render(spec), LABELS[game])
+            n2 += 1
+        v2 = acc2 / max(n2, 1)
+    finally:
+        handle.remove()
+
+    def unit(x):
+        return (x / (np.linalg.norm(x) + 1e-12)).astype(np.float32)
+
+    OUT.mkdir(parents=True, exist_ok=True)
+    doc = dict(direction=unit(v1), direction_format_averaged=unit(v2),
+               source="cv_bench/g4b.py fallback",
+               definition=("grad of z (logit difference) wrt the residual stream at "
+                           "the layer, final prompt token, averaged over prompts; "
+                           "ICLR_PLAN.md B3.1"),
+               prompt_set=("this session's off-grid calibration values "
+                           "(n %% 5 in (2,3)), NOT Track B's calibration-split core "
+                           "prompts, which are defined by B1/B2 and are not "
+                           "available on this side"),
+               n_prompts=len(vals), layer=layer, game=game,
+               duplicate_to_reconcile=True)
+    np.save(OUT / f"fallback_gradient_L{layer}_{game}.npy", doc["direction"])
+    np.save(OUT / f"fallback_gradient_fmtavg_L{layer}_{game}.npy",
+            doc["direction_format_averaged"])
+    meta = {k: v for k, v in doc.items() if not isinstance(v, np.ndarray)}
+    (OUT / f"fallback_gradient_L{layer}_{game}.json").write_text(json.dumps(meta))
+    print(f"[g4b] fallback gradient L{layer} {game}: DUPLICATE, to be reconciled "
+          f"with Track B's B3.1", flush=True)
+    return doc
+
+
+# ---------------------------------------------------------------------------
+# geometry
+# ---------------------------------------------------------------------------
+def g4_directions(variant: str, layer: int, game: str) -> Dict[str, np.ndarray]:
+    """The directions G4 built, in raw space."""
+    p = G4DIR / f"probe_{variant}_L{layer}.json"
+    if not p.exists():
+        return {}
+    g = json.loads(p.read_text())["games"].get(game, {})
+    if not g.get("trained"):
+        return {}
+    out = {}
+    if g.get("direction_raw"):
+        out["probe"] = np.asarray(g["direction_raw"], dtype=np.float32)
+    if g.get("reward_raw"):
+        out["reward"] = np.asarray(g["reward_raw"], dtype=np.float32)
+    d = len(g["direction_raw"])
+    for which in ("rand0", "rand1"):
+        seed = abs(hash((layer, game, which))) % (2**31)
+        v = np.random.default_rng(seed).normal(size=d)
+        out[which] = (v / np.linalg.norm(v)).astype(np.float32)
+    return out
+
+
+def cosine(a: np.ndarray, b: np.ndarray) -> float:
+    return float(np.dot(a, b) / ((np.linalg.norm(a) * np.linalg.norm(b)) + 1e-12))
+
+
+def geometry() -> List[dict]:
+    from cv_bench.s1_data import write_csv
+    rows: List[dict] = []
+    for variant in VARIANTS:
+        for layer in LAYERS:
+            for game in GAMES:
+                dirs = g4_directions(variant, layer, game)
+                if not dirs:
+                    continue
+                grad = trackB_gradient(layer, game)
+                gsrc, dup = "", False
+                if grad is not None:
+                    dirs["gradient"] = grad["direction"]
+                    gsrc, dup = grad["source"], grad["duplicate_to_reconcile"]
+                else:
+                    fb = OUT / f"fallback_gradient_L{layer}_{game}.npy"
+                    if fb.exists():
+                        dirs["gradient"] = np.load(fb)
+                        gsrc, dup = "cv_bench/g4b.py fallback", True
+                d = len(next(iter(dirs.values())))
+                null = 1.0 / np.sqrt(d)
+                names = list(dirs)
+                for i, a in enumerate(names):
+                    for b in names[i + 1:]:
+                        c = cosine(dirs[a], dirs[b])
+                        rows.append(dict(
+                            variant=variant, layer=layer, game=game, a=a, b=b,
+                            cosine=round(c, 5), abs_cosine=round(abs(c), 5),
+                            null_scale=round(float(null), 5),
+                            multiples_of_null=round(abs(c) / null, 2),
+                            d=d,
+                            gradient_source=(gsrc if "gradient" in (a, b) else ""),
+                            duplicate_to_reconcile=(dup if "gradient" in (a, b) else False)))
+    if rows:
+        write_csv("g4b_geometry.csv", rows,
+                  ["variant", "layer", "game", "a", "b", "cosine", "abs_cosine",
+                   "null_scale", "multiples_of_null", "d", "gradient_source",
+                   "duplicate_to_reconcile"])
+        for r in rows:
+            flag = " [DUPLICATE]" if r["duplicate_to_reconcile"] else ""
+            print(f"{r['variant']:14s} L{r['layer']} {r['game']:9s} "
+                  f"{r['a']:8s} x {r['b']:8s}  cos {r['cosine']:+.4f}  "
+                  f"({r['multiples_of_null']:.1f}x null){flag}")
+    else:
+        print("[g4b] no directions yet: G4's probe files do not exist")
+    return rows
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--fallback", action="store_true",
+                    help="compute the B3.1 gradient here, labelled a duplicate")
+    ap.add_argument("--layer", type=int, default=48, choices=list(LAYERS))
+    ap.add_argument("--game", default="both", choices=["lottery", "ultimatum", "both"])
+    a = ap.parse_args()
+    if a.fallback:
+        for game in (GAMES if a.game == "both" else (a.game,)):
+            if trackB_gradient(a.layer, game) is not None:
+                print(f"[g4b] Track B's B3.1 is committed for L{a.layer} {game}; "
+                      f"not computing a duplicate")
+                continue
+            fallback_gradient(a.layer, game)
+    geometry()
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

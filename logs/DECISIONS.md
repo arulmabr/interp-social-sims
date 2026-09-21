@@ -504,3 +504,28 @@ sequence stops at EOS after about ten tokens, while a batch of 40 runs until the
 stops, so one straggler drags all 40 to the full cap. Batching is kept because the alternative is
 worse for the readout arm and because the cost is affordable, but no speed-up is claimed for it,
 and the token cap — not the batch size — is the lever that decides G4's runtime.
+
+**D58. The two anchors are Track B's, and are not built on this side.**
+Correcting an offer I made in this session: the answer-readout gradient and the synthetic-utility
+LoRA are **B3.1** and **B3.2** in `ICLR_PLAN.md`, under amendment **A5**, and they belong to Track B.
+They need no specification from the authors — B3.1 fixes the gradient's definition and B3.2 fixes
+the LoRA's rank, target modules, three-adapter design, loss, training split and cloning check
+(correlation ≥ 0.95, calibration slope 0.9–1.1). Nothing on this side builds either.
+
+**D59. G4b consumes Track B's gradient direction; a locally computed one is a duplicate, not a
+replacement.**
+`cv_bench/g4b.py` loads B3.1's direction from `trackB/` on the lab share **only when its hash is
+committed** on `iclr-trackB`, so the direction in a geometry table is tied to a commit. A file on
+the share whose hash is not committed is not yet the anchor of record and is skipped with a note.
+
+If it is absent when G4 is committed, `--fallback` computes one to B3.1's definition — the gradient
+of z, the logit difference, with respect to the residual stream at the intervention layer, final
+prompt token, averaged over calibration prompts, in both the single-format and format-averaged
+versions — and **every row carrying it is labelled `duplicate_to_reconcile`**. One difference is
+recorded in the artefact rather than glossed: B3.1 averages over Track B's calibration-split *core*
+prompts, which B1/B2 define and which do not exist on this side, so the fallback averages over this
+session's off-grid calibration values and says so in the same field. Two independently computed
+anchors are two numbers until someone reconciles them.
+
+As of this entry Track B is at B2 with Gate B2 failing in all 18 configurations, so no B3 artefact
+exists yet.
