@@ -19,6 +19,47 @@ Generated 2026-09-21T23:29:23+00:00 with `meta-llama/Llama-3.1-8B-Instruct`'s ch
 
 624 distinct cell types.
 
+## The three legacy stacks do not agree with each other
+
+Checked against `Probes/`, `SAE/` and `Revised Prompting/`. "Consistent with the
+paper" has no single answer, because the three stacks that produced the paper's
+figures used **different wordings and different grids**.
+
+### Lottery
+
+| stack | prompt | answer tokens | reward grid |
+|---|---|---|---|
+| `Probes/tasks/prompts.py` | `SAFE VS. RISKY CHOICE GAME` + numbered `1.`/`2.` list | `'Safe'` / `'Risky'` | `range(20, 245, 5)` — **20..240, 45** |
+| `SAE/examples/games/safe_risky.py` | prose: "Option safe gives 50 tokens for sure. Option risky gives N tokens with 50 percent probability…" | `safe` / `risky` (lower case) | `range(10, 181, 5)` — **10..180, 35** |
+| `Revised Prompting/games/safe_risky_strong_prompting.py` | as SAE, plus CoT variants | `safe` / `risky` | `range(10, 181, 5)` — **10..180, 35** |
+| `ICLR_PLAN.md` B1 | — | — | "10…240 step 5" — **47** |
+| **Track B (this build)** | `Safe:` / `Risky:` lines | `Safe` / `Risky` | **20..240, 45** |
+
+Common to all three: the safe option is **50 tokens**, p = **0.5**, everything is
+denominated in **tokens**, and the expected-value crossover is at 100.
+
+**The plan's "10…240" is neither stack**: the 10 is the SAE/Revised-Prompting
+lower bound, the 240 is the Probes upper bound. It is the union, not a grid
+anyone ran.
+
+**This corrects BD29.** That entry asserted the published grid "is" 20..240 and
+that the plan was simply wrong. That was too confident: 20..240 is the *probe*
+stack's grid, while the SAE stack — which produced the layer-50 SAE steering
+results — used 10..180. Which grid the bridging cell should reproduce depends on
+which figure it is meant to bridge to, and that is an author decision.
+
+### Ultimatum
+
+| stack | framing | offers |
+|---|---|---|
+| `Probes` | proposer, 100 tokens, "If you reject, both of you get 0 tokens" | `range(10, 105, 5)` — 10..100 |
+| `SAE` | proposer, "N tokens out of 100", "If you reject, both players receive 0" | `range(10, 91, 5)` — 10..90 |
+| `Revised Prompting` | as SAE | `range(10, 91, 5)` — 10..90 |
+| **Track B (this build)** | **none — a bare payoff pair** | 0..100% of pies 20/100/1000 |
+
+All three legacy stacks state the proposer, the pie and the mutual zero. Track B
+states none of them, which is the defect recorded above.
+
 ## Problems this audit found, before any rebuild
 
 Reading the rendered text surfaced two things that no test caught, because both

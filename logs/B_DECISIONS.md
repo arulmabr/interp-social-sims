@@ -436,3 +436,28 @@ asked for rendered text.
 
 Neither is patched. Both change what the instrument measures, so they go to the authors with the audit
 rather than being fixed inside the gate.
+
+**BD32. The three legacy stacks disagree with each other, which corrects BD29.** Checked `Probes/`,
+`SAE/` and `Revised Prompting/` after being asked whether the prompts match what was done before.
+There is no single "what was done": the three stacks that produced the paper's figures used different
+wordings and different grids.
+
+| stack | lottery prompt | answer tokens | reward grid |
+|---|---|---|---|
+| `Probes` | `SAFE VS. RISKY CHOICE GAME`, numbered list | `'Safe'`/`'Risky'` | 20..240 step 5 (45) |
+| `SAE` | prose, "Option safe gives 50 tokens for sure…" | `safe`/`risky` lower case | 10..180 step 5 (35) |
+| `Revised Prompting` | as SAE, plus CoT variants | `safe`/`risky` | 10..180 step 5 (35) |
+
+Common to all three: safe = **50 tokens**, p = **0.5**, denominated in **tokens**, EV crossover at 100.
+So the currency correction in BD29 was right for all three stacks.
+
+**BD29 was too confident about the grid.** It asserted that the published grid "is" 20..240 and that
+`ICLR_PLAN.md`'s 10..240 was simply wrong. In fact 20..240 is the *probe* stack's grid; the SAE stack —
+which produced the layer-50 SAE steering results, the paper's headline method — used **10..180**. The
+plan's 10..240 is the union of the two: the 10 from SAE, the 240 from Probes. It is not a grid anyone
+ran, but neither is it a simple error, and **which grid the bridging cell should reproduce depends on
+which figure it is meant to bridge to.** That is an author decision, not a code fix, and the build
+currently uses 20..240 by my choice rather than by instruction.
+
+The ultimatum comparison is less ambiguous and worse for Track B: **all three** legacy stacks state the
+proposer, the pie and that rejection gives both parties zero. Track B states none of them (BD31).
