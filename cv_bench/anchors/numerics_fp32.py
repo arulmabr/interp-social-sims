@@ -57,12 +57,26 @@ def select_prompts(n: int, seed: int = 0) -> List[core.Trial]:
 
 
 def load(dtype: torch.dtype):
+    """Load across the visible GPUs, spilling to CPU only if it will not fit.
+
+    fp32 weights for this model are about 282 GB against 320 GB on four 80 GB
+    cards, which leaves under 10 GB a card for activations. `max_memory` caps
+    each GPU below its ceiling and offers host memory as the overflow, so a
+    tight fit degrades into a slow run rather than an OOM. Whether anything
+    actually landed on the CPU is reported, because it would be a deviation.
+    """
     from transformers import AutoModelForCausalLM, AutoTokenizer
     tok = AutoTokenizer.from_pretrained(MODEL_ID)
+    n = torch.cuda.device_count()
+    per_gpu = int(torch.cuda.get_device_properties(0).total_memory / 2**30) - 6
+    max_memory = {i: f"{per_gpu}GiB" for i in range(n)}
+    max_memory["cpu"] = "400GiB"
     model = AutoModelForCausalLM.from_pretrained(
-        MODEL_ID, torch_dtype=dtype, device_map="auto", low_cpu_mem_usage=True)
+        MODEL_ID, torch_dtype=dtype, device_map="auto",
+        max_memory=max_memory, low_cpu_mem_usage=True)
     model.eval()
-    return model, tok
+    devices = sorted({str(p.device) for p in model.parameters()})
+    return model, tok, devices
 
 
 def free(model) -> None:
@@ -154,9 +168,14 @@ def main(argv=None) -> int:
     for dtype_name, dtype in (("fp32", torch.float32), ("bf16", torch.bfloat16)):
         print(f"\n--- loading {dtype_name} ---", flush=True)
         t_start = datetime.now(timezone.utc)
-        model, tok = load(dtype)
+        model, tok, devices = load(dtype)
+        on_cpu = any(d.startswith("cpu") for d in devices)
+        results[f"devices_{dtype_name}"] = devices
+        results[f"cpu_offload_{dtype_name}"] = bool(on_cpu)
         print(f"loaded in {(datetime.now(timezone.utc) - t_start).total_seconds():.0f}s; "
-              f"devices={sorted({str(p.device) for p in model.parameters()})}", flush=True)
+              f"devices={devices}"
+              + ("  *** CPU OFFLOAD IN USE - record as a deviation ***" if on_cpu else ""),
+              flush=True)
 
         iv, kind, unit = build_dose(model, tok, trials, args.scale, args.direction, args.seed)
         dose_kind = kind
