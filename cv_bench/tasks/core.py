@@ -315,23 +315,27 @@ def _append_test_access(caller: str, offered: Optional[str], sha: Optional[str],
 
 def describe(lot: Lottery, currency: str = "$") -> str:
     """One clause describing a lottery, in the plan's own wording."""
-    def amount(a: float) -> str:
+    def amount(a: float, gerund: bool = False) -> str:
+        """`gerund` gives the form that fits after "a 50% chance of ..."."""
         mag = abs(a)
         shown = f"{mag:,.0f}" if float(mag).is_integer() else f"{mag:,.2f}"
         if a < 0:
-            return f"lose {currency}{shown}"
+            return f"{'losing' if gerund else 'lose'} {currency}{shown}"
         if a == 0:
             return "nothing"
         return f"{currency}{shown}"
 
     if lot.is_sure:
         only = [a for p, a in lot.outcomes if p > 0][0]
-        return f"{amount(only)} for sure"
-    parts = []
-    for p, a in sorted(lot.outcomes, key=lambda t: -t[0]):
-        if p <= 0:
-            continue
-        parts.append(f"a {p:.0%} chance of {amount(a)}")
+        return "nothing" if only == 0 else f"{amount(only)} for sure"
+    live = [(p, a) for p, a in lot.outcomes if p > 0]
+    # The plan words these as "p chance of x, otherwise 0", so a gamble whose
+    # other outcome is zero leads with the payoff rather than with the nothing.
+    if len(live) == 2 and any(a == 0 for _, a in live):
+        (p, a), = [(p, a) for p, a in live if a != 0]
+        return f"a {p:.0%} chance of {amount(a, gerund=True)} and otherwise nothing"
+    parts = [f"a {p:.0%} chance of {amount(a, gerund=True)}"
+             for p, a in sorted(live, key=lambda t: -t[1])]
     return " and ".join(parts)
 
 

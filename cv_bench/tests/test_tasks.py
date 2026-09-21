@@ -184,8 +184,13 @@ def test_prompt_mentions_both_options_and_their_amounts():
 def test_describe_wording():
     assert core.describe(core.Lottery(((1.0, 50.0),))) == "$50 for sure"
     assert core.describe(core.Lottery(((1.0, -50.0),))) == "lose $50 for sure"
-    assert "50% chance of $100" in core.describe(core.Lottery(((0.5, 100.0), (0.5, 0.0))))
-    assert "nothing" in core.describe(core.Lottery(((0.5, 100.0), (0.5, 0.0))))
+    # "p chance of x, otherwise 0" is the plan's own wording for these.
+    assert core.describe(core.Lottery(((0.1, 60.0), (0.9, 0.0)))) == \
+        "a 10% chance of $60 and otherwise nothing"
+    # Two live payoffs keep both clauses, larger magnitude first.
+    mixed = core.describe(core.Lottery(((0.5, 100.0), (0.5, -50.0))))
+    assert mixed == "a 50% chance of $100 and a 50% chance of losing $50"
+    assert core.describe(core.Lottery(((1.0, 0.0),))) == "nothing"
 
 
 # -- the test lock ---------------------------------------------------------
