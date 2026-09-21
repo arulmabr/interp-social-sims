@@ -529,3 +529,30 @@ anchors are two numbers until someone reconciles them.
 
 As of this entry Track B is at B2 with Gate B2 failing in all 18 configurations, so no B3 artefact
 exists yet.
+
+**D60. `readout.score` refuses a label pair it cannot tell apart.**
+Reported by the Track B session on 22 Sept: with labels `"Option A"` / `"Option B"` under a bare
+stem `"Answer:"`, both labels' first-token id sets are the same — the scored token is `Option` —
+so `logit_diff` is a difference of two identical quantities and is **identically zero**, for every
+prompt, silently. It reads as "the intervention did nothing" when the truth is "nothing was
+measured", and any gradient taken through it is zero as well.
+
+`Readout.assert_labels_distinguishable` now runs inside both `score` and `score_batch` and raises,
+naming the shared token, the stem, and the remedy (move the scored position onto the differing part:
+stem `"Answer: Option"` with labels `"A"` and `"B"`). Blank labels are rejected too, since they
+tokenise to whitespace. Seven tests cover it; the check is copied from Track B's
+`cv_bench/anchors/gradient.py`, which guards its gradient anchor the same way.
+
+**Every label pair this repository uses was checked against the Llama-3.3-70B tokenizer and none
+collides:** `Safe`/`Risky`, `Reject`/`Accept`, `A`/`B`, `Certain`/`Chance`, `Refuse`/`Take`. The
+neutral finding in **D51** is therefore unaffected — those stems end in `"Option"` and the scored
+token is `" A"` or `" B"`, which are distinct ids. The lottery constancy and the 0.317 ultimatum
+slope stand as a **behavioural label prior**, not an artefact of the readout.
+
+**D61. G4b reads Track B's `legacy_one_format` gradient, and reports its `both_orders` version too.**
+Per the authors, 22 Sept: load `legacy_one_format` at layers 48 and 50 from `trackB/` on the lab
+share once its hash is committed, and report cosines against `both_orders` as well. The cosine
+between the two versions is itself a number worth having — it says how much of the anchor is a
+property of the surface format rather than of the readout. `legacy_one_format` is the version the
+geometry table treats as *the* gradient; `both_orders` enters as its own row. The hash gate, the
+fallback and the `duplicate_to_reconcile` labelling of **D59** are unchanged and apply to both.

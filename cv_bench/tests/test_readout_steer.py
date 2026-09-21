@@ -259,3 +259,75 @@ def test_clamp_mode_raises_the_projection(model_and_tok):
     vt = torch.as_tensor(v, dtype=after.dtype)
     proj = (after.float() @ vt.float())
     assert (proj >= target - 1e-2).all(), "clamp must lift every position to the target"
+
+
+# ---------------------------------------------------------------------------
+# labels must differ where the readout actually looks
+#
+# Reported by the Track B session on 22 Sept: `score` returned z = 0 for every
+# prompt when both labels shared their first token under the stem. Nothing in
+# the arithmetic objects -- a difference of two identical log-probabilities is a
+# clean zero, which reads as "the intervention did nothing" rather than "nothing
+# was measured". The same check guards Track B's gradient anchor, where a zero z
+# makes every gradient zero too.
+# ---------------------------------------------------------------------------
+def test_shared_first_token_is_an_error_not_a_zero(readout):
+    """'Option A' vs 'Option B' under a bare stem: the scored token is 'Option'."""
+    spec = TrialSpec(prompt=lottery_prompt(120), labels=("Option A", "Option B"),
+                     stem="Answer:")
+    with pytest.raises(ValueError, match="identically zero"):
+        readout.assert_labels_distinguishable(spec)
+    with pytest.raises(ValueError, match="identically zero"):
+        readout.score(spec)
+
+
+def test_the_error_names_the_shared_token(readout):
+    spec = TrialSpec(prompt=lottery_prompt(120), labels=("Option A", "Option B"),
+                     stem="Answer:")
+    try:
+        readout.assert_labels_distinguishable(spec)
+    except ValueError as e:
+        assert "share first-token ids" in str(e)
+        assert "'Answer:'" in str(e)          # the stem is named
+        assert "Answer: Option" in str(e)     # and so is the fix
+    else:
+        pytest.fail("expected ValueError")
+
+
+def test_moving_the_stem_onto_the_difference_fixes_it(readout):
+    """The documented remedy must actually pass, and must not give z = 0."""
+    spec = TrialSpec(prompt=lottery_prompt(120), labels=("A", "B"),
+                     stem="Answer: Option")
+    readout.assert_labels_distinguishable(spec)      # no raise
+    out = readout.score(spec)
+    assert out.logit_diff == out.logit_diff          # not NaN
+    assert out.valid_mass > 0
+
+
+@pytest.mark.parametrize("labels", [
+    ("Safe", "Risky"), ("Reject", "Accept"), ("A", "B"),
+    ("Certain", "Chance"), ("Refuse", "Take"),
+])
+def test_every_label_set_this_repo_uses_is_distinguishable(readout, labels):
+    spec = TrialSpec(prompt=lottery_prompt(120), labels=labels, stem="Answer:")
+    readout.assert_labels_distinguishable(spec)
+
+
+def test_an_empty_label_is_an_error_too(readout):
+    spec = TrialSpec(prompt=lottery_prompt(120), labels=("", "Risky"), stem="Answer:")
+    with pytest.raises(ValueError, match="no first-token ids"):
+        readout.assert_labels_distinguishable(spec)
+
+
+def test_score_batch_is_guarded_as_well(readout):
+    specs = [TrialSpec(prompt=lottery_prompt(n), labels=("Option A", "Option B"),
+                       stem="Answer:") for n in (20, 120)]
+    with pytest.raises(ValueError, match="identically zero"):
+        readout.score_batch(specs, batch_size=2)
+
+
+def test_identical_labels_are_caught(readout):
+    spec = TrialSpec(prompt=lottery_prompt(120), labels=("Risky", "Risky"),
+                     stem="Answer:")
+    with pytest.raises(ValueError):
+        readout.assert_labels_distinguishable(spec)

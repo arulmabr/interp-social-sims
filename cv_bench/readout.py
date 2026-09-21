@@ -114,6 +114,42 @@ class Readout:
         return text + spec.stem
 
     # -- scoring -----------------------------------------------------------
+    def assert_labels_distinguishable(self, spec: TrialSpec) -> None:
+        """The two labels must differ at the token this readout actually scores.
+
+        If their first-token id sets overlap, `logit_diff` is a difference of two
+        identical quantities and is identically zero -- and so is every gradient
+        taken through it. Nothing in the arithmetic complains: the readout returns
+        a clean z = 0 for every prompt, which reads as "no effect" rather than
+        "no measurement".
+
+        The failure is easy to walk into. Labels "Option A" and "Option B" under a
+        bare stem "Answer:" share their first token, "Option"; the part that
+        differs is never scored. The fix is a stem that moves the scored position
+        onto the differing part -- "Answer: Option" with labels "A" and "B".
+
+        Reported by the Track B session on 22 Sept; the same check guards its
+        gradient anchor (cv_bench/anchors/gradient.py).
+        """
+        if not spec.negative.strip() or not spec.positive.strip():
+            raise ValueError(
+                f"labels {spec.negative!r} and {spec.positive!r} have no first-token "
+                f"ids worth scoring: a blank label tokenises to whitespace, which is "
+                f"not the answer the readout is looking for.")
+        neg = set(self.label_token_ids(spec.negative))
+        pos = set(self.label_token_ids(spec.positive))
+        if not neg or not pos or (neg & pos):
+            shared = sorted(neg & pos)
+            detail = (f"share first-token ids {shared} "
+                      f"({[self.tok.decode([i]) for i in shared[:4]]!r})"
+                      if shared else "have no first-token ids at all")
+            raise ValueError(
+                f"labels {spec.negative!r} and {spec.positive!r} {detail} under "
+                f"stem {spec.stem!r}: the readout scores a position where the two "
+                f"labels are identical, so logit_diff would be identically zero. "
+                f"Move the scored position onto the part that differs, e.g. stem "
+                f"'Answer: Option' with labels 'A' and 'B'.")
+
     def _from_logits(self, logits: torch.Tensor, spec: TrialSpec,
                      n_tokens: int) -> ReadoutResult:
         logits = logits.float()
@@ -139,6 +175,7 @@ class Readout:
 
     @torch.inference_mode()
     def score(self, spec: TrialSpec, intervention=None) -> ReadoutResult:
+        self.assert_labels_distinguishable(spec)
         text = self.render(spec)
         enc = self.tok(text, return_tensors="pt").to(self.model.device)
         n = int(enc["input_ids"].shape[1])
@@ -160,6 +197,8 @@ class Readout:
         not match the unbatched ones. The plan requires agreement to 1e-2 before
         any batched result is trusted; `cv_bench/tests/test_readout.py` asserts it.
         """
+        for spec in specs:
+            self.assert_labels_distinguishable(spec)
         results: List[ReadoutResult] = []
         pad_id = self.tok.pad_token_id
         if pad_id is None:

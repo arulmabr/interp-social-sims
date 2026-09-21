@@ -11,10 +11,17 @@ a cosine of about 1/sqrt(d), so a "small" cosine can be read against something.
              whether the prompt's payoff is above the grid
              median -- the extension plan's hypothesis 1    (cv_bench/g4.py)
   rand0/1    seeded unit vectors                            (cv_bench/g4.py)
-  gradient   B3.1's answer-readout anchor: grad of z with
-             respect to the residual stream at the
-             intervention layer, final prompt token,
-             averaged over calibration-split core prompts   (Track B, B3.1)
+  gradient   B3.1's answer-readout anchor, `legacy_one_format`
+             version: grad of z with respect to the residual
+             stream at the intervention layer, final prompt
+             token, averaged over calibration-split core
+             prompts, at layers 48 and 50                    (Track B, B3.1)
+  gradient_both_orders
+             the same anchor averaged over option orders and
+             label sets. The cosine between the two versions
+             is reported: it says how much of the anchor is a
+             property of the surface format rather than of
+             the readout                                     (Track B, B3.1)
 
 **The gradient anchor belongs to Track B (ICLR_PLAN.md B3.1, amendment A5) and
 is not built here.** This module loads Track B's saved direction from `trackB/`
@@ -87,30 +94,48 @@ def _hash_is_committed(digest: str) -> Tuple[bool, str]:
     return False, ""
 
 
-def trackB_gradient(layer: int, game: str) -> Optional[dict]:
-    """Track B's B3.1 direction, if it is on the share and its hash is committed."""
+# B3.1 produces two versions, and Track B names them. `legacy_one_format` is the
+# one G4b steers against, per the authors' instruction of 22 Sept; `both_orders`
+# is the version averaged over option orders and label sets, and the cosine
+# between the two is itself a reported number -- it says how much of the anchor
+# is a property of the format rather than of the readout.
+TRACKB_VERSIONS = ("legacy_one_format", "both_orders")
+
+
+def trackB_gradient(layer: int, game: str,
+                    version: str = "legacy_one_format") -> Optional[dict]:
+    """One version of Track B's B3.1 direction, if its hash is committed.
+
+    A direction sitting on the share whose hash is not recorded in the history is
+    not yet the anchor of record, and is skipped with a note rather than used.
+    """
     if not TRACKB.exists():
         return None
-    pats = [f"b3*/gradient_L{layer}_{game}*.npy",
-            f"b3*/gradient_L{layer}_{game}*.json",
-            f"b3*/*grad*L{layer}*{game}*.npy"]
+    pats = [f"b3*/gradient_{version}_L{layer}_{game}.npy",
+            f"b3*/gradient_{version}_L{layer}_{game}*.npy",
+            f"b3*/*{version}*L{layer}*{game}*.npy",
+            f"b3*/*{version}*L{layer}*{game}*.json"]
     hits: List[Path] = []
     for pat in pats:
         hits.extend(sorted(TRACKB.glob(pat)))
-    for p in hits:
-        digest = _sha256(p)
+    seen = set()
+    for q in hits:
+        if q in seen:
+            continue
+        seen.add(q)
+        digest = _sha256(q)
         committed, where = _hash_is_committed(digest)
         if not committed:
-            print(f"[g4b] {p.name} is on the share but its hash is not committed; "
+            print(f"[g4b] {q.name} is on the share but its hash is not committed; "
                   f"not using it", flush=True)
             continue
-        vec = (np.load(p) if p.suffix == ".npy"
-               else np.asarray(json.loads(p.read_text())["direction"], dtype=np.float32))
+        vec = (np.load(q) if q.suffix == ".npy"
+               else np.asarray(json.loads(q.read_text())["direction"], dtype=np.float32))
         vec = np.asarray(vec, dtype=np.float32).ravel()
         return dict(direction=vec / (np.linalg.norm(vec) + 1e-12),
-                    source="trackB/B3.1", path=str(p.relative_to(RUNROOT)),
-                    sha256=digest, committed_at=where,
-                    duplicate_to_reconcile=False)
+                    source=f"trackB/B3.1/{version}", version=version,
+                    path=str(q.relative_to(RUNROOT)), sha256=digest,
+                    committed_at=where, duplicate_to_reconcile=False)
     return None
 
 
@@ -247,16 +272,22 @@ def geometry() -> List[dict]:
                 dirs = g4_directions(variant, layer, game)
                 if not dirs:
                     continue
-                grad = trackB_gradient(layer, game)
                 gsrc, dup = "", False
-                if grad is not None:
-                    dirs["gradient"] = grad["direction"]
-                    gsrc, dup = grad["source"], grad["duplicate_to_reconcile"]
-                else:
+                for version, name in ((("legacy_one_format"), "gradient"),
+                                      (("both_orders"), "gradient_both_orders")):
+                    g = trackB_gradient(layer, game, version)
+                    if g is not None:
+                        dirs[name] = g["direction"]
+                        if name == "gradient":
+                            gsrc, dup = g["source"], False
+                if "gradient" not in dirs:
                     fb = OUT / f"fallback_gradient_L{layer}_{game}.npy"
+                    fb2 = OUT / f"fallback_gradient_fmtavg_L{layer}_{game}.npy"
                     if fb.exists():
                         dirs["gradient"] = np.load(fb)
                         gsrc, dup = "cv_bench/g4b.py fallback", True
+                    if fb2.exists():
+                        dirs["gradient_both_orders"] = np.load(fb2)
                 d = len(next(iter(dirs.values())))
                 null = 1.0 / np.sqrt(d)
                 names = list(dirs)
@@ -269,8 +300,11 @@ def geometry() -> List[dict]:
                             null_scale=round(float(null), 5),
                             multiples_of_null=round(abs(c) / null, 2),
                             d=d,
-                            gradient_source=(gsrc if "gradient" in (a, b) else ""),
-                            duplicate_to_reconcile=(dup if "gradient" in (a, b) else False)))
+                            gradient_source=(gsrc if a.startswith("gradient")
+                                             or b.startswith("gradient") else ""),
+                            duplicate_to_reconcile=(dup if a.startswith("gradient")
+                                                    or b.startswith("gradient")
+                                                    else False)))
     if rows:
         write_csv("g4b_geometry.csv", rows,
                   ["variant", "layer", "game", "a", "b", "cosine", "abs_cosine",
@@ -295,7 +329,7 @@ def main() -> int:
     a = ap.parse_args()
     if a.fallback:
         for game in (GAMES if a.game == "both" else (a.game,)):
-            if trackB_gradient(a.layer, game) is not None:
+            if trackB_gradient(a.layer, game, "legacy_one_format") is not None:
                 print(f"[g4b] Track B's B3.1 is committed for L{a.layer} {game}; "
                       f"not computing a duplicate")
                 continue
