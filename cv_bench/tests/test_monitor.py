@@ -63,3 +63,54 @@ def test_clean_log_is_clean(tmp_path):
 def test_missing_file_is_not_a_failure(tmp_path):
     assert scan_log(tmp_path / "nope.out") == []
     assert scan_log(None) == []
+
+
+# ---------------------------------------------------------------------------
+# a record may hold one code or forty
+#
+# G2 writes one trial per record, so `legacy_code` is an int. G4 and G5 write one
+# cell per record -- 40 agents at one level and one dose -- so the same field is a
+# list. Treating the list as a scalar made `set()` raise `unhashable type: list`,
+# check_outputs threw, and the caller's except-clause marked the task incomplete.
+# Finished G4 replicas were resubmitted over and over as a result.
+# ---------------------------------------------------------------------------
+def test_content_check_handles_list_valued_codes(tmp_path, monkeypatch):
+    import json as _json
+    from cv_bench import monitor as M
+
+    run = tmp_path / "run"
+    (run / "g4").mkdir(parents=True)
+    rec = dict(game="lottery", dose_id=0, value=20,
+               legacy_code=[0, 1, 0, 1], strict_code=[0, 1, 1, 1],
+               raw_generations=["Safe", "Risky", "", "Risky"])
+    (run / "g4/sampled_x.jsonl").write_text(_json.dumps(rec) + "\n")
+    (run / "g4/done_x.json").write_text("{}")
+
+    monkeypatch.setattr(M, "RUNROOT", run)
+    monkeypatch.setitem(M.EXPECTED, "t", dict(
+        sbatch=run / "nope.sbatch", outputs={"g4/sampled_x.jsonl": None},
+        done="g4/done_x.json"))
+    out = M.check_outputs("t")
+    assert out["complete"] is True
+    c = out["content"][0]
+    assert c["n"] == 4                      # flattened, not one row
+    assert c["blank_generations"] == 1       # counted inside the list
+    assert c["legacy_constant"] is False
+
+
+def test_content_check_still_handles_scalar_codes(tmp_path, monkeypatch):
+    import json as _json
+    from cv_bench import monitor as M
+
+    run = tmp_path / "run"
+    (run / "g2").mkdir(parents=True)
+    lines = [_json.dumps(dict(legacy_code=c, strict_choice=c, raw_generation="Safe"))
+             for c in (0, 1, 0)]
+    (run / "g2/x.jsonl").write_text("\n".join(lines) + "\n")
+    monkeypatch.setattr(M, "RUNROOT", run)
+    monkeypatch.setitem(M.EXPECTED, "t2", dict(
+        sbatch=run / "nope.sbatch", outputs={"g2/x.jsonl": 3}))
+    out = M.check_outputs("t2")
+    assert out["complete"] is True
+    assert out["content"][0]["n"] == 3
+    assert out["content"][0]["coding_agreement"] == 1.0

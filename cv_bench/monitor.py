@@ -94,7 +94,7 @@ EXPECTED.update({
                  "instr/freegen_llama.jsonl": 840},
         done="instr/done_instr_llama.json",
     ),
-    "cvb_neutral": dict(
+    "cvb_neutral2": dict(
         sbatch=REPO_SLURM / "cvb_neutral.sbatch",
         args=PREEMPT + ["--gres=gpu:2", "--time=03:00:00"],
         outputs={"neutral/mass_llama.jsonl": 344,   # 50 lottery + 36 ultimatum: CAL_ULTIMATUM has 36 values, not 50
@@ -240,6 +240,21 @@ def check_outputs(task: str) -> dict:
         if not rel.endswith(".jsonl") or not p.exists() or p.stat().st_size == 0:
             continue
         legacy, strict, blanks = [], [], 0
+
+        def _flat(v):
+            """One record may hold one code or a list of them.
+
+            G2 writes one trial per record, so `legacy_code` is an int. G4 and G5
+            write one *cell* per record -- 40 agents at one level and dose -- so
+            the same field is a list of 40. Treating the list as a scalar made
+            `set()` raise, check_outputs threw, and the caller's except-clause
+            marked every G4 task incomplete, which is why finished replicas kept
+            being resubmitted.
+            """
+            if isinstance(v, list):
+                return [x for x in v]
+            return [] if v is None else [v]
+
         with open(RUNROOT / rel) as f:
             for line in f:
                 line = line.strip()
@@ -249,9 +264,13 @@ def check_outputs(task: str) -> dict:
                     r = json.loads(line)
                 except json.JSONDecodeError:
                     continue
-                legacy.append(r.get("legacy_code"))
-                strict.append(r.get("strict_choice"))
-                if not (r.get("raw_generation") or "").strip():
+                legacy.extend(_flat(r.get("legacy_code")))
+                strict.extend(_flat(r.get("strict_choice") if "strict_choice" in r
+                                    else r.get("strict_code")))
+                gens = r.get("raw_generations")
+                if isinstance(gens, list):
+                    blanks += sum(1 for g in gens if not (g or "").strip())
+                elif not (r.get("raw_generation") or "").strip():
                     blanks += 1
         if legacy:
             checked += 1
@@ -259,8 +278,8 @@ def check_outputs(task: str) -> dict:
             agree.append(dict(file=rel, n=len(legacy),
                               coding_agreement=round(same / len(legacy), 4),
                               blank_generations=blanks,
-                              legacy_constant=len(set(legacy)) == 1,
-                              strict_constant=len(set(strict)) == 1))
+                              legacy_constant=len(set(map(str, legacy))) == 1,
+                              strict_constant=len(set(map(str, strict))) == 1))
     out["content"] = agree
     out["files_content_checked"] = checked
     return out
