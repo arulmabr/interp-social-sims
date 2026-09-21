@@ -1,0 +1,28 @@
+stack,arm,source,where,id_recorded,n_rows,is_hf_id,revision_pinned
+A hosted Goodfire/EDSL,lottery,run record,cleaned/behavioral_games_combined.csv :: model.model,meta-llama/Llama-3.3-70B-Instruct,7000,yes,no
+A hosted Goodfire/EDSL,ultimatum,run record,cleaned/behavioral_games_combined.csv :: model.model,meta-llama/Llama-3.3-70B-Instruct,2040,yes,no
+B local vLLM,lottery,run record,cleaned/behavioral_games_combined.csv :: model.model,meta-llama/Llama-3.3-70B-Instruct,12600,yes,no
+B local vLLM,ultimatum,run record,cleaned/behavioral_games_combined.csv :: model.model,meta-llama/Llama-3.3-70B-Instruct,6120,yes,no
+A hosted Goodfire/EDSL,creativity,run record,SAE/data/raw/creativity/product_innovation_20251102_202650/baseline.csv :: model.model,meta-llama/Llama-3.3-70B-Instruct,,yes,no
+B local vLLM,creativity_brick_full,run record,Revised Prompting/runs_fp16/runs/creativity_brick_full/run_manifest.json :: model,meta-llama/Llama-3.3-70B-Instruct,200,yes,no
+B local vLLM,creativity_stapler_full,run record,Revised Prompting/runs_fp16/runs/creativity_stapler_full/run_manifest.json :: model,meta-llama/Llama-3.3-70B-Instruct,160,yes,no
+B local vLLM,safe_risky_full,run record,Revised Prompting/runs_fp16/runs/safe_risky_full/run_manifest.json :: model,meta-llama/Llama-3.3-70B-Instruct,12600,yes,no
+B local vLLM,ultimatum_full,run record,Revised Prompting/runs_fp16/runs/ultimatum_full/run_manifest.json :: model,meta-llama/Llama-3.3-70B-Instruct,6120,yes,no
+C local HF probe / Llama,code,code,Probes/config.py :: ModelConfig.hf_id,meta-llama/Llama-3.3-70B-Instruct,,yes,no
+C local HF probe / Llama,code,code,Probes/config.py :: ModelConfig.name (display string),Llama-3.3-70B-Instruct,,**no**,no
+C local HF probe / Qwen,code,code,Probes/config.py :: ModelConfig.hf_id,Qwen/Qwen2-7B-Instruct,,yes,no
+C local HF probe / Qwen,code,code,Probes/config.py :: ModelConfig.name (display string),Qwen-2-7B-Instruct,,**no**,no
+C local HF probe / Llama,figure metadata,run record,Probes/raw_data/probe_results_final.json :: metadata.model,Llama-3.3-70B-Instruct,14 figure keys,**no** (display name),no
+C local HF probe / Qwen,figure metadata,run record,Probes/raw_data/probe_results_final.json :: metadata.model,Qwen-2-7B-Instruct,6 figure keys,**no** (display name),no
+C local HF probe / Llama,per-row,run record,Probes/raw_data/probe_results_final.json :: row.model,Llama-3.3-70B-Instruct,45302,**no** (display name),no
+C local HF probe / Qwen,per-row,run record,Probes/raw_data/probe_results_final.json :: row.model,Qwen-2-7B-Instruct,10947,**no** (display name),no
+D local open-SAE,creativity_open_sae_steering_40agent,run record,SAE/runs/creativity_open_sae_steering_40agent/open_sae_steering_metadata.json :: model_id / sae_repo,meta-llama/Llama-3.3-70B-Instruct + Goodfire/Llama-3.3-70B-Instruct-SAE-l50,80,yes,SAE snapshot pinned in sae_path
+D local open-SAE,creativity_open_sae_steering_smoke,run record,SAE/runs/creativity_open_sae_steering_smoke/open_sae_steering_metadata.json :: model_id / sae_repo,meta-llama/Llama-3.3-70B-Instruct + Goodfire/Llama-3.3-70B-Instruct-SAE-l50,4,yes,SAE snapshot pinned in sae_path
+D local open-SAE,safe_risky_open_sae_steering_full,run record,SAE/runs/safe_risky_open_sae_steering_full/open_sae_steering_metadata.json :: model_id / sae_repo,meta-llama/Llama-3.3-70B-Instruct + Goodfire/Llama-3.3-70B-Instruct-SAE-l50,1400,yes,SAE snapshot pinned in sae_path
+D local open-SAE,safe_risky_open_sae_steering_full_smoke,run record,SAE/runs/safe_risky_open_sae_steering_full_smoke/open_sae_steering_metadata.json :: model_id / sae_repo,meta-llama/Llama-3.3-70B-Instruct + Goodfire/Llama-3.3-70B-Instruct-SAE-l50,8,yes,SAE snapshot pinned in sae_path
+D local open-SAE,safe_risky_open_sae_steering_lite_full,run record,SAE/runs/safe_risky_open_sae_steering_lite_full/open_sae_steering_metadata.json :: model_id / sae_repo,meta-llama/Llama-3.3-70B-Instruct + Goodfire/Llama-3.3-70B-Instruct-SAE-l50,1400,yes,SAE snapshot pinned in sae_path
+D local open-SAE,safe_risky_open_sae_steering_lite_smoke,run record,SAE/runs/safe_risky_open_sae_steering_lite_smoke/open_sae_steering_metadata.json :: model_id / sae_repo,meta-llama/Llama-3.3-70B-Instruct + Goodfire/Llama-3.3-70B-Instruct-SAE-l50,8,yes,SAE snapshot pinned in sae_path
+D local open-SAE,trust_open_sae_steering_full,run record,SAE/runs/trust_open_sae_steering_full/open_sae_steering_metadata.json :: model_id / sae_repo,meta-llama/Llama-3.3-70B-Instruct + Goodfire/Llama-3.3-70B-Instruct-SAE-l50,200,yes,SAE snapshot pinned in sae_path
+D local open-SAE,trust_open_sae_steering_smoke,run record,SAE/runs/trust_open_sae_steering_smoke/open_sae_steering_metadata.json :: model_id / sae_repo,meta-llama/Llama-3.3-70B-Instruct + Goodfire/Llama-3.3-70B-Instruct-SAE-l50,8,yes,SAE snapshot pinned in sae_path
+D local open-SAE,ultimatum_open_sae_steering_full,run record,SAE/runs/ultimatum_open_sae_steering_full/open_sae_steering_metadata.json :: model_id / sae_repo,meta-llama/Llama-3.3-70B-Instruct + Goodfire/Llama-3.3-70B-Instruct-SAE-l50,680,yes,SAE snapshot pinned in sae_path
+D local open-SAE,ultimatum_open_sae_steering_smoke,run record,SAE/runs/ultimatum_open_sae_steering_smoke/open_sae_steering_metadata.json :: model_id / sae_repo,meta-llama/Llama-3.3-70B-Instruct + Goodfire/Llama-3.3-70B-Instruct-SAE-l50,8,yes,SAE snapshot pinned in sae_path

@@ -110,3 +110,45 @@ stack's *calibration targets* (up to 100) rather than about realised rejections.
 
 **Data unchanged.** `S0.A.ultimatum.pReject_hyperfair.hosted.*` = 0 is correct and stands; the error
 was in what I inferred from it.
+
+---
+
+## D-2026-09-21-05 — `GATE_S0_RESPONSE.md` signed; `FRIDAY_PLAN.md` supersedes §7
+
+**Instruction.** An author signed `GATE_S0_RESPONSE.md` on 21 Sept 2026 (`CONFIRMED BY: shreyas`) and
+added `FRIDAY_PLAN.md`, which replaces §7 of that file until the deadline. The decisions taken are:
+submit to ICLR on **25 Sept**, produce results on **`meta-llama/Llama-3.3-70B-Instruct`**, use
+`/orcd/data/gabrieli/001/guna23` for storage, and pre-approve the ≈145 GB download plus **40 GPU-hours**
+across G2–G5.
+
+**What is now in force.** All of `GATE_S0_RESPONSE.md` except §7, plus `FRIDAY_PLAN.md`. This
+supersedes D-2026-09-21-00, under which only P2–P5 and P10 applied. In particular P1 (task S2.0), P6–P9,
+P11 and §4–§6 are now live, and `CLAUDE.md` still outranks all of it.
+
+**Not yet done, and tracked:** the §4 corrections to `PAPER_AUDIT.md`, the §5 additions to `CLAUDE.md`
+(rules 13–15), and P7's revision of A10. They are queued behind the Friday ordering, which puts
+verification first.
+
+**Sequence.** The authors directed: V3 first, report before the download; then finish the P12/P13
+revision (V0); then continue down `FRIDAY_PLAN.md`.
+
+---
+
+## D-2026-09-21-06 — V3 run before the download; stop condition not triggered
+
+**Why.** `FRIDAY_PLAN.md` V3 makes the download conditional: if the legacy probe runs name
+`Llama-3.1-70B-Instruct`, stop, because the paper would then misstate the model for every probe
+experiment and G2 would belong on the 3.1 checkpoint already on the share.
+
+**Result: not triggered** (`MANIFEST.csv:V3.stop_condition.legacy_probe_names_3_1_70B` = false).
+All four stacks name `meta-llama/Llama-3.3-70B-Instruct`; `Llama-3.1-70B-Instruct` appears in no file
+and at no commit on any branch. The repository's only `Llama-3.1` strings are an SAE **filename**
+helper for the 8B open SAE, which was never run. Full table in `reports/V3_model_ids.md`.
+
+**Also settled from the logs, as §1 asked:** the Qwen arm is **`Qwen/Qwen2-7B-Instruct`**
+(`Probes/config.py:34`), which matches the paper. `Qwen2.5-7B-Instruct` on the share is a different
+model and is not substituted.
+
+**Recorded as a limitation, not a deviation:** the probe run records carry `ModelConfig.name`, a
+display string, not `hf_id`, so for Stack C the checkpoint is attested by one line of configuration
+rather than by the logs. Stacks A, B and D record the id itself.

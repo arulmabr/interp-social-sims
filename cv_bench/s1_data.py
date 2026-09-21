@@ -387,3 +387,200 @@ def append_manifest(entries: List[Tuple[str, object, str, List[str], str]]) -> N
 
 def rel(p: Path) -> str:
     return os.path.relpath(p, ROOT)
+
+
+# ---------------------------------------------------------------------------
+# GATE_S0_RESPONSE.md §3 P12 and P13
+#
+# P12 resets what counts as the primary interval for the *sampled* legacy data.
+# The reward levels are a fixed design and the randomness lives in the sampled
+# responses, so forty draws at one level are forty independent observations of
+# that level's choice probability (not forty agents). The primary statistics are
+# therefore a permutation test of the condition label stratified by level, and a
+# bootstrap that holds the levels fixed and resamples responses within them. The
+# level-resampling interval stays, as a sensitivity column: with a coarse grid
+# and a steep curve only two or three levels carry information about where the
+# curve sits, so that interval largely reflects which of them a draw includes.
+# B6's "resample levels, never trials" rule is for logit readouts, which have no
+# trial noise; it does not apply here.
+# ---------------------------------------------------------------------------
+def grid_step(trials: Sequence[Tuple[float, int]]) -> float:
+    """The spacing of the reward grid, so a shift can be given in grid steps."""
+    xs = np.array(sorted({x for x, _ in trials}), dtype=float)
+    if xs.size < 2:
+        return float("nan")
+    d = np.diff(xs)
+    d = d[d > 0]
+    return float(np.min(d)) if d.size else float("nan")
+
+
+def _paired_levels(a, b):
+    xa, ka, na = aggregate(a)
+    xb, kb, nb = aggregate(b)
+    shared = np.intersect1d(xa, xb)
+    ia = np.searchsorted(xa, shared)
+    ib = np.searchsorted(xb, shared)
+    return shared, ka[ia], na[ia], kb[ib], nb[ib]
+
+
+def permutation_shift_test(
+    a: Sequence[Tuple[float, int]],
+    b: Sequence[Tuple[float, int]],
+    n_perm: int = 5000,
+    seed: int = 11,
+    scale: float = 100.0,
+) -> Tuple[float, float, int]:
+    """(observed shift, two-sided p, n_valid) for switch(a) - switch(b).
+
+    The condition label is permuted *within* each reward level, which for binomial
+    counts is an exact hypergeometric relabelling: at a level with kA+kB positives
+    among nA+nB responses, a permutation redraws how many of them fall to A.
+    """
+    xs, ka, na, kb, nb = _paired_levels(a, b)
+    if xs.size == 0:
+        return float("nan"), float("nan"), 0
+    _, _, sa = _fit_agg(xs, ka, na, scale=scale)
+    _, _, sb = _fit_agg(xs, kb, nb, scale=scale)
+    obs = sa - sb
+    if not np.isfinite(obs):
+        return float("nan"), float("nan"), 0
+    rng = np.random.default_rng(seed)
+    ntot = (na + nb).astype(int)
+    ktot = (ka + kb).astype(int)
+    nA = na.astype(int)
+    extreme, valid = 0, 0
+    for _ in range(n_perm):
+        kA = rng.hypergeometric(ktot, ntot - ktot, nA).astype(float)
+        kB = ktot.astype(float) - kA
+        _, _, s1 = _fit_agg(xs, kA, na, scale=scale)
+        _, _, s2 = _fit_agg(xs, kB, nb, scale=scale)
+        d = s1 - s2
+        if np.isfinite(d):
+            valid += 1
+            if abs(d) >= abs(obs) - 1e-12:
+                extreme += 1
+    if valid < 50:
+        return obs, float("nan"), valid
+    # add-one correction: a permutation p is never exactly 0
+    return obs, float((extreme + 1) / (valid + 1)), valid
+
+
+def bootstrap_shift_within_level(
+    a: Sequence[Tuple[float, int]],
+    b: Sequence[Tuple[float, int]],
+    n_boot: int = 4000,
+    seed: int = 12,
+    scale: float = 100.0,
+) -> Tuple[float, float, float, int]:
+    """(shift, lo, hi, n_valid) with the reward levels held fixed.
+
+    Responses are resampled within each level, which is the sampling scheme that
+    actually generated the data: the grid was chosen, the answers were drawn.
+    """
+    xs, ka, na, kb, nb = _paired_levels(a, b)
+    if xs.size == 0:
+        return float("nan"), float("nan"), float("nan"), 0
+    _, _, sa = _fit_agg(xs, ka, na, scale=scale)
+    _, _, sb = _fit_agg(xs, kb, nb, scale=scale)
+    point = sa - sb
+    pa = np.divide(ka, na, out=np.zeros_like(ka), where=na > 0)
+    pb = np.divide(kb, nb, out=np.zeros_like(kb), where=nb > 0)
+    rng = np.random.default_rng(seed)
+    draws = []
+    for _ in range(n_boot):
+        kA = rng.binomial(na.astype(int), pa).astype(float)
+        kB = rng.binomial(nb.astype(int), pb).astype(float)
+        _, _, s1 = _fit_agg(xs, kA, na, scale=scale)
+        _, _, s2 = _fit_agg(xs, kB, nb, scale=scale)
+        d = s1 - s2
+        if np.isfinite(d):
+            draws.append(d)
+    if len(draws) < 50:
+        return point, float("nan"), float("nan"), len(draws)
+    lo, hi = np.percentile(draws, [2.5, 97.5])
+    return point, float(lo), float(hi), len(draws)
+
+
+def bootstrap_switch_within_level(
+    trials: Sequence[Tuple[float, int]],
+    n_boot: int = 4000,
+    seed: int = 13,
+    scale: float = 100.0,
+) -> Tuple[float, float, float, int]:
+    """(switch, lo, hi, n_valid), levels fixed, responses resampled within level."""
+    xs, k, n = aggregate(trials)
+    _, _, point = _fit_agg(xs, k, n, scale=scale)
+    p_hat = np.divide(k, n, out=np.zeros_like(k), where=n > 0)
+    rng = np.random.default_rng(seed)
+    draws = []
+    for _ in range(n_boot):
+        kb = rng.binomial(n.astype(int), p_hat).astype(float)
+        _, _, s = _fit_agg(xs, kb, n, scale=scale)
+        if np.isfinite(s):
+            draws.append(s)
+    if len(draws) < 50:
+        return point, float("nan"), float("nan"), len(draws)
+    lo, hi = np.percentile(draws, [2.5, 97.5])
+    return point, float(lo), float(hi), len(draws)
+
+
+def staircase_excess(
+    trials: Sequence[Tuple[float, int]],
+    game: str,
+    n_boot: int = 4000,
+    seed: int = 14,
+    scale: float = 100.0,
+):
+    """P13: the catch-trial rate, the rate a clean translation would imply, and the gap.
+
+    A curve that moved as a pure translation is a step at its switching point, so
+    on the catch levels it predicts a rate fixed by arithmetic:
+
+      lottery   -- dominated levels are x < 50; a step at s takes the gamble on
+                   every such level with x >= s
+      ultimatum -- catch levels are x >= 50; a step at threshold s rejects every
+                   such level with x < s
+
+    The excess is observed minus implied. Zero means the whole catch-trial rate is
+    the switching point restated. Positive means responses the switching point does
+    not account for.
+    """
+    xs, k, n = aggregate(trials)
+    if game == "lottery":
+        catch = xs < SURE_AMOUNT
+        implied_of = lambda s: (float(np.mean(xs[catch] >= s)) if catch.any() and np.isfinite(s)
+                                else float("nan"))
+        obs_k, obs_n = k[catch].sum(), n[catch].sum()
+    else:
+        catch = xs >= PIE / 2
+        implied_of = lambda s: (float(np.mean(xs[catch] < s)) if catch.any() and np.isfinite(s)
+                                else float("nan"))
+        obs_k, obs_n = (n[catch] - k[catch]).sum(), n[catch].sum()   # reject = 1 - accept
+    if obs_n == 0:
+        return {}
+    _, _, s_hat = _fit_agg(xs, k, n, scale=scale)
+    observed = float(obs_k / obs_n)
+    implied = implied_of(s_hat)
+    p_hat = np.divide(k, n, out=np.zeros_like(k), where=n > 0)
+    rng = np.random.default_rng(seed)
+    draws = []
+    for _ in range(n_boot):
+        kb = rng.binomial(n.astype(int), p_hat).astype(float)
+        _, _, s = _fit_agg(xs, kb, n, scale=scale)
+        if not np.isfinite(s):
+            continue
+        if game == "lottery":
+            o = float(kb[catch].sum() / obs_n)
+        else:
+            o = float((n[catch] - kb[catch]).sum() / obs_n)
+        draws.append(o - implied_of(s))
+    out = dict(n_catch_levels=int(catch.sum()), n_catch_trials=int(obs_n),
+               observed_rate=observed, switching_point=s_hat, implied_rate=implied,
+               excess=observed - implied if np.isfinite(implied) else float("nan"))
+    if len(draws) >= 50:
+        lo, hi = np.percentile(draws, [2.5, 97.5])
+        out.update(excess_ci_lo=float(lo), excess_ci_hi=float(hi), n_bootstrap=len(draws))
+    else:
+        out.update(excess_ci_lo=float("nan"), excess_ci_hi=float("nan"),
+                   n_bootstrap=len(draws))
+    return out

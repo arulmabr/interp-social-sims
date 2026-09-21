@@ -2,12 +2,23 @@
 
     python -m cv_bench.s1_behaviour
 
-Constraints in force (GATE_S0_RESPONSE.md §3 P2, applied by the authors):
-  * every rate is reported beside its own curve's switching point and beside
-    the same stack's unsteered rate;
-  * no comparison is made across stacks or across unequal doses;
-  * where a stack has no unsteered condition, the baseline columns say
-    "not available" rather than borrowing another stack's.
+Constraints in force (GATE_S0_RESPONSE.md §3, applied by the authors):
+
+P2  -- every rate is reported beside its own curve's switching point and beside
+       the same stack's unsteered rate; no comparison across stacks or across
+       unequal doses; where a stack has no unsteered condition the baseline
+       columns say "not available" rather than borrowing another stack's.
+
+P12 -- the reward levels are a fixed design and the randomness is in the sampled
+       responses, so the primary statistics for every contrast are a permutation
+       test of the condition label stratified by level and a bootstrap that holds
+       the levels fixed and resamples responses within them. The level-resampling
+       interval is kept beside them as a sensitivity column. Shifts are given in
+       grid steps as well as tokens.
+
+P13 -- every catch-trial rate is reported beside the rate a clean translation
+       would imply (a step at the fitted switching point), with the difference
+       and its interval.
 """
 from __future__ import annotations
 
@@ -20,12 +31,16 @@ import numpy as np
 
 from .s1_data import (
     BASELINE_OF, BEHAVIOURAL, PIE, PROBE_JSON, SURE_AMOUNT, Curve,
-    all_curves, append_manifest, bootstrap_switch, bootstrap_switch_diff,
-    fit_logistic, interp_crossing, probe_lambda_table, rel, write_csv,
+    all_curves, append_manifest, bootstrap_shift_within_level, bootstrap_switch,
+    bootstrap_switch_diff, bootstrap_switch_within_level, fit_logistic, grid_step,
+    interp_crossing, permutation_shift_test, probe_lambda_table, rel,
+    staircase_excess, write_csv,
 )
 
 SCRIPT = "cv_bench/s1_behaviour.py"
 NA = "not available"
+N_BOOT = 2000
+N_PERM = 2000
 
 
 def _rate(trials, pred) -> tuple:
@@ -63,6 +78,7 @@ def s1_1_and_1_2(curves: List[Curve]):
             ys = [float(np.mean(bx[x])) for x in xs]
             sw_interp = interp_crossing(xs, ys)
             _, _, sw_logit = fit_logistic(c.trials)
+            exc = staircase_excess(c.trials, game, n_boot=N_BOOT) or {}
 
             if game == "lottery":
                 k_dom, n_dom = _rate(c.trials, lambda x: x < SURE_AMOUNT)
@@ -92,6 +108,11 @@ def s1_1_and_1_2(curves: List[Curve]):
                     n_trials_negative_premium=n_neg, k_risky_negative_premium=k_neg,
                     p_risky_negative_premium=_fmt(p_neg),
                     ci_risky_negative_premium=f"[{_fmt(lo_neg)}, {_fmt(hi_neg)}]",
+                    implied_by_translation=_fmt(exc.get("implied_rate")),
+                    excess_over_staircase=_fmt(exc.get("excess")),
+                    excess_ci=f"[{_fmt(exc.get('excess_ci_lo'))}, {_fmt(exc.get('excess_ci_hi'))}]",
+                    excess_excludes_zero=("" if not np.isfinite(exc.get("excess_ci_lo", np.nan))
+                                          else str(exc["excess_ci_lo"] > 0 or exc["excess_ci_hi"] < 0)),
                     same_stack_baseline_condition=base_name or NA,
                     same_stack_baseline_p_risky_dominated=base_rate,
                     same_stack_baseline_ci=base_ci,
@@ -103,6 +124,15 @@ def s1_1_and_1_2(curves: List[Curve]):
                     f"P(risky | n<50), n={n_dom}, Wilson [{_fmt(lo_dom)},{_fmt(hi_dom)}]; "
                     f"switching point {_fmt(sw_interp)}",
                 ))
+                if exc:
+                    manifest.append((
+                        f"S1.1.{stack}.{cond}.excess_over_staircase", _fmt(exc.get("excess")),
+                        SCRIPT,
+                        [rel(BEHAVIOURAL) if stack in ("hosted", "vllm") else rel(PROBE_JSON)],
+                        f"observed {_fmt(exc.get('observed_rate'))} minus the rate a step at the "
+                        f"fitted switching point implies ({_fmt(exc.get('implied_rate'))}); "
+                        f"95% CI [{_fmt(exc.get('excess_ci_lo'))},{_fmt(exc.get('excess_ci_hi'))}]",
+                    ))
             else:
                 k_hf, n_hf = _rate(c.trials, lambda x: x >= PIE / 2)
                 k_low, n_low = _rate(c.trials, lambda x: x <= 10)
@@ -132,6 +162,11 @@ def s1_1_and_1_2(curves: List[Curve]):
                     n_trials_offer_le_10=n_low, k_accept_offer_le_10=k_low,
                     p_accept_offer_le_10=_fmt(p_acc),
                     ci_accept_offer_le_10=f"[{_fmt(lo_acc)}, {_fmt(hi_acc)}]",
+                    implied_by_translation=_fmt(exc.get("implied_rate")),
+                    excess_over_staircase=_fmt(exc.get("excess")),
+                    excess_ci=f"[{_fmt(exc.get('excess_ci_lo'))}, {_fmt(exc.get('excess_ci_hi'))}]",
+                    excess_excludes_zero=("" if not np.isfinite(exc.get("excess_ci_lo", np.nan))
+                                          else str(exc["excess_ci_lo"] > 0 or exc["excess_ci_hi"] < 0)),
                     same_stack_baseline_condition=base_name or NA,
                     same_stack_baseline_p_reject_hyperfair=base_rate,
                     same_stack_baseline_ci=base_ci,
@@ -143,6 +178,15 @@ def s1_1_and_1_2(curves: List[Curve]):
                     f"P(reject | offer>=50), n={n_hf}, Wilson [{_fmt(lo_rej)},{_fmt(hi_rej)}]; "
                     f"threshold {_fmt(sw_interp)}; grid max {int(max(xs))}",
                 ))
+                if exc:
+                    manifest.append((
+                        f"S1.2.{stack}.{cond}.excess_over_staircase", _fmt(exc.get("excess")),
+                        SCRIPT,
+                        [rel(BEHAVIOURAL) if stack in ("hosted", "vllm") else rel(PROBE_JSON)],
+                        f"observed {_fmt(exc.get('observed_rate'))} minus the rate a step at the "
+                        f"fitted threshold implies ({_fmt(exc.get('implied_rate'))}); "
+                        f"95% CI [{_fmt(exc.get('excess_ci_lo'))},{_fmt(exc.get('excess_ci_hi'))}]",
+                    ))
 
     write_csv("s1_1_dominated_lottery.csv", lot_rows)
     write_csv("s1_2_catch_ultimatum.csv", ult_rows)
