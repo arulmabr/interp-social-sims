@@ -135,3 +135,41 @@ Scheduling is by estimate, not by the fixed now/later lists above.
    cutoff. A Track B result additionally needs Gate B2 and Gate B3 passed, the label *"exploratory,
    selection split, not pre-registered"*, and an author having read its report. Everything else waits
    for the discussion-period revision.
+
+### 22 Sept — author amendments: task definitions and coordination
+
+**A. Legacy format.** Before anything is built on `reports/G2_legacy_format.md`: state whether any
+caller in `Probes/` retries generation until a parse succeeds, falls back to logits, or filters rows,
+quoting the code; search every commit on every branch for chat-template use and for earlier versions
+of the probe files; compare any stored prompt text, token count or generation length against what the
+committed code produces. Then run **both** G4 variants and report them side by side. Mark Figs. 4, 6
+and 9–18 **"not reproducible from the committed code"** in `paper_patches/CLAIMS.csv` until an author
+explains how the original runs were made. **If no explanation is recorded by Wed 23 Sept 09:00 PDT**,
+write the patches on the basis that the Sept 25 PDF reports the reconstruction and removes legacy
+probe figures that were not rebuilt.
+
+**W7. Feedback ledger.** `paper_patches/FEEDBACK_LEDGER.csv`: every issue, all 21 suggested
+improvements and every typo-list entry in `feedback.txt`, with line, paper location, verdict
+(valid / wrong / superseded by S0–S1 / needs a new experiment) and patch. `PAPER_AUDIT.md` §2.7 and §6
+already hold verdicts for some of them. **Deliver the typo part early.**
+
+**W8. Related work.** A patch positioning the paper against ActAdd, Representation Engineering,
+Inference-Time Intervention, Contrastive Activation Addition, AxBench, Tan et al., Arditi et al. and
+the direct precedents in `PAPER_AUDIT.md` §5. **Every entry marked AUTHOR TO VERIFY; invent no
+bibliographic detail.**
+
+**G4b.** After G4, for the chat-template reconstruction: difference-of-means and first-PCA directions
+from the probe's activations; the readout gradient (risky-minus-safe logit with respect to the
+residual stream, final prompt token, layers 48 and 50, averaged over calibration prompts); and a ridge
+probe for log n. Cosine matrix among all of them and the choice probe. Steer with each at the choice
+probe's norm at the same doses. **Descriptive reporting only.**
+
+**G6.** Only if G5 is committed before the cutoff: S3.3 on the eight logged SAE features — ablation
+against 100 activation-matched random features, and attribution rank among all 65,536.
+
+**C. Coordination.**
+- Governing documents (`CLAUDE.md`, `ICLR_PLAN.md`, `PAPER_AUDIT.md`, `GATE_S0_RESPONSE.md`,
+  `FRIDAY_PLAN.md`) and shared logs (`logs/`) are edited **only in this session**.
+- **All Slurm jobs from both sessions carry the job-name prefix `cvb_`.**
+- The 400 GPU-hour cap is evaluated on **`sacct` totals for that prefix**, which makes it a real
+  project-wide number rather than a per-session one.

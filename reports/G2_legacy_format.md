@@ -100,3 +100,115 @@ question of what produced those codings is now open in a way it was not this mor
 One question settles a lot: **is there a run script, notebook or shell history from the original probe
 runs that shows how the prompt was built?** `GATE_S0_RESPONSE.md` §1.3 already asks where those runs
 executed. If the answer includes a working directory, its copy of `models.py` is the thing to look at.
+
+---
+
+# Addendum, 22 Sept — the three checks the authors asked for
+
+## A.1 No caller retries, falls back to logits, or filters rows
+
+**The psychometric sweeps that produced the published curves do neither.** A single
+`model.generate(...)` call per trial, parsed once, and the row is written whatever came back
+(`Probes/tasks/preference.py:48-58`, and `:115-125` for the ultimatum):
+
+```python
+parsed = prompts.parse_lottery_choice(result.text)
+return {
+    ...
+    "response": "Risky" if parsed == 1 else ("Safe" if parsed == 0 else result.text.strip()),
+    "parsed_choice": int(parsed) if parsed is not None else -1,
+}
+```
+
+No loop, no retry, no second attempt, no logit fallback. An unparseable generation is written as
+`parsed_choice = -1` with its raw text preserved. **That branch is never taken in the published
+data.**
+
+There is exactly one drop in the whole package, and it is in **probe training**, not in the sweeps
+(`Probes/experiments/_common.py:99-101`):
+
+```python
+choice = parse_fn(gen.text)
+if choice is None:
+    continue  # unparseable -> no ground-truth label, drop the trial
+```
+
+Two downstream filters exist and are **not** row filters: `Probes/calibration.py:90`
+(`if v in (0, 1)`) and `preference.py::aggregate_by_param` both ignore `-1` when computing a
+switching point or a cell fraction. They operate on rows that are already stored, so they cannot
+explain `per_agent_rows` containing no `-1` at all.
+
+The retries in `Probes/judge.py:298-317` are HTTP retries for the LLM judge and touch nothing here.
+
+## A.2 Git history: the code that ran is not in it
+
+`git fetch --all --tags` brought nothing new; the only remote is
+`github.com/arulmabr/interp-social-sims`, and `origin/main` is at the same commit as local `main`.
+32 commits across all refs.
+
+**`-S` search over every commit on every branch:**
+
+| string | commits | where |
+|---|---:|---|
+| `apply_chat_template` | 5 | 3 are mine (21 Sept). The 2 legacy ones are `53c449e` and `59ca0f0`, and in both the hits are only in **`SAE/scripts/`** and **`Revised Prompting/scripts/`** |
+| `add_generation_prompt` | 4 | same pattern |
+| `<\|begin_of_text\|>` | 1 | `59ca0f0`, in `SAE/` only |
+| `<\|start_header_id\|>`, `<\|im_start\|>` | 0 | — |
+
+**No commit, on any branch, ever put a chat template anywhere in `Probes/`.** The SAE and vLLM
+stacks used one throughout; the probe stack never did.
+
+**Earlier versions of the probe files: there are none.**
+
+| file | commits touching it | first appearance |
+|---|---:|---|
+| `Probes/models.py` | **1** | `59ca0f0`, +176 lines |
+| `Probes/config.py` | **1** | `59ca0f0`, +207 lines |
+| `Probes/tasks/prompts.py` | **1** | `59ca0f0`, +92 lines |
+| `Probes/tasks/preference.py` | **1** | `59ca0f0`, +220 lines |
+
+`git log --follow` finds no predecessor path — these are first appearances, not renames. Each file
+has been modified **zero** times since. So there is no earlier version whose prompt construction,
+`max_new_tokens` or sampling could have differed: the pipeline entered git in exactly its current
+form and stayed there.
+
+**Against the dates in the run records**, this is the heart of it. `59ca0f0` is the repository's
+**root commit**, dated **2026-05-25**. The runs it supposedly produced are dated earlier:
+`SAE/data/raw/games/.../results_20251008_225522` (8 Oct 2025) and
+`product_innovation_20251102_202650` (2 Nov 2025). The multi-judge rescoring carries epoch
+timestamps from 26 May 2026, the day after the root commit.
+
+**The experiments predate the repository.** Git cannot show what changed, because the working code
+was committed months after it ran — if the committed copy is even the same copy.
+
+## A.3 What the run records store, and what it can prove
+
+Fields in `figure_7_psychometric_curves_llama.per_agent_rows`: `agent_id`, `game`,
+`lambda_calibrated`, `model`, `parsed_choice`, `probe_layer`, `prompt`, `response`,
+`risky_reward_tokens`, `target_switching_point_tokens`.
+
+- **Prompt text: stored.** All **21,040 of 21,040** stored prompts match what the committed
+  `Probes/tasks/prompts.py` produces, character for character. So `prompts.py` is unchanged.
+- **Token counts: not stored.** (`risky_reward_tokens` is the game's payoff in "tokens", not a
+  tokenizer count.)
+- **Generation length: not stored.**
+
+**The stored prompt cannot settle the question, and it is worth being exact about why.**
+`run_lottery_trial` stores the string it *passes to* `generate`; `Wrapped.generate` then tokenises
+whatever it is given. A chat template applied inside `generate` — or a different `generate` — would
+leave the stored field identical. The match confirms the prompt *function* is unchanged and is silent
+on what was tokenised.
+
+## Where that leaves it
+
+Three independent checks, and none of them explains the contradiction:
+
+- no retry, no fallback, no row filter in the path that wrote the rows;
+- no earlier version of the probe code anywhere in git, and no chat template in `Probes/` at any
+  commit;
+- the stored prompts match the committed code exactly, and cannot discriminate.
+
+The committed pipeline yields no answer on 88% of trials; the published data has none missing. The
+difference lies in something that never reached this repository, and the repository's history begins
+seven months after the experiments. **Only an author, a surviving working directory, or a run script
+can close this.**

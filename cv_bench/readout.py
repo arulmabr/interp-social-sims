@@ -67,17 +67,28 @@ class Readout:
         self._id_cache: Dict[Tuple[str, bool], List[int]] = {}
 
     # -- tokenisation ------------------------------------------------------
-    def label_token_ids(self, label: str, after_space: bool = True) -> List[int]:
-        """First-token ids for a label, with and without a leading space.
+    def label_token_ids(self, label: str, after_space: bool = True,
+                        case_variants: bool = True) -> List[int]:
+        """First-token ids for a label: case variants, with and without a leading space.
 
-        Returns the distinct ids only. A tokenizer that maps "Safe" and " Safe"
-        to the same first token yields one id, which is correct and not an error.
+        Four spellings by default — "Safe", " Safe", "safe", " safe" — because
+        which one a model emits depends on the stem, and a stem ending in a space
+        makes the leading-space spelling unreachable. Distinct ids only: a
+        tokenizer that maps several spellings to one first token yields one id,
+        which is correct and not an error.
         """
-        key = (label, after_space)
+        key = (label, after_space, case_variants)
         if key in self._id_cache:
             return self._id_cache[key]
+        forms = [label]
+        if case_variants:
+            forms += [label.lower(), label.upper(), label.capitalize()]
+        variants = []
+        for f in dict.fromkeys(forms):
+            variants.append(f)
+            if after_space:
+                variants.append(" " + f)
         ids: List[int] = []
-        variants = [label, " " + label] if after_space else [label]
         for v in variants:
             enc = self.tok(v, add_special_tokens=False)["input_ids"]
             if enc:
