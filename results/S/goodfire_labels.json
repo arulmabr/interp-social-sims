@@ -1,0 +1,110 @@
+{
+  "lottery.steering": {
+    "source_file": "SAE/data/raw/games/safe_risky/results_20251008_225522/safe_risky_steering_50.csv",
+    "model": "meta-llama/Llama-3.3-70B-Instruct",
+    "inference_service": "goodfire",
+    "temperature": "0.5",
+    "top_p": "1",
+    "max_tokens": "1000",
+    "system_prompt": "Your traits: {'subject_id': 'A1'}",
+    "features": [
+      {
+        "uuid": "7f0e30ffb55c412cacd711909b11e5d0",
+        "label": "Willing to take risks or make sacrifices for a goal",
+        "index_in_sae": 184,
+        "max_activation_strength": 1,
+        "mode": "nudge",
+        "value": 0.7
+      },
+      {
+        "uuid": "b53742bf6f5040e0a8aeba37766335ff",
+        "label": "Executing potentially risky operations that require caution",
+        "index_in_sae": 4237,
+        "max_activation_strength": 1,
+        "mode": "nudge",
+        "value": 0.5
+      }
+    ]
+  },
+  "lottery.lite_steering": {
+    "source_file": "SAE/data/raw/games/safe_risky/results_20251008_225522/safe_risky_lite_steering_50.csv",
+    "model": "meta-llama/Llama-3.3-70B-Instruct",
+    "inference_service": "goodfire",
+    "temperature": "0.5",
+    "top_p": "1",
+    "max_tokens": "1000",
+    "system_prompt": "Your traits: {'subject_id': 'A1'}",
+    "features": [
+      {
+        "uuid": "7f0e30ffb55c412cacd711909b11e5d0",
+        "label": "Willing to take risks or make sacrifices for a goal",
+        "index_in_sae": 184,
+        "max_activation_strength": 1,
+        "mode": "nudge",
+        "value": 0.6
+      },
+      {
+        "uuid": "b53742bf6f5040e0a8aeba37766335ff",
+        "label": "Executing potentially risky operations that require caution",
+        "index_in_sae": 4237,
+        "max_activation_strength": 1,
+        "mode": "nudge",
+        "value": 0.4
+      }
+    ]
+  },
+  "ultimatum.steering": {
+    "source_file": "SAE/data/raw/games/ultimatum/results_20251008_201139/ultimatum_steering_50.csv",
+    "model": "meta-llama/Llama-3.3-70B-Instruct",
+    "inference_service": "goodfire",
+    "temperature": "0.5",
+    "top_p": "1",
+    "max_tokens": "1000",
+    "system_prompt": "Your traits: {'subject_id': 'A1'}",
+    "features": [
+      {
+        "uuid": "a239616d4dcf470497b32ad3500f0145",
+        "label": "Altruistic and selfless behavior or intentions",
+        "index_in_sae": 31935,
+        "max_activation_strength": 1,
+        "mode": "nudge",
+        "value": 0.5
+      }
+    ]
+  },
+  "creativity.high_steering": {
+    "source_file": "SAE/data/raw/creativity/product_innovation_20251102_202650/high_steering.csv",
+    "model": "meta-llama/Llama-3.3-70B-Instruct",
+    "inference_service": "goodfire",
+    "temperature": "0.5",
+    "top_p": "1",
+    "max_tokens": "1000",
+    "system_prompt": "Your traits: {'subject_id': 'S1'}",
+    "features": [
+      {
+        "uuid": "2c83bf952a3a4213b45f098aa8c015e2",
+        "label": "Enabling or empowering creative expression and exploration",
+        "index_in_sae": 13142,
+        "max_activation_strength": 1,
+        "mode": "nudge",
+        "value": 0.3
+      },
+      {
+        "uuid": "96f91d8ed8934998b52bf66a5951dafd",
+        "label": "Descriptions of creative unconventional thinking, especially 'thinking outside the box'",
+        "index_in_sae": 20117,
+        "max_activation_strength": 1,
+        "mode": "nudge",
+        "value": 0.3
+      },
+      {
+        "uuid": "c148476f6cdc4cd9a2110c24045bfcbe",
+        "label": "Professional innovation and creative problem-solving",
+        "index_in_sae": 4992,
+        "max_activation_strength": 1,
+        "mode": "nudge",
+        "value": 0.3
+      }
+    ]
+  }
+}
