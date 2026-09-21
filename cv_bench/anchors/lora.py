@@ -1,0 +1,352 @@
+"""B3.2 LoRA anchors (ICLR_PLAN.md B3.2, amendment A5).
+
+Three adapters are trained on identical data, order and schedule:
+
+  reference        theta0 = (alpha 0.88, gamma 0.61, lambda 2.25)
+  preference       theta0 with alpha shifted by its minimum detectable change
+  bias             theta0 plus an additive logit bias, matched on behavioural
+                   effect size -- a weight-space negative control
+
+A5 is the reason there are three and not two: the unmodified model is not a
+prospect-theory agent, so "LoRA against base" would mix the known parameter
+shift with the model becoming prospect-theoretic at all. **The anchors are the
+contrasts against the reference adapter**, where the true difference is exact.
+
+The loss is soft-label cross-entropy over the full vocabulary at the answer
+token, with the synthetic agent's choice probabilities placed on the two option
+tokens. The ground truth is therefore exact rather than sampled, and the
+full-vocabulary normalisation is what keeps valid mass high: every other token
+is pushed down at the same time.
+
+Training prompts come from all frames but only from non-test reward levels and
+templates; the test split cannot be reached from here at all, because the
+generators refuse it.
+
+No anchor is scored with the B2 decision rule until Gate B2 passes (author
+item 6). This trains them and checks the cloning.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+from dataclasses import replace
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Dict, List, Optional, Sequence, Tuple
+
+os.environ.setdefault("HF_HOME", "/orcd/data/gabrieli/001/guna23/hf_cache")
+
+import numpy as np
+import torch
+
+from cv_bench.estimator import checkpoint as CK
+from cv_bench.estimator.agents import (
+    ALPHA0, GAMMA0, LAMBDA0, MDC, AgentParams, choice_prob, latent_z_packed, pack)
+from cv_bench.tasks import core, risk
+
+MODELS = {"llama70b": "meta-llama/Llama-3.3-70B-Instruct",
+          "llama8b": "meta-llama/Llama-3.1-8B-Instruct"}
+DEFAULT_OUT = Path("/orcd/data/gabrieli/001/guna23/iclr_risk_2027/trackB/b3_lora")
+STEM = "Answer:"
+
+#: Provisional temperature for the dry run, until B2-cal returns the fitted one.
+#: Not invented: the B2-cal baseline read measured z with SD 4.840 on the real
+#: model against 1.690 for the synthetic base at TAU0 = 0.25, so 0.25 x
+#: 1.690/4.840 puts the fallback agent on roughly the observed scale. It is a
+#: scale match, not a fit, and is overridden by --tau once B2-cal lands.
+PROVISIONAL_TAU = 0.0873
+
+ADAPTERS = ("reference", "preference", "bias")
+
+
+def agent_for(name: str, tau: float, bias: float) -> AgentParams:
+    """The Tversky-Kahneman fallback agent behind each adapter."""
+    base = AgentParams(alpha=ALPHA0, gamma=GAMMA0, lam=LAMBDA0, tau=tau)
+    if name == "reference":
+        return base
+    if name == "preference":
+        return replace(base, alpha=ALPHA0 + MDC["alpha"])
+    if name == "bias":
+        return replace(base, action=bias)
+    raise ValueError(f"unknown adapter {name!r}")
+
+
+def training_trials(splits: Sequence[str] = ("disc", "cal"),
+                    max_content: Optional[int] = None) -> List[core.Trial]:
+    """All frames, non-test reward levels and templates.
+
+    The selection split is held out of training so the cloning check has
+    prompts the adapter has not been fitted on.
+    """
+    content = list(risk.generate_risk(splits=tuple(splits)))
+    if max_content:
+        content = sorted(content, key=lambda t: t.content_id)[:max_content]
+    out = list(core.expand_formats(content, response_formats=("mc",),
+                                   label_sets=("legacy",)))
+    return sorted(out, key=lambda t: t.trial_id)
+
+
+def cloning_trials(max_content: Optional[int] = None) -> List[core.Trial]:
+    content = list(risk.generate_risk(splits=("sel",)))
+    if max_content:
+        content = sorted(content, key=lambda t: t.content_id)[:max_content]
+    out = list(core.expand_formats(content, response_formats=("mc",),
+                                   label_sets=("legacy",)))
+    return sorted(out, key=lambda t: t.trial_id)
+
+
+def soft_targets(trials: Sequence[core.Trial], par: AgentParams) -> np.ndarray:
+    """P(risky) for each trial under the agent. Exact, not sampled."""
+    return choice_prob(latent_z_packed(pack(trials), par))
+
+
+def load_base(model_key: str, four_bit: bool = False):
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+    mid = MODELS[model_key]
+    tok = AutoTokenizer.from_pretrained(mid)
+    if tok.pad_token is None:
+        tok.pad_token = tok.eos_token
+    kw = dict(device_map="auto", low_cpu_mem_usage=True)
+    if four_bit:
+        from transformers import BitsAndBytesConfig
+        kw["quantization_config"] = BitsAndBytesConfig(
+            load_in_4bit=True, bnb_4bit_compute_dtype=torch.bfloat16,
+            bnb_4bit_quant_type="nf4")
+    else:
+        kw["torch_dtype"] = torch.bfloat16
+    model = AutoModelForCausalLM.from_pretrained(mid, **kw)
+    return model, tok
+
+
+def attach_adapters(model, rank: int = 16):
+    """One LoRA per anchor on a single loaded base, switched with set_adapter."""
+    from peft import LoraConfig, get_peft_model
+    cfg = LoraConfig(
+        r=rank, lora_alpha=2 * rank, lora_dropout=0.0, bias="none",
+        task_type="CAUSAL_LM",
+        target_modules=["q_proj", "k_proj", "v_proj", "o_proj",
+                        "gate_proj", "up_proj", "down_proj"],
+    )
+    peft_model = get_peft_model(model, cfg, adapter_name=ADAPTERS[0])
+    for name in ADAPTERS[1:]:
+        peft_model.add_adapter(name, cfg)
+    return peft_model
+
+
+def answer_token_ids(ro, trial: core.Trial) -> Tuple[List[int], List[int]]:
+    spec = core.to_trial_spec(trial, stem=STEM)
+    return ro.label_token_ids(spec.negative), ro.label_token_ids(spec.positive)
+
+
+def soft_label_loss(logits: torch.Tensor, safe_ids: Sequence[int],
+                    risky_ids: Sequence[int], p_risky: float) -> torch.Tensor:
+    """Cross-entropy at the answer token against the agent's choice probability.
+
+    The log-softmax is over the whole vocabulary, so probability mass on any
+    token that is neither option is penalised; that is what keeps valid mass
+    high without a separate term for it. Where a label tokenises to several
+    first-token spellings, their probabilities are summed before the log, which
+    matches how the readout builds z.
+    """
+    logprobs = torch.log_softmax(logits.float(), dim=-1)
+    p_safe_model = torch.logsumexp(logprobs[safe_ids], dim=0)
+    p_risky_model = torch.logsumexp(logprobs[risky_ids], dim=0)
+    p = float(np.clip(p_risky, 1e-6, 1 - 1e-6))
+    return -(p * p_risky_model + (1.0 - p) * p_safe_model)
+
+
+def train_adapter(peft_model, tok, ro, name: str, trials: Sequence[core.Trial],
+                  targets: np.ndarray, steps: int, lr: float, seed: int,
+                  accum: int, out: Path, log_every: int = 25) -> Dict[str, object]:
+    """Train one adapter. Identical order and schedule for every adapter (A5)."""
+    peft_model.set_adapter(name)
+    params = [p for n, p in peft_model.named_parameters()
+              if p.requires_grad and name in n]
+    if not params:
+        params = [p for p in peft_model.parameters() if p.requires_grad]
+    opt = torch.optim.AdamW(params, lr=lr)
+
+    ck_path = out / f"ckpt_train_{name}.pt"
+    start = 0
+    if ck_path.exists():
+        try:
+            state = torch.load(ck_path, map_location="cpu")
+            opt.load_state_dict(state["opt"])
+            from peft import set_peft_model_state_dict
+            set_peft_model_state_dict(peft_model, state["adapter"], adapter_name=name)
+            start = int(state["step"])
+            print(f"  resuming {name} at step {start}", flush=True)
+        except Exception as exc:                     # a bad checkpoint restarts
+            print(f"  checkpoint for {name} unusable ({exc}); starting over", flush=True)
+
+    # The same permutation for every adapter: A5 requires identical data order.
+    order = np.random.default_rng(seed).permutation(len(trials))
+    losses: List[float] = []
+    peft_model.train()
+    for step in range(start, steps):
+        opt.zero_grad(set_to_none=True)
+        total = 0.0
+        for k in range(accum):
+            idx = int(order[(step * accum + k) % len(order)])
+            trial = trials[idx]
+            spec = core.to_trial_spec(trial, stem=STEM)
+            enc = tok(ro.render(spec), return_tensors="pt").to(peft_model.device)
+            out_logits = peft_model(**enc, use_cache=False).logits[0, -1, :]
+            safe_ids, risky_ids = answer_token_ids(ro, trial)
+            if not safe_ids or not risky_ids:
+                continue
+            loss = soft_label_loss(out_logits, safe_ids, risky_ids,
+                                   float(targets[idx])) / accum
+            loss.backward()
+            total += float(loss.item())
+        torch.nn.utils.clip_grad_norm_(params, 1.0)
+        opt.step()
+        losses.append(total)
+        if (step + 1) % log_every == 0:
+            recent = float(np.mean(losses[-log_every:]))
+            print(f"  {name} step {step+1}/{steps} loss {recent:.4f}", flush=True)
+            CK.heartbeat(out / "heartbeat.json", stage=f"train:{name}",
+                         done=step + 1, total=steps, loss=recent)
+            from peft import get_peft_model_state_dict
+            torch.save({"step": step + 1, "opt": opt.state_dict(),
+                        "adapter": get_peft_model_state_dict(
+                            peft_model, adapter_name=name)}, ck_path)
+    peft_model.eval()
+    return {"adapter": name, "steps": steps, "final_loss": float(np.mean(losses[-25:]))
+            if losses else float("nan")}
+
+
+@torch.inference_mode()
+def read_adapter(peft_model, ro, name: str, trials: Sequence[core.Trial],
+                 out: Path) -> np.ndarray:
+    """Unbatched z under one adapter (amendment item 5a), resumable."""
+    peft_model.set_adapter(name)
+    key = CK.items_key([t.trial_id for t in trials])
+    part = CK.Partial(out / f"ckpt_read_{name}.npz", len(trials), chunk=50, key=key)
+    for i in range(part.n_done, len(trials)):
+        res = ro.score(core.to_trial_spec(trials[i], stem=STEM))
+        part.append(res.logit_diff)
+        if i % 50 == 0:
+            CK.heartbeat(out / "heartbeat.json", stage=f"read:{name}",
+                         done=i + 1, total=len(trials))
+    part.flush()
+    return part.column(0)
+
+
+def cloning_check(z_model: np.ndarray, z_agent: np.ndarray) -> Dict[str, float]:
+    """Correlation >= 0.95 and calibration slope in 0.9-1.1 (B3.2).
+
+    The slope regresses the model's z on the agent's z: a clone should track the
+    target one-for-one, not merely rank the trials the same way.
+    """
+    ok = np.isfinite(z_model) & np.isfinite(z_agent)
+    if ok.sum() < 10:
+        return {"n": int(ok.sum()), "correlation": float("nan"),
+                "slope": float("nan"), "PASS": False}
+    x, y = z_agent[ok], z_model[ok]
+    r = float(np.corrcoef(x, y)[0, 1])
+    slope, intercept = np.polyfit(x, y, 1)
+    return {"n": int(ok.sum()), "correlation": r, "slope": float(slope),
+            "intercept": float(intercept),
+            "PASS": bool(r >= 0.95 and 0.9 <= slope <= 1.1)}
+
+
+def main(argv=None) -> int:
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--model", default="llama8b", choices=list(MODELS))
+    ap.add_argument("--tau", type=float, default=PROVISIONAL_TAU,
+                    help="temperature of the fallback agent; B2-cal supplies the real one")
+    ap.add_argument("--bias", type=float, default=0.6,
+                    help="additive logit bias for the negative-control adapter")
+    ap.add_argument("--rank", type=int, default=16)
+    ap.add_argument("--steps", type=int, default=400)
+    ap.add_argument("--lr", type=float, default=1e-4)
+    ap.add_argument("--accum", type=int, default=8)
+    ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--max-content", type=int, default=None)
+    ap.add_argument("--clone-content", type=int, default=60)
+    ap.add_argument("--four-bit", action="store_true",
+                    help="fallback if bf16 does not fit; recorded as a deviation")
+    ap.add_argument("--out", type=Path, default=DEFAULT_OUT)
+    args = ap.parse_args(argv)
+
+    args.out.mkdir(parents=True, exist_ok=True)
+    torch.manual_seed(args.seed)
+
+    train = training_trials(max_content=args.max_content)
+    clone = cloning_trials(max_content=args.clone_content)
+    print(f"{len(train)} training rows (disc+cal, legacy labels), "
+          f"{len(clone)} selection-split rows for the cloning check", flush=True)
+
+    t0 = datetime.now(timezone.utc)
+    model, tok = load_base(args.model, four_bit=args.four_bit)
+    peft_model = attach_adapters(model, rank=args.rank)
+    from cv_bench.readout import Readout
+    ro = Readout(peft_model, tok)
+    trainable = sum(p.numel() for p in peft_model.parameters() if p.requires_grad)
+    print(f"loaded in {(datetime.now(timezone.utc)-t0).total_seconds():.0f}s; "
+          f"{trainable/1e6:.1f}M trainable LoRA params; "
+          f"4bit={args.four_bit}", flush=True)
+
+    results: Dict[str, object] = {
+        "utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "model": MODELS[args.model], "rank": args.rank, "steps": args.steps,
+        "lr": args.lr, "accum": args.accum, "seed": args.seed,
+        "tau": args.tau, "tau_is_provisional": args.tau == PROVISIONAL_TAU,
+        "bias": args.bias, "four_bit": bool(args.four_bit),
+        "n_train_rows": len(train), "n_clone_rows": len(clone),
+        "theta0": {"alpha": ALPHA0, "gamma": GAMMA0, "lambda": LAMBDA0},
+        "adapters": {}, "cloning": {}, "contrasts": {},
+    }
+
+    agents = {n: agent_for(n, args.tau, args.bias) for n in ADAPTERS}
+    targets = {n: soft_targets(train, p) for n, p in agents.items()}
+    for n in ADAPTERS:
+        results["adapters"][n] = {"params": agents[n].as_dict(),
+                                  "target_mean_p_risky": float(targets[n].mean())}
+
+    for name in ADAPTERS:
+        print(f"--- training {name} ---", flush=True)
+        info = train_adapter(peft_model, tok, ro, name, train, targets[name],
+                             args.steps, args.lr, args.seed, args.accum, args.out)
+        results["adapters"][name].update(info)
+        from peft import get_peft_model_state_dict
+        torch.save(get_peft_model_state_dict(peft_model, adapter_name=name),
+                   args.out / f"adapter_{name}.pt")
+
+    z_clone_agent = {n: latent_z_packed(pack(clone), agents[n]) for n in ADAPTERS}
+    z_clone_model = {}
+    for name in ADAPTERS:
+        z_clone_model[name] = read_adapter(peft_model, ro, name, clone, args.out)
+        chk = cloning_check(z_clone_model[name], z_clone_agent[name])
+        results["cloning"][name] = chk
+        print(f"cloning {name}: r={chk['correlation']:.4f} "
+              f"slope={chk['slope']:.4f} {'PASS' if chk['PASS'] else 'FAIL'}", flush=True)
+
+    # The anchors are the contrasts against the reference adapter (A5).
+    for name in ("preference", "bias"):
+        d_model = z_clone_model[name] - z_clone_model["reference"]
+        d_agent = z_clone_agent[name] - z_clone_agent["reference"]
+        ok = np.isfinite(d_model) & np.isfinite(d_agent)
+        results["contrasts"][f"{name}_minus_reference"] = {
+            "model_mean_dz": float(np.mean(d_model[ok])),
+            "agent_mean_dz": float(np.mean(d_agent[ok])),
+            "correlation": float(np.corrcoef(d_agent[ok], d_model[ok])[0, 1])
+            if ok.sum() > 10 else float("nan"),
+            "recovery_ratio": float(np.mean(d_model[ok]) / np.mean(d_agent[ok]))
+            if abs(np.mean(d_agent[ok])) > 1e-9 else float("nan"),
+        }
+
+    results["all_cloning_pass"] = all(v["PASS"] for v in results["cloning"].values())
+    (args.out / "b3_lora.json").write_text(
+        json.dumps(results, indent=2, sort_keys=True, default=float) + "\n")
+    print("\n" + json.dumps({k: v for k, v in results.items() if k != "adapters"},
+                            indent=2, sort_keys=True, default=float))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

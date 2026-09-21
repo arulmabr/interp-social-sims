@@ -35,6 +35,8 @@ from typing import Dict, List, Optional, Sequence
 
 os.environ.setdefault("HF_HOME", "/orcd/data/gabrieli/001/guna23/hf_cache")
 
+import hashlib
+
 import numpy as np
 import torch
 
@@ -230,6 +232,12 @@ def main(argv=None) -> int:
                 continue
             vec = res.pop("vector")
             np.save(vec_path, vec)
+            # A hash so another session can verify it loaded the same direction
+            # rather than a stale or partly written copy.
+            res["sha256"] = hashlib.sha256(vec_path.read_bytes()).hexdigest()
+            res["shape"] = list(np.asarray(vec).shape)
+            res["dtype"] = str(np.asarray(vec).dtype)
+            res["file"] = vec_path.name
             meta_path.write_text(json.dumps(res, indent=2, sort_keys=True,
                                             default=float) + "\n")
             summary["versions"][key] = res
@@ -250,6 +258,19 @@ def main(argv=None) -> int:
                     cos[f"{a}|{b}"] = float(u @ v / (np.linalg.norm(u) * np.linalg.norm(v)))
         summary["cosines"] = cos
 
+    # A loading contract for the Friday session (author item 3): G4b should load
+    # this direction rather than build a second one, so what it is and how to
+    # apply it has to travel with the file.
+    summary["how_to_load"] = {
+        "numpy": "vec = np.load('grad_L50_legacy_both_orders.npy')",
+        "apply": ("cv_bench.steer.Intervention(layer=L, vectors=vec, scale=s, "
+                  "positions='last', mode='add', norm_unit=median_residual_norm(...))"),
+        "note": ("the vector is the gradient of z with respect to the OUTPUT of "
+                 "model.model.layers[L], which is the tensor SteeringHook adds to; "
+                 "Intervention normalises it, so only its direction is used"),
+        "prefer": "the legacy_* versions until the neutral-label readout work lands",
+        "verify": "sha256 of each .npy is in versions[<key>]['sha256']",
+    }
     (args.out / "b3_gradient.json").write_text(
         json.dumps(summary, indent=2, sort_keys=True, default=float) + "\n")
     print("\n" + json.dumps(summary, indent=2, sort_keys=True, default=float))
