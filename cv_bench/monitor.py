@@ -416,7 +416,19 @@ def main() -> int:
             hits = [h for h in hits if h != "preempted"]
             checks[task]["log_flags"] = hits
             if checks[task]["complete"]:
+                state.setdefault("terminal_since", {}).pop(task, None)
                 continue                      # finished; nothing to retry
+            # Wait one cycle before judging a task that has just left the queue.
+            # A job writes its completion marker in its final seconds, and a poll
+            # that lands in that gap sees a finished run as an incomplete one --
+            # which is how cvb_g4_as_wr_L50 was resubmitted after it had already
+            # written every row and its marker.
+            since = state.setdefault("terminal_since", {})
+            first = since.setdefault(task, time.time())
+            if time.time() - first < CYCLE_SECONDS:
+                print(f"[{cycle}] {task}: terminal but young; rechecking next cycle",
+                      flush=True)
+                continue
             if bad_state or incomplete:
                 cause = (f"state={last['state']} exit={last['exit']}"
                          + (f" log={','.join(hits)}" if hits else "")
