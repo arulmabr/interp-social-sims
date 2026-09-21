@@ -1,10 +1,10 @@
 # STATUS.md
 
-Rewritten by `cv_bench/monitor.py` every 10 minutes. Cycle 9.
+Rewritten by `cv_bench/monitor.py` every 10 minutes. Cycle 1.
 
-**2026-09-21 21:34 UTC** — cutoff Thu 24 Sept 06:00 UTC, **56.4 h remaining**.
+**2026-09-21 21:39 UTC** — cutoff Thu 24 Sept 06:00 UTC, **56.3 h remaining**.
 
-**GPU-hours consumed, both sessions, `sacct` on job names starting `cvb_`: 7.89** of the 400 approved.
+**GPU-hours consumed, both sessions, `sacct` on job names starting `cvb_`: 8.03** of the 400 approved.
 
 
 ## Live jobs
@@ -13,9 +13,9 @@ Rewritten by `cv_bench/monitor.py` every 10 minutes. Cycle 9.
 |---|---|---|---|---|---|
 | 23414443 | cvb_g4_recon_L50 | PENDING | 0:00 | 16:00:00 | (QOSMaxGRESPerUser) |
 | 23414442 | cvb_g4_recon_L48 | PENDING | 0:00 | 16:00:00 | (QOSMaxGRESPerUser) |
-| 23414441 | cvb_g4_as_wr_L50 | PENDING | 0:00 | 16:00:00 | (QOSMaxGRESPerUser) |
-| 23414439 | cvb_neutral | RUNNING | 5:35 | 2:54:25 | node4309 |
-| 23414440 | cvb_g4_as_wr_L48 | RUNNING | 4:24 | 15:55:36 | node4501 |
+| 23414440 | cvb_g4_as_wr_L48 | PENDING | 0:00 | 16:00:00 | (QOSMaxGRESPerUser) |
+| 23414439 | cvb_neutral | RUNNING | 11:10 | 2:48:50 | node4309 |
+| 23414441 | cvb_g4_as_wr_L50 | RUNNING | 2:59 | 15:57:01 | node3209 |
 
 ## Recent jobs
 
@@ -25,12 +25,14 @@ Rewritten by `cv_bench/monitor.py` every 10 minutes. Cycle 9.
 | 23379475 | g2_llama | COMPLETED | 03:42:51 | 0:0 |
 | 23379816 | bench70b | COMPLETED | 00:04:10 | 0:0 |
 | 23412430 | cvb_instr | CANCELLED by 234238 | 00:00:00 | 0:0 |
-| 23414439 | cvb_neutral | RUNNING | 00:05:35 | 0:0 |
-| 23414440 | cvb_g4_as_wr_L48 | RUNNING | 00:04:24 | 0:0 |
-| 23414441 | cvb_g4_as_wr_L50 | PENDING | 00:00:00 | 0:0 |
+| 23414439 | cvb_neutral | RUNNING | 00:11:10 | 0:0 |
+| 23414441 | cvb_g4_as_wr_L50 | RUNNING | 00:02:59 | 0:0 |
 | 23414442 | cvb_g4_recon_L48 | PENDING | 00:00:00 | 0:0 |
 | 23414443 | cvb_g4_recon_L50 | PENDING | 00:00:00 | 0:0 |
 | 23414416 | cvb_instr | COMPLETED | 01:06:37 | 0:0 |
+| 23421227 | cvb_instr | CANCELLED by 234238 | 00:00:00 | 0:0 |
+| 23414440 | cvb_g4_as_wr_L48 | PENDING | 00:00:00 | 0:0 |
+| 23421312 | cvb_instr | CANCELLED by 234238 | 00:00:00 | 0:0 |
 
 ## Outputs
 
@@ -45,8 +47,12 @@ Rewritten by `cv_bench/monitor.py` every 10 minutes. Cycle 9.
 
 | output | rows | expected |
 |---|---:|---:|
-| `g4/readout_as_written_L48.jsonl` | — | — |
-| `g4/sampled_as_written_L48.jsonl` | — | — |
+| `g4/readout_as_written_L48.jsonl` | 212 | — |
+| `g4/sampled_as_written_L48.jsonl` | 0 | — |
+
+| file | n | legacy vs strict agreement | blank gens | constant? |
+|---|---:|---:|---:|---|
+| `readout_as_written_L48.jsonl` | 212 | 1.0000 | 212 | legacy/strict |
 
 ### cvb_g4_as_wr_L50 — INCOMPLETE
 
@@ -88,12 +94,12 @@ Rewritten by `cv_bench/monitor.py` every 10 minutes. Cycle 9.
 | output | rows | expected |
 |---|---:|---:|
 | `neutral/mass_llama.jsonl` | 344 | 400 |
-| `neutral/free_llama.jsonl` | 370 | 640 |
+| `neutral/free_llama.jsonl` | 421 | 640 |
 
 | file | n | legacy vs strict agreement | blank gens | constant? |
 |---|---:|---:|---:|---|
 | `mass_llama.jsonl` | 344 | 1.0000 | 344 | legacy/strict |
-| `free_llama.jsonl` | 370 | 1.0000 | 0 | legacy/strict |
+| `free_llama.jsonl` | 421 | 1.0000 | 0 | legacy/strict |
 
 ### g2_llama — complete
 
@@ -137,4 +143,4 @@ Rewritten by `cv_bench/monitor.py` every 10 minutes. Cycle 9.
 
 ## Automatic resubmissions
 
-- `cvb_instr`: 1 of 2
+- `cvb_instr`: 2 of 2

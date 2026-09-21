@@ -396,7 +396,15 @@ def main() -> int:
             if not terminal:
                 continue
             last = terminal[-1]
-            bad_state = not last["state"].startswith("COMPLETED")
+            # Which terminal states are a technical failure worth retrying.
+            # An operator's scancel is not one: Slurm reports it as
+            # "CANCELLED by <uid>", and resurrecting a job somebody deliberately
+            # stopped is the opposite of helpful. Neither is a task whose
+            # outputs are all present -- it is finished, whatever its state says.
+            RETRYABLE = ("FAILED", "NODE_FAIL", "TIMEOUT", "OUT_OF_MEMORY",
+                         "BOOT_FAIL", "DEADLINE", "PREEMPTED")
+            state0 = last["state"].split()[0].upper()
+            bad_state = state0 in RETRYABLE
             hits = scan_log(latest_log(task))
             incomplete = not checks[task]["complete"]
             # A log hit is not on its own a reason to resubmit. These logs are
@@ -407,6 +415,8 @@ def main() -> int:
             # output; report the rest.
             hits = [h for h in hits if h != "preempted"]
             checks[task]["log_flags"] = hits
+            if checks[task]["complete"]:
+                continue                      # finished; nothing to retry
             if bad_state or incomplete:
                 cause = (f"state={last['state']} exit={last['exit']}"
                          + (f" log={','.join(hits)}" if hits else "")

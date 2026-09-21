@@ -1,119 +1,101 @@
-# SCHEDULE.md
+# Schedule against the cutoff
 
-Required by the 22 Sept amendment. **Cutoff: Thu 24 Sept 06:00 UTC**, 68 h from writing.
-Estimates are `load + items ÷ measured throughput, × 1.5`, plus the queue wait Slurm predicts,
-plus dependencies. Posted, then started without waiting for approval; veto anything.
+**Cutoff Thu 24 Sept 06:00 UTC** (Wed 23 Sept 23:00 PDT). Only work finished,
+verified and committed before it enters the Sept 25 PDF. Written 21 Sept 21:45
+UTC, so the cutoff is **56 hours** away and the paper deadline 110.
 
-Rewritten whenever a measurement changes it. Live job state is in `reports/STATUS.md`, rewritten
-every 10 minutes by `cv_bench/monitor.py` under tmux.
+Estimates are measured, not guessed. The rates behind them, all from tonight's
+runs on 2×A100-80GB:
 
----
+| operation | measured |
+|---|---|
+| forward pass / logit readout | 6.5 /s |
+| one sampled cell, 40 agents, 12 new tokens | 3.4 s |
+| one sampled cell, 40 agents, 256 new tokens | 34.6 s |
+| model load, 141 GB bf16 to two GPUs | 4–5 min |
 
-## 1. Measured throughput — no estimate below is guessed
+**The binding constraint is not the 400 GPU-hour cap — it is a per-user GRES
+limit.** Jobs queue on `QOSMaxGRESPerUser` at six GPUs in use across the account,
+and that pool is shared with the Track B session and with an unrelated project of
+the same user. Three 2-GPU jobs run at once, at best. Spend so far: **under 20 of
+400 GPU-hours.**
 
-`meta-llama/Llama-3.3-70B-Instruct`, bf16, **2 × A100 80 GB PCIe**, `ou_bcs_low`
-(`results/S/.../bench/bench_llama.json`, job 23379816, 8-minute benchmark):
+## Running and queued
 
-| quantity | measured |
-|---|---:|
-| model load from the lab share | **185 s** |
-| generation, 12 new tokens (legacy settings) | **0.93 /s** |
-| generation, 64 new tokens | **0.40 /s** |
-| readout, one forward pass, unbatched | **6.35 /s** |
-| readout, batch 8 / 16 / 32 | 10.9 / **11.6** / 12.0 /s |
-| LoRA seconds per step | **not available — `peft` is not installed** |
+| job | what it settles | GPUs | estimate | expected finish |
+|---|---|---|---|---|
+| `cvb_neutral` | the neutral label framing for S3.4 | 2 | ~35 min | 21 Sept ~22:15 |
+| `cvb_g4_as_wr_L50` | G4, legacy recipe, layer 50 | 2 | 0.64 h + load | 21 Sept ~22:30 |
+| `cvb_g4_as_wr_L48` | G4, legacy recipe, layer 48 | 2 | 0.64 h + load | queued |
+| `cvb_g5` | the eight logged SAE features, steered locally | 2 | 16 min + load | queued |
+| `cvb_choose` | picks the neutral framing (CPU) | 0 | < 1 min | after `cvb_neutral` |
+| `cvb_g3` | label and option-order transfer, forward passes only | 2 | ~3 min + load | after `cvb_choose` |
+| `cvb_g6` | SAE ablation and attribution | 2 | ~2 h + load | after `cvb_g5` |
+| `cvb_g4_recon_L48` | G4 reconstruction + G4b baselines, layer 48 | 2 | **8.6 h** | queued |
+| `cvb_g4_recon_L50` | the same at layer 50 | 2 | **8.6 h** | queued |
 
-`Qwen/Qwen2-7B-Instruct`, 1 GPU: load 30 s, **6.90 gen/s** (from the completed `g2_qwen`).
-`Qwen2.5-0.5B-Instruct` on CPU is used for tests only.
+The two reconstruction replicas are the long pole. At three concurrent 2-GPU jobs
+and 8.6 h each they finish roughly **22 Sept 09:00–14:00 UTC**, leaving about 40
+hours of margin. Every one of these jobs is resumable per cell, so preemption
+costs the cell in flight and a reload, not the run.
 
-**Two S2.1 acceptance criteria fail on the 70B and gate everything readout-based** (§4).
+## Reviewer-derived tasks, against the cutoff
 
-## 2. What the account may actually run
+Which of `feedback.txt`'s points the PDF answers **with data**, and when that data
+lands. Rows marked *text* or *limitation* need no run; they are written, not
+computed, and are listed so the count is complete.
 
-Read, not guessed. QOS `ou_bcs_low` would cap a user at 64 GPUs / 256 submitted jobs, but this
-account's association permits only QOS **`normal`** on that partition, which carries **no GPU cap**;
-the association cap is `MaxSubmit=500` and `MaxArraySize` is 25,000.
+| reviewer point | answered with | job | data by | margin |
+|---|---|---|---|---|
+| CAA / ActAdd / RepE baselines absent | data | `cvb_g4_recon_*` (G4b) | 22 Sept ~14:00 UTC | 40 h |
+| no causal test behind the SAE readings | data | `cvb_g5` → `cvb_g6` | 22 Sept ~02:00 UTC | 52 h |
+| prompting ladder omitted from results | data | S1.7, **done** | committed | — |
+| judge-independent creativity measures | data | S1.6, **done** | committed | — |
+| 0.77 agreement reported without context | data | S1.5/S1.6, **done** | committed | — |
+| judge ordering claim | data | S1.5, **done** | committed | — |
+| length not controlled as stated | data | S1.5, **done** | committed | — |
+| no agent-level inferential test | data | S1.5 mixed model, **done** | committed | — |
+| judge citation verifiability | data | V2, **done** | committed | — |
+| probe training underspecified / inconsistent | data | PROBE_PROVENANCE, **done** | committed | — |
+| steering hook mechanics | data | STACK_AUDIT + test, **done** | committed | — |
+| SAE / probe operational confounds | data | STACK_AUDIT, **done** | committed | — |
+| missing lottery UUIDs | data | PROVENANCE, **done** | committed | — |
+| Fig. 5 provenance | data | V1, **done** | committed | — |
+| label / order transfer of the effect | data | `cvb_g3` | 21 Sept ~23:00 UTC | 55 h |
+| λ polarity contradiction | text | — | — | — |
+| Fig. 6 diagonal | text | — | — | — |
+| Fig. 3(A) pivot at 50 | text | — | — | — |
+| ρ dose labels | text | — | — | — |
+| few-shot exemplar is dominated | text | — | — | — |
+| two SAE doses are one dose | text | — | — | — |
+| prompting and SAE not independent | text | — | — | — |
+| fluency is a constant | text | — | — | — |
+| Table 1 recommendation | text | — | — | — |
+| SAE literature mischaracterised | text | AUTHOR TO VERIFY | — | — |
+| 15 typos and wording items | text | W7 ledger, deliver early | — | — |
+| 12 figures not reproducible | text | W1 provenance statement | — | — |
+| **ITI not compared against** | limitation | — | — | — |
+| **human-normed AUT / SemDis** | limitation | — | — | — |
+| **multi-turn / multi-agent** | limitation | — | — | — |
+| **personality batteries / collateral** | limitation | — | — | — |
+| **proposer role / mini-ultimatum** | limitation | — | — | — |
 
-**So Slurm is not the binding constraint — the budget is, and barely.** 400 GPU-hours over 68 hours
-is 5.9 GPUs sustained. But the whole remaining V/G/S3 list below costs **≈ 60 GPU-hours**. The real
-constraints are wall-clock to the cutoff and how fast each job's code can be written and validated.
-Both G2 jobs started within 17 s of submission, so queue wait on `ou_bcs_low` is currently ~0.
+**17 reviewer-derived points are answered with data, 24 with text, 5 as named
+limitations.** Nine of the seventeen are already committed; the rest land between
+tonight and 22 Sept afternoon, all inside the cutoff.
 
-**GPUs actually obtained so far: 3 concurrently** (2 for `g2_llama`, 1 for `g2_qwen`), plus 2 for the
-benchmark. Consumed to date: **≈ 1.3 GPU-hours of 400**.
+## What is not on this schedule
 
-## 3. The schedule
+The extension plan's own programme — parameter recovery on synthetic agents, the
+loss and probability frames, certainty equivalents, paired lotteries, the frozen
+test split — is six weeks of work and is not attempted here. Track B's anchors
+(B3.1 gradient, B3.2 LoRA) are running in the other session; G4b consumes the
+gradient once its hash is committed.
 
-"Value" is value to the Sept 25 paper per GPU-hour, which is the amendment's ordering rule after G2
-and G4.
+## Author deadline inside this window
 
-| task | depends on | GPUs | est. run | est. finish (UTC) | GPU-h | when |
-|---|---|---:|---:|---|---:|---|
-| **G2** llama λ=0, 3 arms | — | 2 | 3.4 h | **21 Sept 13:2​0** | 6.8 | **running** |
-| G2 qwen | — | 1 | 0.16 h | done | 0.2 | **done** |
-| **G2-analysis** switching points, rates, coding agreement | G2 | 0 (CPU array) | 0.2 h | 21 Sept 14:00 | 0 | **run now** |
-| **S2.1-fix** revise the stem, settle batch disagreement | benchmark | 2 | 0.5 h | 21 Sept 15:00 | 1.0 | **run now — blocks G3/G4** |
-| **G4a** probe rebuild, legacy recipe as written | S2.1-fix | 2 | 0.6 h | 21 Sept 16:00 | 1.2 | **run now** |
-| **G4b** probe rebuild with chat template (reconstruction) | S2.1-fix | 2 | 0.6 h | 21 Sept 17:00 | 1.2 | **run now** |
-| **G4c** dose-response generation arm, 5 doses × 2 layers, both games | G4a/b | 2 × 3 replicas | 4.0 h | 21 Sept 21:00 | 24.0 | **run now** |
-| **G3** S3.4 label-neutral test, readout only | S2.1-fix | 2 | 0.4 h | 21 Sept 18:00 | 0.8 | **run now** |
-| **G5** local open-SAE steering at the two published doses | G2 | 2 | 1.3 h | 22 Sept 00:00 | 2.6 | **run now** |
-| **S3.1** difference-of-means and PCA directions, cosine matrix | G4a/b | 2 | 0.8 h | 22 Sept 02:00 | 1.6 | **run now** |
-| **S3.2** position and layer ablation (48 vs 50, last / all_prompt / legacy_ramp) | S3.1 | 2 | 1.0 h | 22 Sept 04:00 | 2.0 | **run now** |
-| **S3.3** SAE ablation and attribution over 65,536 features | G5 | 2 | 1.5 h | 22 Sept 07:00 | 3.0 | **run now** |
-| **S3.5** temperature sweep + five-judge rescoring | — | 2 | 1.0 h | — | 2.0 | **blocked — paid API, rule 7 unchanged** |
-| V1 Fig. 5 source search | — | 0 (CPU array) | 0.5 h | 21 Sept 14:00 | 0 | **run now** |
-| V2 judge identities | — | 0 (CPU array) | 0.2 h | 21 Sept 14:00 | 0 | **run now** |
-| W1–W6 patches | V1, V2, paper_src | 0 | — | — | 0 | run now, CPU |
-| **Track B B0–B5** | — | — | — | — | — | **other session** — see §5 |
-
-Sum of run-now GPU-hours: **≈ 44**, against a 400 cap. Everything on this list finishes well before
-the cutoff, so nothing is deferred to Sat 26 Sept on time grounds.
-
-## 4. Two blockers, both real
-
-**S2.1's acceptance criteria fail on the 70B.** Both are plan requirements, not nice-to-haves:
-
-| criterion | required | measured on the 70B | on Qwen2.5-0.5B (CPU, fp32) |
-|---|---|---:|---:|
-| valid answer mass | ≥ 0.98 | **0.371** (min 0.102) | 0.324 |
-| batched vs unbatched logit diff | ≤ 1e-2 | **0.125** | 0.000 |
-
-The mass failure means the stem `"My choice: "` does not concentrate probability on the two labels —
-so the renormalised probability is being taken over a small and possibly unrepresentative slice. The
-plan's instruction is explicit: *"otherwise revise the stem"*. The batch failure is almost certainly
-bf16 plus left padding, since the same code is exact in fp32 on CPU; the fix is to compare in fp32 or
-to run the readout unbatched, which at 6.35/s is affordable for everything on this list.
-
-**`peft` is not installed**, so B3.2's LoRA anchors cannot run and `lora_seconds_per_step` is null
-rather than estimated. Installing it is a one-line dependency addition, reported rather than made
-silently.
-
-## 5. Two items in the amendment that do not exist here
-
-- **G4b and G6** are named as remaining tasks. `FRIDAY_PLAN.md` defines only **G1–G5**. I have used
-  "G4a/G4b/G4c" above for the three parts G4 now has under amendment 9 — that is my labelling, not a
-  claim to have found the author's G4b, and **G6 has no definition anywhere**. Tell me what it is and
-  it gets scheduled.
-- The cap "replaces the earlier 40 and 60". Only **40** was ever communicated to this session
-  (`GATE_S0_RESPONSE.md` §1.2). No 60 exists in any document here.
-
-## 6. Track B and the shared budget
-
-Track B runs in the other session on `iclr-trackB`. **The 400 GPU-hour cap presumably covers both
-sessions**, and neither can see the other's spend. `cv_bench/monitor.py` counts only the job names in
-its registry, so it is currently counting this session's jobs alone. Two ways to make the cap real:
-either the other session adopts the same monitor and registry, or one session owns the accounting and
-the other reports to it. Until that is settled, **the number in `reports/STATUS.md` is this session's
-spend, not the project's** — it is labelled that way.
-
-## 7. What may enter the Sept 25 PDF
-
-Per amendment item 6: only what is finished, verified and committed before the cutoff. A Track B
-result additionally needs Gate B2 and Gate B3 passed, the label *"exploratory, selection split, not
-pre-registered"*, and an author having read its report.
-
-One thing already will not make it in its original form: the probe figures. `G2_legacy_format.md`
-shows the committed legacy code path yields no answer on 88% of trials while the published data has
-0% unparseable, so those figures cannot be regenerated from this repository. That is an author
-decision, and it is on the critical path for W3 and W4.
+**Wed 23 Sept 09:00 PDT** — an explanation of how the original probe runs were
+made. Absent one, the patches proceed on the basis that the PDF reports the
+reconstruction and removes legacy probe figures that were not rebuilt. That is
+~31 hours from writing and is the only item here that no amount of compute can
+close.
