@@ -278,14 +278,13 @@ class Trial:
 
     @property
     def risky_label(self) -> str:
-        """The label attached to the *more risky* canonical option."""
-        first, second = self.labels
-        return first if self.fmt.option_order == 1 else second
+        """The label of the more risky option. Bound to content, not position."""
+        return self.labels[1]
 
     @property
     def safe_label(self) -> str:
-        first, second = self.labels
-        return second if self.fmt.option_order == 1 else first
+        """The label of the less risky option. Bound to content, not position."""
+        return self.labels[0]
 
 
 def assign_split(reward_index: int) -> str:
@@ -391,14 +390,27 @@ def describe(lot: Lottery, currency: str = "$") -> str:
 
 
 def body_text(trial: Trial) -> str:
-    first, second = trial.presented
-    lab_first, lab_second = trial.labels
-    return (f"{lab_first}: {describe(first, trial.currency)}\n"
-            f"{lab_second}: {describe(second, trial.currency)}")
+    """The two options, each keeping its own label, in presentation order.
+
+    Option order reorders the two *lines*; it must not move the labels between
+    the lotteries. Pairing the label to the position instead of to the content
+    made every order-1 legacy prompt self-contradictory -- the gamble was
+    announced as "Safe Option" and the sure amount as "Risky Option" -- which
+    is not an order manipulation but a relabelling, and a model with any prior
+    toward the word "Safe" reads it as a different question entirely.
+    """
+    safe_lot, risky_lot = trial.canonical
+    lab_safe, lab_risky = LABEL_SETS[trial.fmt.label_set]
+    lines = [(lab_safe, safe_lot), (lab_risky, risky_lot)]
+    if trial.fmt.option_order == 1:
+        lines.reverse()
+    return "\n".join(f"{lab}: {describe(lot, trial.currency)}" for lab, lot in lines)
 
 
 def instruction_text(trial: Trial) -> str:
     lab_first, lab_second = trial.labels
+    if trial.fmt.option_order == 1:
+        lab_first, lab_second = lab_second, lab_first
     if trial.fmt.response_format == "mc":
         return (f"Which do you choose? Answer with exactly one of "
                 f"\"{lab_first}\" or \"{lab_second}\" and nothing else.")

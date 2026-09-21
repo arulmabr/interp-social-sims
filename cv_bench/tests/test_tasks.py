@@ -432,3 +432,42 @@ def test_stem_for_picks_by_label_set():
     t2 = next(x for x in core.expand_formats(list(risk.generate_risk()))
               if x.fmt.label_set == "neutral")
     assert core.stem_for(t2) == "Answer: Option"
+
+
+def test_option_order_reorders_lines_and_never_relabels():
+    """Order must move the lines, not move the labels between the lotteries.
+
+    Regression: body_text paired the label to the *position*, so every order-1
+    legacy prompt read "Safe Option: a 25% chance of $37" and "Risky Option:
+    $20 for sure" -- the gamble announced as safe. That is a relabelling, not
+    an order manipulation, and it is indistinguishable from a real position
+    effect in anything that compares the two orders.
+    """
+    trials = [t for t in core.expand_formats(list(risk.generate_risk(splits=("cal",),
+                                                                    include_catch=False)))
+              if t.fmt.label_set == "legacy" and t.fmt.response_format == "mc"]
+    by = {}
+    for t in trials:
+        by.setdefault(t.content_id, {})[t.fmt.option_order] = t
+    pairs = [d for d in by.values() if len(d) == 2]
+    assert pairs, "need both orders of some content"
+    for d in pairs[:40]:
+        a, b = d[0], d[1]
+        # the label attached to each lottery is the same in both orders
+        assert a.safe_label == b.safe_label and a.risky_label == b.risky_label
+        # and the readout scores the same token pair in both
+        assert core.to_trial_spec(a).labels == core.to_trial_spec(b).labels
+        # the safe label names the sure amount in both
+        for t in (a, b):
+            body = core.body_text(t)
+            safe_line = [l for l in body.splitlines() if l.startswith(t.safe_label)][0]
+            assert "for sure" in safe_line or "nothing" in safe_line, safe_line
+        # the two orders differ only by the order of the lines
+        assert sorted(core.body_text(a).splitlines()) == sorted(core.body_text(b).splitlines())
+        assert core.body_text(a) != core.body_text(b)
+
+
+def test_risky_label_is_independent_of_presentation_order():
+    for t in core.expand_formats(list(risk.generate_risk(splits=("cal",)))):
+        assert t.risky_label == t.labels[1]
+        assert t.safe_label == t.labels[0]

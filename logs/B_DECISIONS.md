@@ -340,3 +340,39 @@ Two consequences, neither of them Track B's to settle alone:
 
 Saved under `$TRACKB_SHARE/trackB/b3_gradient/` with sha256 per file in `b3_gradient.json`, plus a
 `how_to_load` block naming the tensor the gradient is taken against.
+
+**BD28. Option order was relabelling the options, not reordering them. BD27 is withdrawn.** Found by
+running the sanity check that should have preceded BD27: are the readout's two labels the same in both
+option orders? They were not. `body_text` paired each label with a *position* rather than with its
+lottery, so every order-1 legacy prompt read
+
+    Safe Option: a 25% chance of $37 and otherwise nothing
+    Risky Option: $20 for sure
+
+— the gamble announced as "Safe Option" and the sure amount as "Risky Option". That is a relabelling,
+not an order manipulation. z itself stayed content-anchored, so nothing was inverted, but half of every
+legacy comparison was asking a different question.
+
+**This invalidates BD27's conclusion.** cos(g1, g2) = -0.814 was reported as evidence that the readout
+gradient is "predominantly a position direction". The far simpler explanation is the bug: under order 0
+the word "Risky Option" names the gamble, under order 1 the word "Safe Option" does, so a model with any
+prior toward the token "Safe" has its z-raising direction flipped by the relabelling. The measurement
+cannot separate that from a real position effect, so **the claim is withdrawn, not merely qualified.**
+Whether the gradient is position-dominated is now an open question, to be re-measured on corrected
+prompts.
+
+The fix binds each label to its lottery and lets the order reorder the two lines. `safe_label` and
+`risky_label` no longer depend on `option_order`. Two tests lock it: the label-lottery pairing must be
+identical across orders, and the two orders must differ only in the order of the lines.
+
+**What the bug touched, and what has to be redone.** Only label sets whose labels carry meaning are
+affected; "Option A"/"Option B" are arbitrary, so the neutral set was always fine.
+- `B1` dataset — rebuild (half the legacy rows carried contradictory prompts).
+- `B2` recovery study — rerun; the label-bias and position-bias terms were confounded with each other.
+- `B2-cal` — rerun; the theta0 fit, the template-noise estimate and the slope table all used 872 rows of
+  which half were order-1 legacy.
+- `B3.1` gradient — rerun; this is where the bug produced a headline finding that was not real.
+- `B3.2` LoRA — the 8B dry run was cancelled mid-flight; it was training on the contradictory prompts.
+None of this was caught earlier because every test compared the code against itself: the label
+properties agreed with `body_text` because both applied the same wrong rule. The check that found it
+compared the *rendered prompt* against what the readout claimed to be scoring.
