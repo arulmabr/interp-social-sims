@@ -20,6 +20,21 @@ S_GRID: Tuple[float, ...] = (20.0, 50.0, 100.0, 500.0)
 N_LEVELS = 14                      # the plan allows 12-16
 X_LO, X_HI = 0.3, 5.0              # multiples of s/p
 
+#: The mixed-frame ratio grid: 0 for sure against a 50/50 of +G or -L, with
+#: G/L as the reward level. Lambda is identified on these trials and on almost
+#: nothing else (BD10), so the density is a parameter: `lambda_grid.py` sweeps
+#: it to find the smallest grid that identifies lambda.
+MIXED_RATIOS: Tuple[float, ...] = (0.5, 0.75, 1.0, 1.25, 1.5, 1.75,
+                                   2.0, 2.5, 3.0, 3.5, 4.0, 5.0)
+
+
+def mixed_ratio_grid(n: int) -> Tuple[float, ...]:
+    """`n` log-spaced loss-aversion ratios from 0.5 to 5.0."""
+    if n < 2:
+        return (1.0,)
+    return tuple(round(0.5 * 10.0 ** (i / (n - 1)), 4) for i in range(n))
+
+
 #: p = 0.5, s = 50, x = 10..240 in steps of 5 (the cell every legacy curve used).
 LEGACY_CELL = (0.5, 50.0)
 LEGACY_X: Tuple[float, ...] = tuple(float(n) for n in range(10, 245, 5))
@@ -128,7 +143,9 @@ def generate_risk(splits: Sequence[str] = ("disc", "sel", "cal"),
                   s_grid: Sequence[float] = S_GRID,
                   families: Sequence[str] = ("sure_gain", "sure_loss", "mixed", "paired"),
                   include_catch: bool = True,
-                  unlock_test: Optional[str] = None) -> Iterator[Trial]:
+                  unlock_test: Optional[str] = None,
+                  mixed_ratios: Optional[Sequence[float]] = None,
+                  mixed_losses: Optional[Sequence[float]] = None) -> Iterator[Trial]:
     """Every risk trial whose split is in ``splits``, format-free.
 
     Formats are added by `core.expand_formats`; yielding content once keeps the
@@ -160,8 +177,9 @@ def generate_risk(splits: Sequence[str] = ("disc", "sel", "cal"),
     if "mixed" in families:
         # 0 for sure vs 50/50 (+G, -L). L fixed by the s grid, G swept as a
         # multiple of L so the loss-aversion ratio G/L is the reward level.
-        for loss in s_grid:
-            ratios = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0, 3.5, 4.0, 5.0]
+        losses = mixed_losses if mixed_losses is not None else s_grid
+        ratios = list(mixed_ratios if mixed_ratios is not None else MIXED_RATIOS)
+        for loss in losses:
             for i, ratio in enumerate(ratios):
                 split = assign_split(i)
                 if split in wanted:

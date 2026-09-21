@@ -46,7 +46,7 @@ class AgentParams:
     label: float = LABEL0            # pull toward the risky option under legacy labels
     kappa: float = KAPPA0            # belief distortion: the *gamble's* x perceived as kappa*x
     kind: str = "cpt"                # "cpt" | "mean_variance" | "monotone"
-    mv_b: float = 0.01               # mean-variance risk penalty
+    mv_b: float = 0.35               # mean-SD risk penalty (dimensionless)
     mono_scale: float = 120.0        # scale of the arbitrary monotone curve
 
     def as_dict(self) -> Dict[str, float]:
@@ -124,11 +124,23 @@ def cpt_utility(lot: Lottery, par: AgentParams) -> float:
 
 
 def mean_variance_utility(lot: Lottery, par: AgentParams) -> float:
+    """Mean minus a multiple of the standard deviation.
+
+    The textbook mean-*variance* form is not scale-invariant: variance grows as
+    the square of the stake while the mean grows linearly, so with a constant
+    penalty the same agent is nearly risk-neutral at $20 and wildly risk-averse
+    at $500. Across B1's 25x stake range that produced z running to -90 with an
+    SD of 10.3 against CPT's 1.7, and -- worse -- it let one term dominate z, so
+    changing that term was indistinguishable from changing the temperature and
+    the model-free layer read a preference shift as noise. Penalising the
+    standard deviation keeps both terms linear in the stake, makes `mv_b`
+    dimensionless, and leaves the family just as non-prospect-theoretic.
+    """
     live = _amounts(lot, par)
     xs = np.array([a for _, a in live]); ps = np.array([p for p, _ in live])
     mean = float(np.sum(ps * xs))
     var = float(np.sum(ps * (xs - mean) ** 2))
-    return mean - par.mv_b * var
+    return mean - par.mv_b * float(np.sqrt(max(var, 0.0)))
 
 
 def monotone_utility(lot: Lottery, par: AgentParams) -> float:
@@ -418,7 +430,7 @@ def _utility_vec(hi: np.ndarray, lo: np.ndarray, phi: np.ndarray,
     if par.kind == "mean_variance":
         mean = phi * a_hi + plo * a_lo
         var = phi * (a_hi - mean) ** 2 + plo * (a_lo - mean) ** 2
-        return mean - par.mv_b * var, a_hi, a_lo
+        return mean - par.mv_b * np.sqrt(np.clip(var, 0.0, None)), a_hi, a_lo
     if par.kind == "monotone":
         u = phi * np.tanh(a_hi / par.mono_scale) + plo * np.tanh(a_lo / par.mono_scale)
         return u, a_hi, a_lo
@@ -485,6 +497,56 @@ PREFERENCE_KNOB: Dict[str, str] = {
 }
 
 
+def base_scale_report(trials) -> Dict[str, Dict[str, float]]:
+    """How steep each base agent's choice function is, on one grid.
+
+    A base agent has to be a plausible subject. One that is indifferent
+    everywhere passes every specificity check for free (BD22); one that is
+    saturated everywhere is just as useless, and worse, if a single term
+    dominates its z then a change in that term is indistinguishable from a
+    temperature change and the model-free layer cannot tell a preference shift
+    from noise. Both failures are scaling, not modelling.
+    """
+    pk = trials if isinstance(trials, Packed) else pack(trials)
+    out: Dict[str, Dict[str, float]] = {}
+    for b in BASES:
+        z = latent_z_packed(pk, base_params(b))
+        p = choice_prob(z)
+        out[b] = {"z_sd": float(z.std()), "z_min": float(z.min()),
+                  "z_max": float(z.max()),
+                  "p_spread": float(p.max() - p.min()),
+                  "p_mean": float(p.mean())}
+    return out
+
+
+def calibrate_mean_variance_b(trials, lo: float = 0.01, hi: float = 0.95,
+                              max_iter: int = 60) -> float:
+    """The variance penalty that puts the mean-variance base on CPT's scale.
+
+    At `mv_b = 0.01` the variance term swamped the mean term: z ran to -90 with
+    an SD of 10.3 against CPT's 1.7, and mean P(risky) was 0.29 rather than
+    about a half. That is not just an implausible subject. It is why a
+    *preference* change in that family was indistinguishable from a temperature
+    change: when one term dominates z, scaling that term is scaling z, so dz
+    comes out proportional to z and the model-free layer reads it as noise.
+    Matching the SD to CPT's puts the mean and variance terms on comparable
+    footing and restores the distinction.
+    """
+    pk = trials if isinstance(trials, Packed) else pack(trials)
+    target = float(latent_z_packed(pk, base_params("cpt")).std())
+    for _ in range(max_iter):
+        mid = 0.5 * (lo + hi)
+        sd = float(latent_z_packed(pk, replace(AgentParams(), kind="mean_variance",
+                                               mv_b=mid)).std())
+        if abs(sd - target) < 0.01:
+            return mid
+        if sd < target:
+            lo = mid
+        else:
+            hi = mid
+    return 0.5 * (lo + hi)
+
+
 def base_params(base: str) -> AgentParams:
     """The unmodified agent of each family."""
     if base == "cpt":
@@ -545,7 +607,7 @@ def build_crossed_zoo(trials, target_effect: Optional[float] = None
 
     #: search ranges per family for the preference knob
     pref_range = {"cpt": (ALPHA0, ALPHA0 + 0.60),
-                  "mean_variance": (AgentParams().mv_b, AgentParams().mv_b * 40.0),
+                  "mean_variance": (AgentParams().mv_b, AgentParams().mv_b * 2.5),
                   "monotone": (AgentParams().mono_scale, AgentParams().mono_scale * 6.0)}
 
     for base, par0 in bases.items():

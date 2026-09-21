@@ -269,3 +269,41 @@ the misspecification test look like it was working.
 roughly 1,600 times, so building the crossed zoo alone would have taken about 850 seconds inside every
 one of the 18 array tasks. It now takes the packed path with the trials packed once, and the zoo builds
 in **1 second**. No result changes: the two paths are asserted equal.
+
+**BD24. The mean-variance base is mean minus b x standard deviation, not minus b x variance.** The
+textbook mean-*variance* form is not scale-invariant: variance grows as the square of the stake while
+the mean grows linearly, so at a constant penalty the same agent is nearly risk-neutral at $20 and
+extreme at $500. Across B1's 25x stake range that gave z running to **-90.32 with an SD of 10.27**
+against CPT's 1.69, and mean P(risky) 0.29 rather than about a half. Penalising the standard deviation
+keeps both terms linear in the stake and makes `mv_b` dimensionless. At `mv_b = 0.35` the base now has
+**z SD 1.744, range [-4.02, 3.67], P(risky) spread 0.958**, beside CPT's 1.691 / [-3.67, 3.67] / 0.950
+and monotone's 1.847 / [-3.84, 3.84] / 0.958. All three bases are now plausible subjects on one scale,
+and all 17 crossed cells match the target effect of 0.0176.
+
+**BD25. On a mean-SD base a preference change is observationally an action bias, and this is
+structural.** Gate B2's one remaining classification failure, and it survived the rescaling of BD24, so
+it is not a scaling artefact. Measured on the sure-gain grid, shifting the mean-SD risk penalty gives a
+dz with **mean -0.2611 and SD 0.0753**, a ratio of **0.29**: it varies with p (from -0.17 at p = 0.1 to
+-0.32 at p = 0.5, tracking sqrt(p(1-p))) but hardly at all with the reward level (-0.19 to -0.27 across
+three decades of x). A CPT alpha shift on the same grid has a ratio of **0.99** and changes sign across
+x, from -0.037 at x about 10 to +0.096 at x about 100. The reason is exact: after the contextual
+normalisation the mean-SD risk term is the gamble's standard deviation divided by the outcome range,
+which for a two-outcome gamble is sqrt(p(1-p)) and carries no dependence on the reward level at all. A
+shift in it is therefore close to a constant shift in z, which is the model-free signature of an action
+bias. **The model-free separation of preference from action is model-dependent**: it works when the
+subject reshapes the choice curve, as a CPT agent does, and fails when the subject's risk attitude
+enters as a level-independent offset. That is exactly the question the two misspecified bases were put
+in the plan to answer, and the answer is negative and worth reporting rather than tuning away. It is
+reported, not fixed: the fix would be to add a regressor built from the mean-SD form, which is to tell
+the model-free layer the answer.
+
+**BD26. No mixed-frame grid in the swept family identifies lambda.** Author item 2 asked for the
+smallest denser mixed-frame grid that passes. There is none in this family. Lambda's RMSE **plateaus at
+about 0.26** against its 0.15 bar and does not fall with density: 576 mixed rows give 0.3216, 2,304
+give 0.2654, 3,072 give 0.2629, and 4,608 rows over eight loss levels still give 0.2663 — an eightfold
+increase in mixed trials for no improvement. That is the signature of an identification limit, not a
+sample-size one, so buying more mixed trials buys nothing. The sweep now also fits lambda with alpha
+and gamma held at the baseline fit, to separate "lambda is invisible" from "lambda is confounded with
+the curvature it is estimated beside"; if the held arm passes where the joint arm fails, the remedy is
+to pin alpha on the gain frame — which is what the plan already does for out-of-frame prediction —
+rather than to enlarge the grid.

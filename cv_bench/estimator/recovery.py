@@ -25,7 +25,7 @@ import numpy as np
 
 from cv_bench.estimator import decision as DEC, fingerprint as FP, fit as FIT
 from cv_bench.estimator.agents import (
-    AgentParams, BASES, CPT_PREFERENCE_CELLS, INTERVENTIONS, MDC,
+    AgentParams, BASES, base_scale_report, CPT_PREFERENCE_CELLS, INTERVENTIONS, MDC,
     MISSPECIFIED_BASES, base_params, behavioural_effect, build_crossed_zoo,
     choice_prob, draw_template_offsets, latent_z_packed, pack, simulate)
 from cv_bench.tasks import core, risk
@@ -202,6 +202,16 @@ def main(argv=None) -> int:
     if args.dump_zoo:
         trials = build_trials(expand=True)
         crossed, bases, effects = build_crossed_zoo(trials)
+        from cv_bench.estimator.agents import (
+            base_scale_report, calibrate_mean_variance_b)
+        print(f"calibrated mean_variance mv_b = "
+              f"{calibrate_mean_variance_b(trials):.6f}  (current default "
+              f"{AgentParams().mv_b})")
+        print("base agent scales (a base must be neither flat nor saturated):")
+        for b, v in base_scale_report(trials).items():
+            print(f"  {b:15s} z_sd={v['z_sd']:8.4f} z=[{v['z_min']:8.2f},{v['z_max']:6.2f}] "
+                  f"P spread={v['p_spread']:.4f} P mean={v['p_mean']:.4f}")
+        print()
         print(f"target effect (CPT alpha at its MDC): {effects['_target']:.4f}")
         print(f"{len(crossed)} cells over {len(bases)} bases\n")
         for (b, iv) in sorted(crossed):
