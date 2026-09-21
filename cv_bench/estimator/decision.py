@@ -124,48 +124,85 @@ def parameter_rmse(records: Sequence[Dict[str, object]]) -> Dict[str, float]:
     return {p: float(np.sqrt(np.mean(np.square(e)))) for p, e in by_param.items()}
 
 
+#: Gate B2 is evaluated on these parameters. Lambda moved to its own gate on
+#: 22 Sept (logs/B_DEVIATIONS.md): the paper's tasks are in the gain domain, the
+#: first preference anchor shifts alpha, and lambda is not identified on the
+#: current grid at all. Its 0.15 bar is unchanged and is checked by gate_lambda.
+GATE_B2_PARAMS: Tuple[str, ...] = ("alpha", "gamma")
+SECONDARY_PARAMS: Tuple[str, ...] = ("lambda",)
+
+
+def gate_lambda(rmse: Dict[str, float]) -> Dict[str, object]:
+    """Lambda's own gate. Same bar as before: RMSE at most half the MDC.
+
+    Tested once a denser mixed-frame grid passes on synthetic agents. Passing
+    this is not passing Gate B2 and does not license a lambda claim on its own.
+    """
+    bound = MDC["lambda"]
+    limit = GATE_RMSE_FRACTION * bound
+    got = rmse.get("lambda")
+    ok = bool(got is not None and np.isfinite(got) and got <= limit)
+    return {"rmse": got, "limit": limit, "PASS": ok}
+
+
 def gate_b2(rmse: Dict[str, float],
             classifications: Dict[str, List[bool]],
-            misspecified_ok: Optional[Dict[str, bool]] = None) -> Dict[str, object]:
-    """Evaluate Gate B2 exactly as ICLR_PLAN.md writes it.
+            misspecified_modelfree: Optional[Dict[str, float]] = None,
+            parametric_contradiction: Optional[Dict[str, float]] = None
+            ) -> Dict[str, object]:
+    """Evaluate Gate B2 as amended on 22 Sept (logs/B_DEVIATIONS.md).
 
     Pass requires all of:
-      * parameter RMSE at most half of each minimum detectable change;
-      * at least 95% of preference-shift agents classified preference-like;
-      * at least 95% of action, belief and noise agents -- matched on
-        behavioural effect size -- classified as not preference-like;
-      * the two misspecified agents handled on the model-free layer.
+      * alpha and gamma RMSE at most half of each minimum detectable change
+        (lambda moved to gate_lambda; its bar is unchanged);
+      * at least 95% of preference interventions on the CPT base classified
+        preference-like;
+      * at least 95% of action, belief, noise and format interventions on the
+        CPT base -- matched on behavioural effect size -- classified as not;
+      * on the two misspecified bases, the MODEL-FREE layer classifies the
+        interventions correctly at least 95% of the time. The parametric layer
+        is allowed to be wrong there; how often it contradicts the model-free
+        verdict with a share above 0.8 is reported, not gated.
     """
     rmse_ok: Dict[str, object] = {}
-    for pname, bound in MDC.items():
+    for pname in GATE_B2_PARAMS:
+        bound = MDC[pname]
         limit = GATE_RMSE_FRACTION * bound
         got = rmse.get(pname)
         rmse_ok[pname] = {"rmse": got, "limit": limit,
                           "pass": bool(got is not None and np.isfinite(got) and got <= limit)}
 
-    pref_rates: Dict[str, float] = {}
-    for name, flags in classifications.items():
-        if not flags:
-            continue
-        pref_rates[name] = float(np.mean(flags))
+    # Classification keys are "base/intervention" (author item 3).
+    rates = {k: float(np.mean(v)) for k, v in classifications.items() if v}
+    cpt = {k.split("/", 1)[1]: v for k, v in rates.items() if k.startswith("cpt/")}
 
-    pref_agents = {k: v for k, v in pref_rates.items() if k.startswith("pref_")}
-    non_pref = {k: v for k, v in pref_rates.items()
+    # The CPT base runs one preference cell per parameter. Gate B2 covers alpha
+    # and gamma; lambda's cell is measured but belongs to gate_lambda.
+    from cv_bench.estimator.agents import CPT_GATE_PREFERENCE
+    pref_cells = {k: v for k, v in cpt.items() if k in CPT_GATE_PREFERENCE}
+    pref_rate = float(np.mean(list(pref_cells.values()))) if pref_cells else None
+    non_pref = {k: v for k, v in cpt.items()
                 if k in ("action", "belief", "noise", "format")}
 
-    pref_pass = all(v >= GATE_CLASSIFICATION_MIN for v in pref_agents.values()) \
-        if pref_agents else False
-    non_pref_pass = all((1.0 - v) >= GATE_CLASSIFICATION_MIN for v in non_pref.values()) \
-        if non_pref else False
-    miss_pass = all(misspecified_ok.values()) if misspecified_ok else False
+    # Every preference cell in the gate must clear the bar, not just their mean.
+    pref_pass = bool(pref_cells) and all(
+        v >= GATE_CLASSIFICATION_MIN for v in pref_cells.values())
+    non_pref_pass = bool(non_pref) and all(
+        (1.0 - v) >= GATE_CLASSIFICATION_MIN for v in non_pref.values())
+
+    mf = misspecified_modelfree or {}
+    miss_pass = bool(mf) and all(v >= GATE_CLASSIFICATION_MIN for v in mf.values())
 
     overall = (all(v["pass"] for v in rmse_ok.values())
                and pref_pass and non_pref_pass and miss_pass)
     return {
         "rmse": rmse_ok,
-        "preference_agents_classified_preference_like": pref_agents,
-        "non_preference_agents_classified_preference_like": non_pref,
-        "misspecified_handled": misspecified_ok or {},
+        "gate_params": list(GATE_B2_PARAMS),
+        "cpt_preference_classified_preference_like": pref_rate,
+        "cpt_preference_cells": pref_cells,
+        "cpt_non_preference_classified_preference_like": non_pref,
+        "misspecified_modelfree_accuracy": mf,
+        "parametric_contradiction_rate": parametric_contradiction or {},
         "preference_pass": bool(pref_pass),
         "non_preference_pass": bool(non_pref_pass),
         "misspecified_pass": bool(miss_pass),

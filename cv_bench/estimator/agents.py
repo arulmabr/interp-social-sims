@@ -281,16 +281,21 @@ NON_PREFERENCE_AGENTS = ("action", "format", "belief", "noise")
 MISSPECIFIED_AGENTS = ("mean_variance", "monotone")
 
 
-def behavioural_effect(trials: Sequence[Trial], par: AgentParams,
-                       base: Optional[AgentParams] = None) -> float:
+def behavioural_effect(trials, par: AgentParams,
+                       base: Optional[AgentParams] = None,
+                       pk: Optional["Packed"] = None) -> float:
     """Mean absolute change in P(risky) against the baseline agent.
 
     This is the currency in which non-preference agents are matched to
-    preference shifts, so that Gate B2's 95% rejection requirement is a fair test.
+    preference shifts, so that Gate B2's 95% rejection requirement is a fair
+    test. `pk` lets a caller that evaluates this thousands of times -- the
+    effect-size bisection does -- pack the trials once instead of once per call.
     """
     base = base or AgentParams()
-    z0 = latent_z_batch(trials, base)
-    z1 = latent_z_batch(trials, par)
+    if pk is None:
+        pk = trials if isinstance(trials, Packed) else pack(trials)
+    z0 = latent_z_packed(pk, base)
+    z1 = latent_z_packed(pk, par)
     return float(np.mean(np.abs(choice_prob(z1) - choice_prob(z0))))
 
 
@@ -445,6 +450,17 @@ def latent_z_packed(pk: Packed, par: AgentParams) -> np.ndarray:
 
 BASES: Tuple[str, ...] = ("cpt", "mean_variance", "monotone")
 INTERVENTIONS: Tuple[str, ...] = ("preference", "action", "belief", "noise", "format")
+
+#: On the CPT base a "preference shift" has three possible parameters and Gate
+#: B2 needs alpha and gamma separately for their RMSE bars, so the CPT base runs
+#: one cell per parameter. Lambda is kept for its own secondary gate and is not
+#: part of Gate B2 (logs/B_DEVIATIONS.md).
+CPT_PREFERENCE_CELLS: Dict[str, str] = {
+    "preference_alpha": "alpha",
+    "preference_gamma": "gamma",
+    "preference_lambda": "lam",
+}
+CPT_GATE_PREFERENCE: Tuple[str, ...] = ("preference_alpha", "preference_gamma")
 MISSPECIFIED_BASES: Tuple[str, ...] = ("mean_variance", "monotone")
 
 #: The parameter each family expresses a preference change through. CPT shifts
@@ -470,7 +486,8 @@ def _set(par: AgentParams, knob: str, value: float) -> AgentParams:
 
 def _solve_for_effect(trials, par0: AgentParams, knob: str,
                       lo: float, hi: float, target: float,
-                      tol: float = 0.0015, max_iter: int = 48) -> float:
+                      tol: float = 0.0015, max_iter: int = 48,
+                      pk: Optional["Packed"] = None) -> float:
     """Bisect `knob` until the agent moves behaviour by `target` against `par0`.
 
     Matching on behavioural effect size rather than on parameter size is what
@@ -480,7 +497,7 @@ def _solve_for_effect(trials, par0: AgentParams, knob: str,
     """
     for _ in range(max_iter):
         mid = 0.5 * (lo + hi)
-        eff = behavioural_effect(trials, _set(par0, knob, mid), par0)
+        eff = behavioural_effect(trials, _set(par0, knob, mid), par0, pk=pk)
         if abs(eff - target) < tol:
             return mid
         if eff < target:
@@ -502,10 +519,11 @@ def build_crossed_zoo(trials, target_effect: Optional[float] = None
 
     Returns (crossed, bases, effects).
     """
+    pk = trials if isinstance(trials, Packed) else pack(trials)
     cpt0 = base_params("cpt")
     if target_effect is None:
         target_effect = behavioural_effect(
-            trials, replace(cpt0, alpha=ALPHA0 + MDC["alpha"]), cpt0)
+            trials, replace(cpt0, alpha=ALPHA0 + MDC["alpha"]), cpt0, pk=pk)
 
     bases = {b: base_params(b) for b in BASES}
     crossed: Dict[Tuple[str, str], AgentParams] = {}
@@ -517,29 +535,39 @@ def build_crossed_zoo(trials, target_effect: Optional[float] = None
                   "monotone": (AgentParams().mono_scale, AgentParams().mono_scale * 6.0)}
 
     for base, par0 in bases.items():
-        for iv in INTERVENTIONS:
-            if iv == "preference":
+        # The CPT base gets one preference cell per parameter, at the plan's
+        # minimum detectable change rather than matched on effect size: those
+        # are the shifts Gate B2's RMSE bars are written about.
+        ivs = list(INTERVENTIONS)
+        if base == "cpt":
+            ivs = [i for i in ivs if i != "preference"] + list(CPT_PREFERENCE_CELLS)
+        for iv in ivs:
+            if iv in CPT_PREFERENCE_CELLS:
+                field = CPT_PREFERENCE_CELLS[iv]
+                mdc_key = {"alpha": "alpha", "gamma": "gamma", "lam": "lambda"}[field]
+                par = _set(par0, field, float(getattr(par0, field)) + MDC[mdc_key])
+            elif iv == "preference":
                 knob = PREFERENCE_KNOB[base]
                 lo, hi = pref_range[base]
-                val = _solve_for_effect(trials, par0, knob, lo, hi, target_effect)
+                val = _solve_for_effect(trials, par0, knob, lo, hi, target_effect, pk=pk)
                 par = _set(par0, knob, val)
             elif iv == "action":
-                val = _solve_for_effect(trials, par0, "action", 0.0, 8.0, target_effect)
+                val = _solve_for_effect(trials, par0, "action", 0.0, 8.0, target_effect, pk=pk)
                 par = _set(par0, "action", val)
             elif iv == "belief":
-                val = _solve_for_effect(trials, par0, "kappa", 1.0, 8.0, target_effect)
+                val = _solve_for_effect(trials, par0, "kappa", 1.0, 8.0, target_effect, pk=pk)
                 par = _set(par0, "kappa", val)
             elif iv == "noise":
                 val = _solve_for_effect(trials, par0, "tau", TAU0, TAU0 * 40.0,
-                                        target_effect)
+                                        target_effect, pk=pk)
                 par = _set(par0, "tau", val)
             elif iv == "format":
-                val = _solve_for_effect(trials, par0, "position", 0.0, 8.0, target_effect)
+                val = _solve_for_effect(trials, par0, "position", 0.0, 8.0, target_effect, pk=pk)
                 par = replace(par0, position=val, label=val)
             else:
                 raise ValueError(iv)
             crossed[(base, iv)] = par
-            effects[f"{base}/{iv}"] = behavioural_effect(trials, par, par0)
+            effects[f"{base}/{iv}"] = behavioural_effect(trials, par, par0, pk=pk)
 
     effects["_target"] = float(target_effect)
     return crossed, bases, effects

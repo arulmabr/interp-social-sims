@@ -184,20 +184,59 @@ def test_decision_rule_refuses_to_run_without_format_variation():
                         "D6_recall": {}}, 0.0, {})
 
 
+def _good_gate_inputs():
+    """Keys are base/intervention (author item 3)."""
+    rmse = {"alpha": 0.01, "gamma": 0.01, "lambda": 0.01}
+    cls = {
+        "cpt/preference_alpha": [True] * 20,
+        "cpt/preference_gamma": [True] * 20,
+        "cpt/preference_lambda": [True] * 20,
+        "cpt/action": [False] * 20, "cpt/belief": [False] * 20,
+        "cpt/noise": [False] * 20, "cpt/format": [False] * 20,
+    }
+    mf = {f"{b}/{iv}": 1.0 for b in A.MISSPECIFIED_BASES for iv in A.INTERVENTIONS}
+    return rmse, cls, mf
+
+
 def test_gate_b2_needs_every_condition():
-    good_rmse = {"alpha": 0.01, "gamma": 0.01, "lambda": 0.01}
-    good_cls = {"pref_alpha": [True] * 20, "pref_gamma": [True] * 20,
-                "pref_lambda": [True] * 20, "action": [False] * 20,
-                "belief": [False] * 20, "noise": [False] * 20, "format": [False] * 20}
-    good_miss = {"mean_variance": True, "monotone": True}
-    assert DEC.gate_b2(good_rmse, good_cls, good_miss)["PASS"]
-    # any single failure sinks it
-    bad = dict(good_rmse, **{"lambda": 10.0})
-    assert not DEC.gate_b2(bad, good_cls, good_miss)["PASS"]
-    cls = dict(good_cls, **{"action": [True] * 20})
-    assert not DEC.gate_b2(good_rmse, cls, good_miss)["PASS"]
-    assert not DEC.gate_b2(good_rmse, good_cls, {"mean_variance": False,
-                                                 "monotone": True})["PASS"]
+    rmse, cls, mf = _good_gate_inputs()
+    assert DEC.gate_b2(rmse, cls, mf)["PASS"]
+
+    # a preference cell below the bar sinks it
+    bad = dict(cls, **{"cpt/preference_alpha": [True] * 18 + [False] * 2})
+    assert not DEC.gate_b2(rmse, bad, mf)["PASS"]
+
+    # a non-preference intervention called preference-like sinks it
+    bad = dict(cls, **{"cpt/action": [True] * 20})
+    assert not DEC.gate_b2(rmse, bad, mf)["PASS"]
+
+    # the model-free layer failing on a misspecified base sinks it
+    bad_mf = dict(mf, **{"mean_variance/format": 0.5})
+    assert not DEC.gate_b2(rmse, cls, bad_mf)["PASS"]
+
+    # alpha RMSE over its bar sinks it
+    assert not DEC.gate_b2(dict(rmse, alpha=0.9), cls, mf)["PASS"]
+
+
+def test_gate_b2_no_longer_depends_on_lambda():
+    """Author item 2: lambda moved to its own gate; its bar is unchanged."""
+    rmse, cls, mf = _good_gate_inputs()
+    assert DEC.GATE_B2_PARAMS == ("alpha", "gamma")
+    assert DEC.gate_b2(dict(rmse, **{"lambda": 99.0}), cls, mf)["PASS"]
+    # but lambda's own gate still fails, at the same 0.15 bar
+    lam = DEC.gate_lambda(dict(rmse, **{"lambda": 99.0}))
+    assert not lam["PASS"]
+    assert lam["limit"] == pytest.approx(0.5 * A.MDC["lambda"])
+    assert DEC.gate_lambda({"lambda": 0.01})["PASS"]
+
+
+def test_parametric_contradiction_is_reported_not_gated():
+    """On a misspecified base the parametric layer may be wrong (item 3)."""
+    rmse, cls, mf = _good_gate_inputs()
+    contra = {f"{b}/{iv}": 1.0 for b in A.MISSPECIFIED_BASES for iv in A.INTERVENTIONS}
+    g = DEC.gate_b2(rmse, cls, mf, contra)
+    assert g["PASS"], "a contradiction rate must not by itself fail the gate"
+    assert g["parametric_contradiction_rate"] == contra
 
 
 def test_gate_thresholds_are_plan_v4():
@@ -267,3 +306,57 @@ def test_template_intercepts_improve_parameter_recovery(trials):
     err_with = abs(with_tpl.alpha - truth.alpha)
     assert err_with < err_without, (err_with, err_without)
     assert err_with < 0.5 * A.MDC["alpha"]
+
+
+# -- bases crossed with interventions (author item 3) ----------------------
+
+def test_crossed_zoo_covers_every_base_and_intervention(trials):
+    sub = trials[::9]
+    crossed, bases, effects = A.build_crossed_zoo(sub)
+    assert set(bases) == set(A.BASES)
+    for b in A.BASES:
+        ivs = {iv for (bb, iv) in crossed if bb == b}
+        if b == "cpt":
+            assert set(A.CPT_PREFERENCE_CELLS) <= ivs
+            assert "preference" not in ivs
+        else:
+            assert "preference" in ivs
+        assert {"action", "belief", "noise", "format"} <= ivs
+
+
+def test_each_base_keeps_its_own_family(trials):
+    sub = trials[::9]
+    crossed, bases, _ = A.build_crossed_zoo(sub)
+    for (b, iv), par in crossed.items():
+        assert par.kind == bases[b].kind, (b, iv)
+
+
+def test_modelfree_classifier_names_belief_and_format_first():
+    """Those two announce themselves on dedicated diagnostics."""
+    fp = {"D6_recall": {"intact": 0.0}, "D5_format": {"in_band": 1.0},
+          "D2_variance": {"action_share": 1.0, "payoff_share": 0.0, "scale_share": 0.0}}
+    assert FP.modelfree_classify(fp) == "belief"
+    fp = {"D6_recall": {"intact": 1.0}, "D5_format": {"in_band": 0.0},
+          "D2_variance": {"action_share": 1.0, "payoff_share": 0.0, "scale_share": 0.0}}
+    assert FP.modelfree_classify(fp) == "format"
+
+
+def test_modelfree_classifier_sorts_the_rest_by_where_the_variance_went():
+    base = {"D6_recall": {"intact": 1.0}, "D5_format": {"in_band": 1.0}}
+    for top, expected in (("action_share", "action"), ("payoff_share", "preference"),
+                          ("scale_share", "noise")):
+        shares = {"action_share": 0.1, "payoff_share": 0.1, "scale_share": 0.1}
+        shares[top] = 0.8
+        assert FP.modelfree_classify({**base, "D2_variance": shares}) == expected
+
+
+def test_d2_scale_term_separates_a_temperature_change(trials):
+    """Raising tau rescales z toward zero, so dz loads on z itself."""
+    sub = trials[::7]
+    base = A.AgentParams()
+    z0 = A.latent_z_packed(A.pack(sub), base)
+    hotter = replace(base, tau=A.TAU0 * 2.0)
+    dz = A.latent_z_packed(A.pack(sub), hotter) - z0
+    v = FP.d2_variance_decomposition(sub, dz, z_base=z0)
+    assert v["scale_share"] > v["payoff_share"]
+    assert v["scale_share"] > v["action_share"]

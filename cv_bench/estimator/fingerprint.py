@@ -40,8 +40,15 @@ def d1_dominance_violations(trials: Sequence[Trial], choice: np.ndarray) -> floa
 
 # -- D2 ---------------------------------------------------------------------
 
-def _design(trials: Sequence[Trial]) -> Tuple[np.ndarray, List[str]]:
-    """Constant, format terms and payoff terms, as a design matrix."""
+def _design(trials: Sequence[Trial],
+            z_base: Optional[np.ndarray] = None) -> Tuple[np.ndarray, List[str]]:
+    """Constant, format terms, payoff terms, and the baseline z itself.
+
+    The baseline z column is what separates a temperature change from a
+    preference change on this layer: raising tau rescales every z toward zero,
+    so dz loads on z itself, while a preference change alters how dz depends on
+    the payoff terms.
+    """
     order = np.array([1.0 if t.fmt.option_order == 0 else -1.0 for t in trials])
     label = np.array([1.0 if t.fmt.label_set == "legacy" else 0.0 for t in trials])
     p = np.array([t.param_dict.get("p", 0.5) for t in trials])
@@ -53,23 +60,30 @@ def _design(trials: Sequence[Trial]) -> Tuple[np.ndarray, List[str]]:
     logxs = np.array(logxs)
     loss = np.array([1.0 if t.family in ("sure_loss",) else 0.0 for t in trials])
     mixed = np.array([1.0 if t.family == "mixed" else 0.0 for t in trials])
-    X = np.column_stack([np.ones(len(trials)), order, label, logxs, p, loss, mixed])
-    return X, ["const", "order", "label", "log_x_over_s", "p", "loss_frame", "mixed_frame"]
+    cols = [np.ones(len(trials)), order, label, logxs, p, loss, mixed]
+    names = ["const", "order", "label", "log_x_over_s", "p", "loss_frame", "mixed_frame"]
+    if z_base is not None:
+        cols.append(np.asarray(z_base, dtype=float))
+        names.append("z_base")
+    return np.column_stack(cols), names
 
 
 def d2_variance_decomposition(trials: Sequence[Trial],
-                              dz: np.ndarray) -> Dict[str, float]:
+                              dz: np.ndarray,
+                              z_base: Optional[np.ndarray] = None) -> Dict[str, float]:
     """Split the variance of the change in z into action, format and payoff parts.
 
     An action bias is a constant shift, so it loads on `const`; a format bias
     loads on order and label; a genuine preference change loads on the payoff
     terms, because it changes how the reward level matters.
     """
-    X, names = _design(trials)
+    X, names = _design(trials, z_base)
     coef, *_ = np.linalg.lstsq(X, dz, rcond=None)
     total = float(np.var(dz))
     groups = {"action": ["const"], "format": ["order", "label"],
               "payoff": ["log_x_over_s", "p", "loss_frame", "mixed_frame"]}
+    if z_base is not None:
+        groups["scale"] = ["z_base"]
     out: Dict[str, float] = {}
     for g, cols in groups.items():
         idx = [names.index(c) for c in cols]
@@ -268,15 +282,37 @@ def d7_stake_stability(trials: Sequence[Trial], p_base: np.ndarray,
 
 # -- the whole fingerprint --------------------------------------------------
 
+def modelfree_classify(fp: Dict[str, object]) -> str:
+    """Name the intervention from the model-free layer alone.
+
+    Author item 3 requires this layer to classify the interventions correctly
+    even on a base agent the parametric model is wrong about, so it may not lean
+    on the parametric fit at all. The order matters: belief and format announce
+    themselves on dedicated diagnostics, and only what survives those is sorted
+    by where the variance of dz went.
+    """
+    if fp["D6_recall"].get("intact", 1.0) == 0.0:
+        return "belief"
+    if fp["D5_format"].get("in_band", 1.0) == 0.0:
+        return "format"
+    v = fp["D2_variance"]
+    shares = {"action": v.get("action_share", 0.0),
+              "payoff": v.get("payoff_share", 0.0),
+              "scale": v.get("scale_share", 0.0)}
+    top = max(shares, key=shares.get)
+    return {"action": "action", "payoff": "preference", "scale": "noise"}[top]
+
+
 def fingerprint(trials: Sequence[Trial],
                 truth_base: AgentParams, truth_int: AgentParams,
                 fitted_base: AgentParams, fitted_int: AgentParams,
                 choice_int: np.ndarray,
                 p_base: np.ndarray, p_int: np.ndarray,
-                dz: np.ndarray) -> Dict[str, object]:
+                dz: np.ndarray,
+                z_base: Optional[np.ndarray] = None) -> Dict[str, object]:
     return {
         "D1_dominance": d1_dominance_violations(trials, choice_int),
-        "D2_variance": d2_variance_decomposition(trials, dz),
+        "D2_variance": d2_variance_decomposition(trials, dz, z_base),
         "D3_paired_shift": d3_paired_shift(trials, p_base, p_int),
         "D4_ce": d4_ce_vs_choice(trials, truth_base, truth_int, fitted_base, fitted_int),
         "D5_format": d5_format_transfer(trials, dz),
