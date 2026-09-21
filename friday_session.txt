@@ -1,0 +1,447 @@
+================================================================================
+FRIDAY_SESSION.TXT
+Session record for the ICLR 2027 submission "Interpreting and Steering LLM
+Agents for Social Simulations"
+
+Repository : /home/guna23/shrey/risk  (github.com/arulmabr/interp-social-sims)
+Branch     : iclr-extension   (Track B runs in parallel on iclr-trackB)
+Rewritten  : 2026-09-21 23:55 UTC   (supersedes the 15:39 version)
+Cutoff     : Thu 24 Sept 06:00 UTC  -- 54 hours away
+Deadline   : Fri 25 Sept 23:59 AoE
+Spend      : 20.91 of 400 GPU-hours (this session 16.32, Track B 4.59)
+================================================================================
+
+CONTENTS
+  1.  What changed since the 15:39 version
+  2.  Headline findings
+  3.  Corrections to my own work
+  4.  What is running, queued, and finished
+  5.  The review, and what the PDF says to each point
+  6.  Infrastructure: resumability, the monitor, the watcher
+  7.  Scheduling, GPU caps, and what they cost
+  8.  Blockers and decisions waiting on the authors
+  9.  Artefact inventory
+  10. Next steps and deadlines
+
+================================================================================
+1. WHAT CHANGED SINCE THE 15:39 VERSION
+================================================================================
+
+The earlier version covered S0, S1, V3/V4/V5, G1, G2 and the S2.1-fix. Since
+then the authors issued six further instruction sets. 19 new commits, from
+0a9bd67 to 2342363.
+
+Author instructions acted on, in order:
+  * five amendments -- G2's main result; the instrument check; G4's control
+    directions; the neutral-label rework; the monitor off the login node;
+  * resumability: everything survives a dropped connection and resumes from its
+    last written row;
+  * the two anchors are Track B's B3.1/B3.2 and are not built here;
+  * readout.score must refuse a label pair it cannot tell apart;
+  * the review cross-referenced, the queue spread, V1 and V2 run, a schedule
+    written against the cutoff;
+  * results first: G4q, S3.2, S3.5 and G5b queued; a third coding added; the
+    G4_DECISION report due Wed 08:00 PDT.
+
+Commits, newest first:
+  2342363 Results first: G4q, S3.2, S3.5, G5b queued; third coding added
+  c92f815 Size the GPU memory budget to the card that is there
+  eaacaef Monitor: a record may hold one code or forty
+  dec49c4 Resubmit into the partition without a per-user GPU cap
+  87f7ce3 Monitor: wait a cycle before judging a task that just left the queue
+  4ee560f Neutral free generation must straddle the switching point
+  cca1489 Every reviewer point gets a written response, and a schedule
+  1078107 G4b baselines into G4's reconstruction sweep
+  94ef486 V1, V2, G5, G3, G6; and a correction to the decision detector
+  18a7942 readout.score refuses a label pair it cannot tell apart
+  1d60f32 G4b: load Track B's gradient anchor, or mark a local one a duplicate
+  8d50fd3 Cross-reference the review into CLAIMS.csv
+  81448ea G4 gains the plan's control directions; cost measured
+  3b116c7 Measure the cost of one G4 cell before committing to 462 of them
+  e693665 Refuse a silent CPU placement of the 70B model
+  2df84e2 Completion markers, and a monitor that knows the new jobs
+  74b653f Chain the CPU analysis after the GPU job that feeds it
+  0a9bd67 G2's main result, the instrument check, and G4 built resumable
+
+================================================================================
+2. HEADLINE FINDINGS
+================================================================================
+
+Findings from the earlier version stand and are not repeated: the committed
+probe path answers nothing on 88.3% of trials, the published data has 0
+unparseable rows in 21,040, the four probe files postdate their own runs by
+seven months, the preference probe sees 45 prompts differing in one integer,
+the capability probe sees two, the legacy hook steers zero generated tokens,
+and the 0.77 judge agreement is a pooling artefact. What follows is new.
+
+2.1 G2'S FULL RESULT, PER ARM AND PER CODING  (reports/G2_RESULTS.md)
+    No arm of the committed code path reproduces a published curve.
+
+      Llama lottery, legacy arm   87.0% no answer, 234 coded of 1800; the
+                                  logistic lands at 604, far outside the grid;
+                                  P(risky | n<50) = 0.087 [0.024, 0.268] where
+                                  every published Llama curve reports 0.000
+      Llama lottery, chat arm     68.0% no answer; switch 93.0 [89.2, 96.7]
+      Llama lottery, chat64       0.0% no answer -- and that is the artefact
+      Llama ultimatum, chat and chat64
+                                  accepts 760 of 760 offers from 10 to 100.
+                                  There is no threshold, wide or narrow. The
+                                  hosted baseline's 37.9 does not survive a
+                                  change of prompt format.
+      Qwen lottery, chat          6.9% no answer; switch 47.8 [45.7, 49.8];
+                                  P(risky|n<50) = 0.151 where every published
+                                  Qwen curve reports 0.000
+
+2.2 THE CHAT64 ARM'S "0% NO ANSWER" IS COVERAGE, NOT ANSWERS
+    Both codings assign a choice to 100% of chat64 lottery trials. 41.3% of
+    those trials contain a decision. On 737 of 1800 the codings disagree, always
+    the same way, and in every one the response is still enumerating the
+    prompt's own options when the cap lands:
+
+      "1. Safe Option: You get 50 tokens for sure ...
+       2. Risky Option: There's a 50% chance of getting 65 tokens and ..."
+
+    The legacy rule takes the LAST mention -- option 2, Risky. The strict rule
+    takes the FIRST -- option 1, Safe. Neither has seen a decision. The switching
+    point is 74.6 under one and 222.7 under the other on identical generations:
+    148 tokens apart, about 30 grid steps.
+
+2.3 THE TOKEN CAP IS THE WHOLE STORY, AND 64 IS THE WRONG VALUE
+    Free generation, 7 levels per game, 20 agents, both games:
+
+      cap  64   decision rate 0.707   truncated at the cap 0.343
+      cap 128   decision rate 0.821   truncated 0.264
+      cap 256   decision rate 1.000   truncated 0.000
+
+    At 256 tokens every response reaches a decision and none is cut off. G4's
+    sampled arm runs at 256 rather than inheriting 64.
+
+2.4 CODING AGREEMENT IS A FUNCTION OF THE CAP, AND CARRIES ITS DENOMINATOR
+      G2 chat64, 64 new tokens     agreement 0.591
+      G4 as-written, 12 tokens     agreement 0.982 over 27,120 trials per replica
+    Twelve tokens leave no room to reason, so there is one label in the text and
+    both rules read it. Sixty-four leave room to restate the options and not to
+    conclude. The second number is not reassurance about the first. Neither is
+    quoted without the trials on which both codings produced a choice, that
+    share, and both no-answer rates.
+
+2.5 THE CALIBRATION SLOPE THAT VALIDATED THE READOUT WAS CIRCULAR
+    s21_fix.phase_slope generated its 20 samples per prompt from rd.render(spec)
+    -- the same string the readout scores, ending in the same stem. Both columns
+    come from a prompt that forces an immediate label, so the slope of 1.09
+    shows internal consistency under a forced answer and cannot distinguish that
+    from a label prior. No longer cited as instrument validation (D52). The
+    non-circular comparison is cv_bench/instr_analyse.py.
+
+2.6 V1: NO SCORING PASS IN THIS REPOSITORY PRODUCES FIGURE 5
+    1,175 cells searched -- every scoring pass, prompt version, condition, task,
+    score column and judge subset. 21 single-value matches to the PDF's
+    readings. 21.0 is exactly the number chance predicts at that search width.
+    Requiring a coherent pair, both halves from the same cell differing only in
+    condition: none matches.
+
+2.7 V2: THE FIVE-JUDGE PASSES CARRY NO API RESPONSE IDS
+      baseline.csv, high_steering.csv, high_temperature.csv, prompting.csv
+        1 judge (gpt-5), 80 rows each, every row with an api_response_id
+      open_sae_creativity, revised_prompting_brick, revised_prompting_stapler
+        5 judges, 320/200/160 rows each, ZERO api_response_ids
+    This is the evidence for the review's question on judge verifiability.
+
+2.8 THE NEUTRAL LABEL QUESTION IS OPEN, AND THE FIRST ANSWER WAS WRONG
+    The first pass found a constant sampled choice for every framing. That is
+    what the prompt range guarantees, not what the label reveals: the unsteered
+    lottery crossing is at n ~ 242 and the calibration range runs 22-143, so the
+    whole range sits on one side of the switching point. The selection is
+    withdrawn; the rerun locates the crossing per framing and spans it.
+
+2.9 READOUT.SCORE COULD RETURN A SILENT ZERO, AND NOW REFUSES TO
+    Reported by Track B: with labels "Option A"/"Option B" under a bare stem
+    "Answer:", both labels share their first token, so logit_diff is a difference
+    of two identical quantities -- identically zero for every prompt, and so is
+    any gradient through it. It reads as "no effect" when the truth is "no
+    measurement". Every label pair this repository uses was then checked against
+    the real tokenizer and none collides: Safe/Risky, Reject/Accept, A/B,
+    Certain/Chance, Refuse/Take. The neutral finding is unaffected.
+
+2.10 BATCHING DOES NOT HELP AT A LONG CAP
+     One measured cell of 40 agents: as-written (12 tokens) 3.40 s against 0.145
+     s for a single sequence; reconstruction (256 tokens) 34.6 s against 0.357 s.
+     The 40-way batch is slower per sequence, because a batch runs until its last
+     straggler stops while a single sequence ends at EOS after about ten tokens.
+     The cap, not the batch size, sets G4's runtime.
+
+================================================================================
+3. CORRECTIONS TO MY OWN WORK
+================================================================================
+
+Eleven deviations are logged, D-2026-09-21-00 through -10. The two new ones:
+
+D-2026-09-21-09  THE DECISION DETECTOR MISSED THE MODEL'S OWN ANSWER CONVENTION
+    decision_code recognised a bare label only as an entire response. Llama,
+    given room, reasons and then puts the answer alone on the last line. 92 of
+    280 responses at a 256-token cap ended exactly that way and none was
+    truncated. Found because the cap chooser reported a 0.343 decision rate at
+    256 tokens, which is not plausible for a 70B model.
+      decision rate cap 64    0.3143 -> 0.4143
+      decision rate cap 128   0.3429 -> 0.6429
+      decision rate cap 256   0.3429 -> 1.0000
+      G2 chat64 lottery       0.320  -> 0.413
+    This corrected a committed report: G2_RESULTS said the rate was "identical"
+    at 12 and 64 tokens. It is 32.0% and 41.3%. Recoded from saved text with no
+    model rerun -- which is why the raw text is saved.
+
+D-2026-09-21-10  THE NEUTRAL FREE GENERATION RAN OVER A FLAT RANGE
+    See 2.8. The same error had been corrected once already for the legacy stem
+    (D-2026-09-21-08) and the remedy existed in s21_fix.py; neutral.py did not
+    use it. The flat-range pass is kept at free_llama_flatrange.jsonl.
+
+FOUR BUGS IN MY OWN INFRASTRUCTURE, ALL FOUND BY CHECKING RATHER THAN ASSUMING:
+
+  * The 70B loaded silently onto the CPU on a preemptable node -- 4 MiB used on
+    each of two A100s -- because device_map="auto" asked once how much GPU memory
+    was free, was told almost none while the displaced job was still releasing
+    it, and offloaded without saying so. The job looked healthy while burning its
+    wall clock on a CPU forward pass. load() now waits for the memory, caps CPU
+    at 0 GiB so accelerate must place on a GPU or raise, and asserts the device
+    map afterwards.
+  * The monitor's content check assumed G2's record shape, where legacy_code is
+    an int. G4 and G5 write one cell per record, so it is a list of 40. set()
+    raised, check_outputs threw, the caller's except-clause marked the task
+    incomplete, and finished G4 replicas were resubmitted repeatedly with their
+    completion markers sitting on disk.
+  * The monitor resubmitted a job it had seen COMPLETED (an old preemption
+    message in an append-mode log), and a job the operator had cancelled. Both
+    rules fixed; a task seen terminal is rechecked a cycle later.
+  * The failure watcher's sacct query used a UTC start time on a cluster that
+    runs PDT, so the query errored and returned nothing -- and a watcher that
+    greps a failing command is silent, which looks exactly like "all fine".
+
+Twice I reported an edit as applied without verifying it, and twice it had
+silently failed to match. Both are now verified by running the logic.
+
+================================================================================
+4. WHAT IS RUNNING, QUEUED, AND FINISHED
+================================================================================
+
+FINISHED, WITH COMPLETION MARKERS ON DISK
+  done_instr_llama.json        the instrument check: 50 residual norms, 128
+                               readout grid points, 840 free generations
+  done_neutral_llama.json      the neutral mass phase, 344 rows
+  done_g4_as_written_L48.json  678 sampled cells, 2,816 readout cells
+  done_g4_as_written_L50.json  678 sampled cells, 2,816 readout cells
+Finished without markers because they predate them: G2 (both models, three arms,
+both games), V1, V2, the G4 cell benchmark, the S2.1-fix phases.
+
+PARTIAL
+  sampled_reconstruction_L50.jsonl   130 of 894 cells, preempted; resumes there
+  readout_reconstruction_L50.jsonl   4,928 cells -- the readout arm is COMPLETE
+                                     for all seven directions at all 11 doses
+
+QUEUED, 12 jobs across two pools
+  mit_normal_gpu / mit_amf_advanced_gpu
+    cvb_g4_recon_L48, cvb_g4_recon_L50   the two long poles, ~4.5 h each
+  mit_preemptable
+    cvb_neutral2 -> cvb_g3               neutral framing, then label/order transfer
+    cvb_g5 -> cvb_g6                     local SAE steering, then ablation
+    cvb_g4b                              the readout gradient, both layers
+    cvb_g4q   (--nice 5000)              Qwen L17 probe rebuild
+    cvb_s32   (--nice 6000)              position policies at two doses
+    cvb_s35   (--nice 7000)              temperature 1.0 unsteered arm
+    cvb_g5b   (--nice 8000)              creativity generations
+    cvb_monitor                          running
+
+================================================================================
+5. THE REVIEW, AND WHAT THE PDF SAYS TO EACH POINT
+================================================================================
+
+feedback.txt is a full review of the submitted PDF, found in the repository root
+along with the PDF itself. paper_patches/CLAIMS.csv now has 46 rows, each with
+answered_with and pdf_response -- the sentence the paper will carry. A reviewer
+weakness with no written response is the failure that column exists to prevent.
+
+  answered with data        17   a measurement finished before the cutoff
+  answered with text        24   a correction, a removal, a statement of fact
+  answered as a limitation   5   not done, named, with the reason
+
+  not reproducible from the committed code   12
+  contradicted by the repository's own data  12
+  confirmed                                  14
+  open                                        4
+  deferred to the extension plan              2
+  editorial                                   2
+
+Answered with data, and the job that answers it:
+  CAA / ActAdd / RepE baselines absent    G4b inside the reconstruction sweep
+  no causal test behind the SAE readings  G5 -> G6
+  prompting ladder omitted                S1.7, done
+  judge-independent creativity measures   S1.6, done
+  0.77 agreement without context          S1.5/S1.6, done
+  judge ordering claim                    S1.5, done
+  length not controlled as stated         S1.5, done
+  no agent-level inferential test          S1.5 mixed model, done
+  judge citation verifiability            V2, done
+  probe training underspecified           PROBE_PROVENANCE, done
+  hook mechanics                          STACK_AUDIT plus a pinning test, done
+  SAE / probe operational confounds       STACK_AUDIT, done
+  missing lottery UUIDs                   PROVENANCE, done
+  Figure 5 provenance                     V1, done
+  label and option-order transfer         G3
+
+Named as limitations, each with a sentence in the paper: ITI; human-normed AUT
+or SemDis; multi-turn and multi-agent settings; personality batteries and
+collateral distortion; the proposer role and mini-ultimatum variant.
+
+Where the repository goes further than the review: the review cites the 0.77
+agreement as a strength; it is 0.135 and 0.020 within the prompting condition.
+The review catches the lambda polarity contradiction between Sec. 4.2.1 and
+Fig. 10(a); the cause is that every lambda in the repository is negative and no
+lambda = 0 row exists, so there is no positive-lambda arm to describe. And the
+review's whole frame assumes the figures came from the committed code.
+
+Full text: reports/REVIEW_CROSSREF.md.
+
+================================================================================
+6. INFRASTRUCTURE
+================================================================================
+
+RESUMABILITY (cv_bench/resume.py, 7 tests)
+  One fsynced JSON record per unit of work, keyed by the work itself -- game,
+  dose, level -- and re-read on start. A truncated final line from a process that
+  died mid-write is dropped rather than parsed. Jobs carry --requeue,
+  --open-mode=append and a TERM handler that stops at a unit boundary. A dropped
+  connection is irrelevant: these are batch jobs, nothing is tied to a terminal,
+  and ps on the login node shows nothing of mine computing. Measured cost of a
+  real preemption: recon_L50 kept all 130 completed cells; only the reload was
+  lost.
+
+COMPLETION MARKERS
+  A row count cannot say whether a G4 replica finished, because the number of
+  doses depends on a norm measured at run time. Each job writes a marker only
+  when every unit is present, and the monitor treats a missing marker as
+  incomplete.
+
+THE IN-CLUSTER MONITOR (cv_bench/monitor.py, 19 tests)
+  A Slurm job, not a tmux session. Every 10 minutes it reads squeue and sacct,
+  scans logs, compares row counts against expectations, runs content checks and
+  resubmits technical failures at most twice, logging each to DEVIATIONS.md with
+  the cause and the statement that nothing was changed. It chains itself before
+  the 12-hour partition cap and refuses to chain a loop that died in under two
+  minutes.
+
+THE SESSION WATCHER
+  Polls every 60 s and reports only what is actionable: a job in a bad terminal
+  state that did not come back, a crash signature in a running log, a write
+  stall, a resubmission loop, or the run finishing. Operator cancellations and
+  preempt-and-requeue are filtered out -- a watcher that reports my own actions
+  back to me trains me to ignore it.
+
+================================================================================
+7. SCHEDULING, GPU CAPS, AND WHAT THEY COST
+================================================================================
+
+The binding constraint is not the 400 GPU-hour cap (20.91 used) but per-user GPU
+caps and a depleted fairshare.
+
+  QOS                      per-user GPU cap
+  mit_preemptable          4
+  mit_normal_gpu           2
+  mit_amf_advanced_gpu     4
+  normal (ou_bcs_low)      none
+
+Two scheduling mistakes worth recording:
+
+  * I moved everything to ou_bcs_low because it has no GPU cap, without checking
+    when anything would start. The scheduler's estimates were 22 Sept 12:10 for
+    one job and 23 Sept 22:40 for two others. No cap, two-day queue.
+  * I then moved jobs four times in forty minutes chasing a faster start. AGE is
+    a real priority factor -- the long-running s3_* jobs in this queue carry
+    4,408 of their 255,276 priority from age -- and every resubmission reset mine
+    to zero. Fairshare under mit_general is 869 against 138,823 under the amf
+    account, which is why the recon jobs sit at 40-70k priority while the amf
+    jobs sit at 404k. Churn cannot fix fairshare.
+
+The settled configuration spreads work across two pools with no two of my jobs
+contending for one cap, and jobs are left alone to accumulate age.
+
+Measured rates, all from tonight:
+  forward pass / logit readout           6.5 /s
+  one cell, 40 agents, 12 new tokens     3.4 s
+  one cell, 40 agents, 256 new tokens    34.6 s  (21.8 s observed in situ)
+  model load, 141 GB bf16 to two GPUs    4-7 min
+  free generation, mixed caps            0.13-3.6 /s depending on the cap
+
+================================================================================
+8. BLOCKERS AND DECISIONS WAITING ON THE AUTHORS
+================================================================================
+
+(a) HOW WERE THE ORIGINAL PROBE RUNS MADE?  DEADLINE WED 23 SEPT 09:00 PDT,
+    about 31 hours from writing. Absent an explanation, the patches proceed on
+    the basis that the Sept 25 PDF reports the reconstruction and removes legacy
+    probe figures that were not rebuilt. This is the only item here that no
+    amount of compute can close.
+
+(b) G5b's JUDGING CANNOT RUN -- NO API CREDENTIALS. OPENAI_API_KEY,
+    ANTHROPIC_API_KEY, GEMINI_API_KEY, DEEPSEEK_API_KEY, MOONSHOT_API_KEY and
+    EXPECTED_PARROT_API_KEY are all unset and there is no credential file in the
+    usual places. The $50 approval does not help without keys. G5b is therefore
+    split: gen (GPU, queued), measures (S1.6's four judge-independent measures,
+    CPU, no keys) and judge (blocked). The texts and the judge-independent
+    measures land regardless.
+
+(c) THE LATEX SOURCE. Every text patch waits on paper_src/. The built PDF is in
+    the repository root and has been used for V1; the source is not.
+
+(d) IS THE mit_amf_advanced_gpu ALLOCATION FAIR GAME? I used it under the
+    scheduling amendment's instruction to use what the account's limits allow,
+    but it is a different allocation and worth confirming.
+
+(e) bitsandbytes is installed without GPU support, so 4-bit is unavailable. B3.2
+    should train in bf16; a GPU-enabled build is a request, not something to work
+    around.
+
+================================================================================
+9. ARTEFACT INVENTORY
+================================================================================
+
+  reports/         23 files, including G2_RESULTS.md, REVIEW_CROSSREF.md,
+                   SCHEDULE.md and the S0/S1/V/G series
+  cv_bench/        32 modules and 4 test files, 51 tests passing. New tonight:
+                   resume, instr, instr_analyse, g2_summary, g4, g4b, g4_report,
+                   g5, g5b, g3, g6, s35, neutral, claims, v1_v2
+  slurm/           16 sbatch scripts, every long job resumable
+  paper_patches/   CLAIMS.csv (46 rows), appendix_prompts.md
+  logs/            DECISIONS.md (61 entries), DEVIATIONS.md (11 ids),
+                   AI_USE_LOG.md
+  MANIFEST.csv     867 registered values
+  results/S/s1/    the table view of every figure and analysis
+  figures/         9 PDFs with their generating scripts
+
+================================================================================
+10. NEXT STEPS AND DEADLINES
+================================================================================
+
+  Wed 23 Sept 08:00 PDT   reports/G4_DECISION.md -- as-written against
+                          reconstruction at both layers, no-answer rates,
+                          agreement with denominators, crossings under all three
+                          codings, excess over the staircase, G4b cosines, and
+                          which legacy probe figures the results support keeping,
+                          replacing or dropping.
+  Wed 23 Sept 09:00 PDT   the author explanation in (a).
+  Thu 24 Sept 06:00 UTC   cutoff. Only work finished, verified and committed
+                          before it enters the PDF.
+  Fri 25 Sept 23:59 AoE   the submission.
+
+Immediate order once GPUs free: the two reconstruction replicas, then G5 -> G6
+and neutral2 -> G3, then the niced queue (G4q, S3.2, S3.5, G5b).
+
+Nothing stops for writing. Every result lands in a report with MANIFEST ids as
+it finishes.
+
+RULES THAT HAVE NOT MOVED: the test split stays locked until a human unlocks it
+after PREREG.md is tagged; no rerun because a result is unhelpful; no number
+without a file behind it. Nothing in cleaned/, Probes/, Revised Prompting/ or
+SAE/ has been modified, moved or deleted at any point in this session.
+
+================================================================================
+end of file
+================================================================================
