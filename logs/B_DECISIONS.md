@@ -414,3 +414,25 @@ order x response format x template) cell, after the chat template, with the stem
 ids scored for each label. A test asserts **from the rendered text alone** that the safe label's line
 states a certainty and the risky label's line states a chance, and another asserts no label pair shares
 a first token. B1 is not rebuilt until an author replies "audit ok".
+
+**BD31. The audit found two things no test could have: the social games have no game text, and free
+text is scored like multiple choice.** Both are properties of what the prompt *says*, which is exactly
+the class of defect that a suite comparing the code against itself cannot reach, and exactly why item 1
+asked for rendered text.
+
+- **The social families render as bare payoff pairs.** A responder trial reads `Reject: nothing` /
+  `Accept: 90 tokens for sure`. The published prompt states a proposer, a 100-token pie, and that
+  rejection gives *both* parties zero. None of that survives. The cause is that the social games were
+  represented as degenerate lotteries so they could reuse the risk domain's machinery; sharing the
+  split logic and the format logic is right, sharing `body_text` is not. `responder`, `proposer`,
+  `dictator` and `mini_ultimatum` are all affected. Without the framing, rejecting a low offer is not
+  a preference, it is an arithmetic error, and the mini-ultimatum's alternatives — the entire point of
+  that family — never appear in the prompt.
+- **Free text is a second multiple-choice arm.** `ICLR_PLAN.md:153` says free text is "scored by
+  sequence log-probability"; both formats currently use the `Answer:` stem and the same first-token
+  readout, differing only in instruction wording. So the response-format factor in D5 and in the B2
+  format term is not the factor the plan defines, and "the effect survives the response format" is
+  currently unsupported.
+
+Neither is patched. Both change what the instrument measures, so they go to the authors with the audit
+rather than being fixed inside the gate.
