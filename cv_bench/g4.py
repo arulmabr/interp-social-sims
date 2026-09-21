@@ -405,18 +405,75 @@ def phase_sweep(model_key: str, variant: str, layer: int, loaded=None) -> None:
               f"(readout={done_r}, sampled={done_s}); rerun to continue", flush=True)
 
 
+def phase_bench(model_key: str, loaded=None) -> dict:
+    """Time one sampled cell, so G4's cost is measured before it is committed.
+
+    A cell is 40 agents at one level and one dose. The 40 share a prompt, so
+    they batch with no padding at all -- the condition the S2.1-fix amendment
+    allows. What that buys over 40 sequential generations is the one number
+    G4's runtime depends on and the one number nothing here has measured.
+    """
+    import torch
+    from cv_bench.steer import Intervention, SteeringHook
+    model, tok = loaded or load(model_key, "bf16")
+    out = dict(model=model_key, n_agents=N_AGENTS)
+    vec = np.random.default_rng(0).normal(size=model.config.hidden_size).astype(np.float32)
+    for tag, cap, positions in (("as_written", 12, "legacy_ramp"),
+                                ("reconstruction", 256, "all")):
+        text = render(tok, "lottery", 120,
+                      dict(chat_template=(tag == "reconstruction")))
+        enc = tok(text, return_tensors="pt").to(model.device)
+        plen = int(enc["input_ids"].shape[1])
+        iv = Intervention(layer=48, vectors=vec, scale=0.1, positions=positions,
+                          mode="add", norm_unit=50.0, sign=-1)
+        for n_seq in (1, N_AGENTS):
+            torch.manual_seed(0)
+            with SteeringHook(model, iv, prompt_len=plen):
+                with torch.inference_mode():
+                    model.generate(**enc, max_new_tokens=cap, do_sample=True,
+                                   temperature=0.7, top_p=0.95,
+                                   num_return_sequences=n_seq,
+                                   pad_token_id=tok.pad_token_id)
+            torch.cuda.synchronize()
+            t0 = time.time()
+            with SteeringHook(model, iv, prompt_len=plen):
+                with torch.inference_mode():
+                    model.generate(**enc, max_new_tokens=cap, do_sample=True,
+                                   temperature=0.7, top_p=0.95,
+                                   num_return_sequences=n_seq,
+                                   pad_token_id=tok.pad_token_id)
+            torch.cuda.synchronize()
+            dt = time.time() - t0
+            out[f"{tag}_cap{cap}_batch{n_seq}_s"] = round(dt, 3)
+            print(f"[bench] {tag} cap={cap} batch={n_seq}: {dt:.2f}s "
+                  f"({n_seq * cap / dt:.1f} tok/s)", flush=True)
+        seq = out[f"{tag}_cap{cap}_batch1_s"] * N_AGENTS
+        cell = out[f"{tag}_cap{cap}_batch{N_AGENTS}_s"]
+        n_cells = 11 * (len(SAMPLED_LOTTERY) + len(SAMPLED_ULTIMATUM))
+        out[f"{tag}_speedup"] = round(seq / cell, 2)
+        out[f"{tag}_projected_hours"] = round(n_cells * cell / 3600.0, 2)
+        print(f"[bench] {tag}: batching x{seq / cell:.1f}; {n_cells} cells "
+              f"=> {n_cells * cell / 3600.0:.2f} h per replica", flush=True)
+    OUT.mkdir(parents=True, exist_ok=True)
+    (OUT / "bench_cell.json").write_text(json.dumps(out))
+    return out
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default="llama", choices=list(MODELS))
     ap.add_argument("--variant", required=True, choices=VARIANTS)
     ap.add_argument("--layer", type=int, required=True, choices=list(LAYERS))
-    ap.add_argument("--phase", default="all", choices=["train", "sweep", "all"])
+    ap.add_argument("--phase", default="all",
+                    choices=["train", "sweep", "bench", "all"])
     a = ap.parse_args()
     OUT.mkdir(parents=True, exist_ok=True)
     t0 = time.time()
     loaded = load(a.model, "bf16")
     print(f"[g4] model loaded in {(time.time()-t0)/60:.1f} min", flush=True)
-    if a.phase == "train":
+    if a.phase == "bench":
+        phase_bench(a.model, loaded)
+    elif a.phase == "train":
         phase_train(a.model, a.variant, a.layer, loaded)
     else:
         phase_sweep(a.model, a.variant, a.layer, loaded)
