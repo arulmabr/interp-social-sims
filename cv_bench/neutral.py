@@ -44,7 +44,8 @@ os.environ.setdefault("HF_HOME", "/orcd/data/gabrieli/001/guna23/hf_cache")
 os.environ.setdefault("HF_HUB_OFFLINE", "1")
 os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 
-from cv_bench.resume import JsonlSink, install_stop_handler, run_units
+from cv_bench.resume import (JsonlSink, install_stop_handler, run_units,
+                             mark_done)
 from cv_bench.s21_fix import MODELS, load, CAL_LOTTERY, CAL_ULTIMATUM
 
 RUNROOT = Path(os.environ.get("ICLR_RUNROOT",
@@ -219,6 +220,8 @@ def main() -> int:
         phase_mass(a.model, loaded)
     if a.phase in ("free", "all"):
         phase_free(a.model, a.agents, a.levels, loaded)
+    if a.phase == "all":
+        mark_done(OUT / f"done_neutral_{a.model}.json", framings=FRAMINGS)
     print(f"{a.phase} finished in {(time.time()-t0)/60:.1f} min", flush=True)
     return 0
 

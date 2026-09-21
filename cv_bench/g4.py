@@ -67,7 +67,8 @@ os.environ.setdefault("HF_HOME", "/orcd/data/gabrieli/001/guna23/hf_cache")
 os.environ.setdefault("HF_HUB_OFFLINE", "1")
 os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 
-from cv_bench.resume import JsonlSink, install_stop_handler, run_units
+from cv_bench.resume import (JsonlSink, install_stop_handler, run_units,
+                             complete, mark_done)
 from cv_bench.s21_fix import MODELS, load
 from cv_bench.instr import decision_code, LABELS, STEM, prompt_for
 
@@ -392,7 +393,16 @@ def phase_sweep(model_key: str, variant: str, layer: int, loaded=None) -> None:
     sink_r.close()
     run_units(s_units, sink_s, lambda u: f"{u[0]}|{u[1]}|{u[2]}", s_work,
               f"sampled/{variant}/L{layer}", 10)
+    done_r = complete(r_units, sink_r, lambda u: f"{u[0]}|{u[1]}|{u[2]}")
+    done_s = complete(s_units, sink_s, lambda u: f"{u[0]}|{u[1]}|{u[2]}")
     sink_s.close()
+    if done_r and done_s:
+        mark_done(OUT / f"done_g4_{variant}_L{layer}.json",
+                  variant=variant, layer=layer, M=M, n_doses=len(doses),
+                  n_readout=len(r_units), n_sampled=len(s_units))
+    else:
+        print(f"[g4] {variant} L{layer}: NOT complete "
+              f"(readout={done_r}, sampled={done_s}); rerun to continue", flush=True)
 
 
 def main() -> int:

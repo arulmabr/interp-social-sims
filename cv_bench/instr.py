@@ -48,7 +48,8 @@ os.environ.setdefault("HF_HOME", "/orcd/data/gabrieli/001/guna23/hf_cache")
 os.environ.setdefault("HF_HUB_OFFLINE", "1")
 os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 
-from cv_bench.resume import JsonlSink, install_stop_handler, run_units, complete
+from cv_bench.resume import (JsonlSink, install_stop_handler, run_units,
+                             complete, mark_done)
 from cv_bench.s21_fix import (MODELS, load, lottery_prompt, ultimatum_prompt,
                               CAL_LOTTERY, CAL_ULTIMATUM)
 
@@ -288,6 +289,8 @@ def main() -> int:
         phase_readout_grid(a.model, loaded)
         phase_freegen(a.model, a.agents, loaded)
         write_cap_choice(a.model)
+        mark_done(OUT / f"done_instr_{a.model}.json", phases=["norms", "readout_grid",
+                                                             "freegen"])
     elif a.phase == "norms":
         phase_norms(a.model)
     elif a.phase == "readout_grid":

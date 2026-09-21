@@ -144,3 +144,18 @@ def run_units(units: Sequence[T], sink: JsonlSink, key_of: Callable[[T], str],
 def complete(units: Sequence[T], sink: JsonlSink,
              key_of: Callable[[T], str]) -> bool:
     return not remaining(units, sink, key_of)
+
+
+def mark_done(path: Path, **facts) -> None:
+    """Write a completion marker, so a watcher can tell finished from stopped.
+
+    A job that exits 0 having written half its rows is still a failure, and the
+    row count alone cannot say so when the total depends on something measured
+    at run time. The marker is written only when every unit is present.
+    """
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    facts.setdefault("finished_utc", time.strftime("%Y-%m-%dT%H:%M:%SZ",
+                                                   time.gmtime()))
+    path.write_text(json.dumps(facts))
+    print(f"[resume] complete: wrote {path.name}", flush=True)

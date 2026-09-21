@@ -71,6 +71,44 @@ EXPECTED: Dict[str, dict] = {
     ),
 }
 
+# The FRIDAY-amendment jobs. These run on mit_preemptable, where a job can be
+# taken away at any moment; each writes through cv_bench.resume, so a resubmission
+# continues from the unit after the last one on disk. `done` names a marker the
+# job writes only when every unit is present -- a row count cannot stand in for
+# it here, because the number of doses depends on a norm measured at run time.
+REPO_SLURM = ROOT / "slurm"
+PREEMPT = ["--partition=mit_preemptable", "--qos=normal", "--account=mit_general"]
+
+EXPECTED.update({
+    "cvb_instr": dict(
+        sbatch=REPO_SLURM / "cvb_instr.sbatch",
+        args=PREEMPT + ["--gres=gpu:a100:2", "--time=03:00:00"],
+        outputs={"instr/norms_llama.jsonl": 50,
+                 "instr/readout_grid_llama.jsonl": 128,
+                 "instr/freegen_llama.jsonl": 840},
+        done="instr/done_instr_llama.json",
+    ),
+    "cvb_neutral": dict(
+        sbatch=REPO_SLURM / "cvb_neutral.sbatch",
+        args=PREEMPT + ["--gres=gpu:a100:2", "--time=03:00:00"],
+        outputs={"neutral/mass_llama.jsonl": 400,
+                 "neutral/free_llama.jsonl": 640},
+        done="neutral/done_neutral_llama.json",
+    ),
+})
+for _v in ("as_written", "reconstruction"):
+    for _l in (48, 50):
+        _g = "gpu:a100:2" if _l == 48 else "gpu:h100:2"
+        EXPECTED[f"cvb_g4_{_v[:5]}_L{_l}"] = dict(
+            sbatch=REPO_SLURM / "cvb_g4.sbatch",
+            args=PREEMPT + [f"--gres={_g}", "--time=08:00:00",
+                            f"--job-name=cvb_g4_{_v[:5]}_L{_l}",
+                            f"--export=ALL,V={_v},L={_l}"],
+            outputs={f"g4/readout_{_v}_L{_l}.jsonl": None,
+                     f"g4/sampled_{_v}_L{_l}.jsonl": None},
+            done=f"g4/done_g4_{_v}_L{_l}.json",
+        )
+
 
 def sh(cmd: List[str]) -> str:
     try:
@@ -182,8 +220,12 @@ def check_outputs(task: str) -> dict:
             missing.append(rel)
         elif target is not None and n < target:
             short.append((rel, n, target))
-    out = dict(rows=rows, missing=missing, short=short,
-               complete=(not missing and not short))
+    marker = spec.get("done")
+    marked = (RUNROOT / marker).exists() if marker else True
+    if marker and not marked:
+        missing = missing + [marker]
+    out = dict(rows=rows, missing=missing, short=short, marker=marker,
+               marked=marked, complete=(not missing and not short and marked))
 
     # content checks on any complete jsonl this task owns
     agree, checked = [], 0
@@ -252,7 +294,7 @@ def resubmit(task: str, state: dict, cause: str) -> Optional[str]:
     sb = EXPECTED[task]["sbatch"]
     if not Path(sb).exists():
         return None
-    out = sh(["sbatch", str(sb)])
+    out = sh(["sbatch"] + list(EXPECTED[task].get("args", [])) + [str(sb)])
     jid = (re.search(r"(\d+)", out).group(1) if out else None)
     state["retries"][task] = n + 1
     log_deviation(
