@@ -26,7 +26,7 @@ import json
 import os
 import time
 from pathlib import Path
-from typing import Dict, List, Sequence, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple
 
 import numpy as np
 
@@ -140,8 +140,13 @@ def wait_for_gpus(need_gib: float = 70.0, timeout_s: float = 900.0,
         _t.sleep(poll_s)
 
 
-def load(model_key: str, dtype: str, per_gpu_gib: float = 74.0):
-    """Load onto the GPUs, or fail. Never silently onto the CPU."""
+def load(model_key: str, dtype: str, per_gpu_gib: Optional[float] = None):
+    """Load onto the GPUs, or fail. Never silently onto the CPU.
+
+    `per_gpu_gib` defaults to 90% of the smallest card actually present, so the
+    same code runs on 2 x A100-80GB and on 4 x L40S-48GB. Handing accelerate a
+    budget larger than the card leads it to over-assign and OOM mid-load.
+    """
     import torch
     from transformers import AutoModelForCausalLM, AutoTokenizer
     td = {"bf16": torch.bfloat16, "fp32": torch.float32}[dtype]
@@ -155,10 +160,13 @@ def load(model_key: str, dtype: str, per_gpu_gib: float = 74.0):
     # "free" means free relative to the card, so this also works on a 48 GiB
     # card where 70 GiB could never be free.
     total_gib = min(torch.cuda.mem_get_info(i)[1] / 2**30 for i in range(n))
+    if per_gpu_gib is None:
+        per_gpu_gib = 0.90 * total_gib
+    per_gpu_gib = min(per_gpu_gib, 0.92 * total_gib)
     wait_for_gpus(need_gib=min(per_gpu_gib, 0.85 * total_gib))
     # cpu 0 GiB: accelerate must place every module on a GPU or raise. Without
     # this it offloads quietly whenever it thinks the GPUs are short.
-    max_memory = {i: f"{per_gpu_gib}GiB" for i in range(n)}
+    max_memory = {i: f"{per_gpu_gib:.1f}GiB" for i in range(n)}
     max_memory["cpu"] = "0GiB"
     m = AutoModelForCausalLM.from_pretrained(MODELS[model_key], torch_dtype=td,
                                              device_map="auto",
