@@ -860,3 +860,26 @@ the rerun.
 written from a join of almost none. Both parsed cleanly and both were consumed downstream as though
 they meant something. `choose_framing` now refuses an empty input (D63) -- it should also report the
 join size, which it now does through `n_free_levels` being visible in the file it writes.
+
+**D75. One model load per allocation, not one per layer.**
+`cvb_g4b` computed the L48 lottery gradient successfully -- both versions are on disk -- and then
+failed with
+
+    RuntimeError: GPUs still busy after 900s: free = 6.8 GiB, 6.9 GiB; need 118.8 GiB each
+
+The sbatch ran `for L in 48 50; do srun ... --layer $L; done`, so each layer was a separate `srun`
+that loaded the 141 GB model from scratch. The second could not start because the first had not
+finished releasing its memory. `wait_for_gpus` waited the full 900 seconds and then refused, which is
+exactly what it is for -- the guard behaved correctly and the design was wrong.
+
+**Chosen:** one `srun`, one model load, an internal loop over every (layer, game) pair, and a skip for
+any gradient already on disk. The L48 lottery result is therefore kept rather than recomputed.
+
+*Alternatives not taken:* a sleep between sruns, which guesses at a teardown time that depends on the
+node; `--exclusive`, which reserves hardware this job does not need for the 20 minutes it actually
+computes.
+
+**Four of tonight's failures now share one description:** a job that was correct in what it computed
+and wrong in how it asked for its resources -- the L40S capacity fault, the two backward-pass OOMs,
+and this teardown race. None was a bug in the science; all four were me mis-specifying the
+environment a correct computation needed.

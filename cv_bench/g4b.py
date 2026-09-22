@@ -139,7 +139,8 @@ def trackB_gradient(layer: int, game: str,
     return None
 
 
-def fallback_gradient(layer: int, game: str, model_key: str = "llama") -> dict:
+def fallback_gradient(layer: int, game: str, model_key: str = "llama",
+                      loaded=None) -> dict:
     """B3.1's definition, computed here because Track B's is not yet committed.
 
     grad of z with respect to the residual stream at `layer`, final prompt token,
@@ -154,7 +155,14 @@ def fallback_gradient(layer: int, game: str, model_key: str = "llama") -> dict:
     from cv_bench.readout import Readout, TrialSpec
     from cv_bench.neutral import build as build_neutral
 
-    model, tok = load(model_key, "bf16")
+    done = OUT / f"fallback_gradient_L{layer}_{game}.npy"
+    if done.exists():
+        print(f"[g4b] L{layer} {game} already computed; skipping", flush=True)
+        import numpy as _np
+        return dict(direction=_np.load(done), source="cv_bench/g4b.py friday-session",
+                    version="friday_session", layer=layer, game=game,
+                    duplicate_to_reconcile=True, note="loaded from disk")
+    model, tok = loaded or load(model_key, "bf16")
     rd = Readout(model, tok)
     from cv_bench.instr import LABELS, STEM, prompt_for
 
@@ -330,7 +338,8 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--fallback", action="store_true",
                     help="compute the B3.1 gradient here, labelled a duplicate")
-    ap.add_argument("--layer", type=int, default=48, choices=list(LAYERS))
+    ap.add_argument("--layer", type=int, default=0,
+                    help="48 or 50; 0 (the default) means every layer in LAYERS")
     ap.add_argument("--game", default="both", choices=["lottery", "ultimatum", "both"])
     a = ap.parse_args()
     if a.fallback:
