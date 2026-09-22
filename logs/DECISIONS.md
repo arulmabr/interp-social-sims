@@ -969,3 +969,45 @@ qualifier stated in the figure, which is cheapest to reverse if the direction is
 Figure change: panel A's note in `cv_bench/g4_figure.py` now carries the qualifier its own
 title already had ("with a probe we rebuilt: its own direction was never saved"). No data
 changed; `figures/g4_summary.{pdf,png}` rebuilt.
+
+## D79 — D78 corrected: the paper's layer-48 steering is verified in its own data (22 Sept)
+
+D78 read `figure_11_dose_response_lottery_ultimatum_llama` as possibly an artefact of its own
+search bracket. That was wrong, and the error came from reading only the inverse-calibration
+records and not the psychometric curves beside them.
+
+`figure_7_psychometric_curves_llama` holds the forward evidence: per target switching point,
+the full curve over the task parameter, n_agents = 40 at every point, with `n_choosing_risky`
+and `raw_fraction_risky` (verified: raw == k/n at all 450 rows). Interpolating the 0.5 crossing
+from their raw counts and comparing to the target:
+
+  lottery   L48  10 targets 30..200   mean |error| 2.1 tokens, max 4.5
+  ultimatum L48   4 targets 30..60    mean |error| 1.1 tokens, max 2.5
+  lottery   L50  10 targets 30..200   mean |error| 2.6 tokens, max 5.0
+  ultimatum L50   4 targets 30..60    mean |error| 1.8 tokens, max 3.8
+
+So the paper's claim on p8 -- "we successfully shift this switching point across a wide range
+from approximately 30 to 200 tokens, with achieved values closely matching targets" -- is
+supported by the data it released. The effect is forward-verified, not merely a search return.
+
+What survives from D78, reduced in scope:
+  - `lambda_required` = -5.9987 against the declared bracket edge -6.0 is real, but it sits at
+    target 240, outside the 30-200 range the text claims. It is a remark about figure_11's tail,
+    not about the headline result.
+  - The non-monotone steps in `lambda_required` remain, and are unremarkable given that the
+    achieved crossings land within ~2 tokens regardless.
+
+Two observations that are new and are NOT challenges to the above:
+  - A complete parallel layer-50 set exists in the released data (`*_layer50`, 7 keys) and is
+    not reported in the paper, which states layer 48 throughout and says the layer was chosen
+    on held-out probe performance. An unreported arm, noted for rule 5 symmetry; the two layers
+    perform almost identically.
+  - `plotted_fraction_risky` differs from `raw_fraction_risky` on 124 of 450 rows, by up to
+    0.0705, mean +0.0007. It is not add-alpha or Jeffreys smoothing (tested, 1-2 matches of 450).
+    Some display-level smoothing is applied that the paper does not describe. Every number above
+    is computed from the raw counts, so this does not affect them.
+
+Consequence for G4: panel A now stands as a direct contradiction of a verified claim, not as a
+methodological caveat about it. The explanation must lie in the difference between the paper's
+setup and the rebuild, and the decisive discriminator -- their probe direction -- is still not
+in the repo. `reports/G4_DECISION.md` and `reports/REVIEW_CROSSREF.md` to be updated.
