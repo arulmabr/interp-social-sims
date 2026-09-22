@@ -35,7 +35,8 @@ from typing import Dict, List, Sequence
 import numpy as np
 
 POLES = ("bias_adapter", "readout_anchor_L48")
-D2_KEYS = ("const", "format", "payoff")
+# the shares `d2_variance_decomposition` actually returns; they sum to 1
+D2_KEYS = ("action_share", "format_share", "payoff_share", "scale_share")
 
 
 def _p(z: np.ndarray) -> np.ndarray:
@@ -71,6 +72,17 @@ def analyse(out: Path, trials: Sequence) -> int:
     init = AgentParams(alpha=theta0["alpha"], gamma=theta0["gamma"],
                        lam=theta0["lambda"], tau=theta0["tau"])
 
+    # Fit the UNMODIFIED model first and use that as the init for every
+    # intervened fit, exactly as the recovery study does. Seeding with the
+    # synthetic theta0 instead makes every nested model fit the real z badly
+    # and hands the whole weight to `noise`, which says nothing about the
+    # direction -- it says the base agent is not this model.
+    fitted_base, _, _ = FIT.fit(trials, base, ("alpha", "gamma", "tau"), init,
+                                observe="logit", free_templates=True)
+    tpl_offsets = dict(FIT.fit.last_template_offsets)
+    print(f"baseline fit: alpha={fitted_base.alpha:.4f} gamma={fitted_base.gamma:.4f} "
+          f"tau={fitted_base.tau:.4f}", flush=True)
+
     d1_base = FP.d1_dominance_violations(trials, (base > 0).astype(int))
     rows: Dict[str, Dict[str, object]] = {}
 
@@ -95,12 +107,14 @@ def analyse(out: Path, trials: Sequence) -> int:
             "D7_stakes": FP.d7_stake_stability(trials, p_base, p_int),
         }
         try:
-            fits = FIT.fit_all_models(trials, zc, init, observe="logit")
+            fits = FIT.fit_all_models(trials, zc, fitted_base, observe="logit",
+                                      template_offsets=tpl_offsets)
             shares = FIT.model_shares(fits)
         except Exception as exc:                     # a fit that will not run
             shares = {"error": f"{type(exc).__name__}: {exc}"}
         try:
-            oof = DEC.out_of_frame_check(trials, zc, init, observe="logit")
+            oof = DEC.out_of_frame_check(trials, zc, fitted_base, observe="logit",
+                                         template_offsets=tpl_offsets)
         except Exception as exc:
             oof = {"error": f"{type(exc).__name__}: {exc}"}
 
@@ -157,10 +171,107 @@ def analyse(out: Path, trials: Sequence) -> int:
         "utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "n_trials": len(trials), "theta0": theta0,
         "baseline_dominance": float(d1_base),
+        "fitted_base": fitted_base.as_dict(),
         "target_shift": doses.get("target_shift"),
+        "switch_unmodified": doses.get("switch_unmodified"),
+        "switch_bias": doses.get("switch_bias"),
         "conditions": rows, "resemblance": verdicts, "null_band": null,
     }
     (out / "b33_analysis.json").write_text(json.dumps(payload, indent=2, default=str))
     print(json.dumps(verdicts, indent=2, default=str))
     print(f"\nwrote {out/'b33_analysis.json'}")
     return 0
+
+
+# ---------------------------------------------------------------------------
+def write_report(out: Path, repo: Path) -> Path:
+    """reports/B_PROBE_VS_ANCHORS.md, generated from b33_analysis.json."""
+    a = json.loads((out / "b33_analysis.json").read_text())
+    C, V, dose = a["conditions"], a["resemblance"], a.get("target_shift")
+    probe_keys = [k for k in C if k.startswith("choice_probe")]
+
+    def d2(c, k):
+        v = C[c]["fingerprint"]["D2_variance"]
+        return v.get(k, float("nan"))
+
+    def top_share(c):
+        s = C[c]["shares"]
+        if not isinstance(s, dict) or "error" in s:
+            return "not available", float("nan")
+        t = max(s, key=s.get)
+        return t, s[t]
+
+    L = []
+    L.append("# B_PROBE_VS_ANCHORS.md — the choice probe beside the anchors\n")
+    L.append("**EXPLORATORY, SELECTION SPLIT, NOT PRE-REGISTERED.** Gate B2 stands failed, so "
+             "no direction is certified preference-like here and none of this may be reported "
+             "as a confirmatory result. Nothing touched the test split.\n")
+
+    L.append("\n## The one-paragraph answer\n")
+    verdicts = {k: V[k]["verdict"] for k in probe_keys if k in V}
+    uniq = sorted(set(verdicts.values()))
+    L.append(f"Each direction was dosed to reproduce the bias adapter's shift of the legacy "
+             f"switching point ({dose:+.2f} tokens, from "
+             f"{a.get('switch_unmodified', float('nan')):.2f}"
+             f" unmodified to {a.get('switch_bias', float('nan')):.2f} under the bias adapter)"
+             f" on the calibration split, so every condition below moves behaviour "
+             f"by the same amount and any difference between them is a difference of *shape*. "
+             f"On that basis the choice probe is placed: **{'; '.join(uniq)}**. "
+             f"The model-free fingerprint and the parametric shares are reported side by side "
+             f"because they do not always agree, and where they disagree that disagreement is "
+             f"itself the finding.\n")
+
+    L.append("\n## Conditions, at matched behavioural dose\n")
+    L.append("| condition | role | layer | scale | achieved shift | matched | D2 action | "
+             "D2 payoff | D2 format | parametric top |")
+    L.append("|---|---|---|---|---|---|---|---|---|---|")
+    for c in sorted(C):
+        r = C[c]
+        t, w = top_share(c)
+        sc = r.get("scale")
+        sh = r.get("achieved_shift")
+        L.append(f"| `{c}` | {r.get('role','')} | {r.get('layer') or '-'} | "
+                 f"{'-' if sc is None or sc != sc else f'{sc:.4f}'} | "
+                 f"{'-' if sh is None or sh != sh else f'{sh:+.2f}'} | "
+                 f"{'yes' if r.get('matched') else '**NO**'} | "
+                 f"{d2(c,'action_share'):.3f} | {d2(c,'payoff_share'):.3f} | "
+                 f"{d2(c,'format_share'):.3f} | {t} {w:.3f} |")
+
+    L.append("\n## Resemblance, in D2 space\n")
+    L.append("| direction | distance to bias adapter | distance to readout anchor | closer to | "
+             "beats the random band | verdict |")
+    L.append("|---|---|---|---|---|---|")
+    for c in sorted(V):
+        v = V[c]
+        L.append(f"| `{c}` | {v['dist_bias']:.4f} | {v['dist_readout']:.4f} | "
+                 f"{v['closer_to']} | {'yes' if v['resemblance_beats_random'] else '**no**'} | "
+                 f"{v['verdict']} |")
+
+    L.append("\n## What is not available, and why\n")
+    L.append("- **D4 (certainty equivalents) and D6 (fact recall)** are implemented for synthetic "
+             "agents: both take the intervened agent's *true* parameters, which a real direction "
+             "does not have. Their model-side forms need CEs and recall elicited from the model, "
+             "a prompt family this repo does not have. Reported as not available rather than "
+             "filled with a synthetic stand-in.")
+    unmatched = [c for c in C if not C[c].get("matched")]
+    if unmatched:
+        L.append(f"- **{len(unmatched)} direction(s) could not be dosed to the target** and are "
+                 f"marked NO above: {', '.join(f'`{c}`' for c in sorted(unmatched))}. "
+                 f"`ICLR_PLAN.md` B5: *a family that cannot reach a target without breaking "
+                 f"outputs is recorded as such; that is a result.* Where these are the random "
+                 f"controls, the null band is weakened or absent and every resemblance verdict "
+                 f"above must be read with that in mind.")
+    L.append("- No preference-like verdict is certified while Gate B2 stands failed.")
+
+    L.append("\n## Provenance\n")
+    L.append("| direction | source | sha256 |")
+    L.append("|---|---|---|")
+    for c in sorted(C):
+        s, h = C[c].get("source", ""), C[c].get("source_sha256", "")
+        L.append(f"| `{c}` | `{s}` | `{h[:16] or 'n/a'}` |")
+    L.append(f"\nBaseline fit: `{a.get('fitted_base')}`. "
+             f"Trials: {a['n_trials']}. Generated {a['utc']}.\n")
+
+    path = repo / "reports" / "B_PROBE_VS_ANCHORS.md"
+    path.write_text("\n".join(L))
+    return path
