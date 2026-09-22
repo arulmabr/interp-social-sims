@@ -52,8 +52,39 @@ def code_all(text: str, game: str) -> Dict[str, Optional[int]]:
                 phrase=pc)
 
 
-def load_cells(variant: str, layer: int) -> List[dict]:
-    p = G4 / f"sampled_{variant}_L{layer}.jsonl"
+def sweeps() -> List[tuple]:
+    """(model, variant, layer, tag) for every sampled file on disk.
+
+    Llama's files are `sampled_<variant>_L<layer>.jsonl`; every other model and
+    every tagged run carries the model and tag in the name. Scanning the
+    directory rather than enumerating a fixed list means G4q, S3.2 and any later
+    sweep are reported without touching this module again.
+    """
+    out = []
+    for f in sorted(G4.glob("sampled_*.jsonl")):
+        stem = f.stem[len("sampled_"):]
+        parts = stem.split("_L")
+        if len(parts) != 2:
+            continue
+        head, tail = parts
+        layer_s, _, tag = tail.partition("_")
+        try:
+            layer = int(layer_s)
+        except ValueError:
+            continue
+        model = "llama"
+        for m in ("qwen", "llama31_8b"):
+            if head.startswith(m + "_"):
+                model, head = m, head[len(m) + 1:]
+        out.append((model, head, layer, tag))
+    return out
+
+
+def load_cells(variant: str, layer: int, model: str = "llama",
+               tag: str = "") -> List[dict]:
+    name = (f"sampled_{variant}_L{layer}.jsonl" if model == "llama" and not tag
+            else f"sampled_{model}_{variant}_L{layer}{'_' + tag if tag else ''}.jsonl")
+    p = G4 / name
     if not p.exists():
         return []
     out = []
@@ -66,8 +97,10 @@ def load_cells(variant: str, layer: int) -> List[dict]:
 
 
 def readout_curve(variant: str, layer: int, direction: str, game: str,
-                  dose_id: int) -> Dict[float, float]:
-    p = G4 / f"readout_{variant}_L{layer}.jsonl"
+                  dose_id: int, model: str = "llama", tag: str = "") -> Dict[float, float]:
+    name = (f"readout_{variant}_L{layer}.jsonl" if model == "llama" and not tag
+            else f"readout_{model}_{variant}_L{layer}{'_' + tag if tag else ''}.jsonl")
+    p = G4 / name
     if not p.exists():
         return {}
     out = {}
@@ -101,9 +134,8 @@ def curve_row(trials: Sequence[Tuple[float, int]], game: str) -> dict:
 def build() -> Tuple[List[dict], List[dict]]:
     curves: List[dict] = []
     agree: List[dict] = []
-    for variant in ("as_written", "reconstruction"):
-        for layer in (48, 50):
-            cells = load_cells(variant, layer)
+    for model, variant, layer, tag in sweeps():
+            cells = load_cells(variant, layer, model, tag)
             if not cells:
                 continue
             groups = collections.defaultdict(list)
@@ -137,9 +169,9 @@ def build() -> Tuple[List[dict], List[dict]]:
                                     pair[(a, b, "both")] += 1
                                     pair[(a, b, "same")] += int(cd[a] == cd[b])
 
-                base = dict(variant=variant, layer=layer, direction=direction,
-                            game=game, dose_id=dose_id, dose=dose, anchor=anchor,
-                            n_trials=n_trials)
+                base = dict(model=model, variant=variant, layer=layer, tag=tag,
+                            direction=direction, game=game, dose_id=dose_id,
+                            dose=dose, anchor=anchor, n_trials=n_trials)
                 for name in CODINGS:
                     row = dict(base, coding=name,
                                no_answer=counts[name]["no_answer"],
@@ -148,7 +180,8 @@ def build() -> Tuple[List[dict], List[dict]]:
                     row.update(curve_row(per[name], game))
                     curves.append(row)
 
-                rd = readout_curve(variant, layer, direction, game, dose_id)
+                rd = readout_curve(variant, layer, direction, game, dose_id,
+                                   model, tag)
                 if rd:
                     xs = sorted(rd)
                     curves.append(dict(base, coding="readout", no_answer=0,
@@ -181,12 +214,12 @@ def build() -> Tuple[List[dict], List[dict]]:
     return curves, agree
 
 
-CFIELDS = ["variant", "layer", "direction", "game", "dose_id", "dose", "anchor",
+CFIELDS = ["model", "variant", "layer", "tag", "direction", "game", "dose_id", "dose", "anchor",
            "coding", "n_trials", "no_answer", "no_answer_rate", "n_coded",
            "n_levels", "interp_crossing", "crosses_half_on_grid", "switch",
            "switch_lo", "switch_hi", "fit_inside_grid", "excess", "excess_lo",
            "excess_hi", "excess_valid"]
-AFIELDS = ["variant", "layer", "direction", "game", "dose_id", "dose", "anchor",
+AFIELDS = ["model", "variant", "layer", "tag", "direction", "game", "dose_id", "dose", "anchor",
            "coding_a", "coding_b", "n_trials", "n_both_coded", "share_of_trials",
            "n_agree", "agreement", "agreement_lo", "agreement_hi",
            "no_answer_rate_a", "no_answer_rate_b"]
