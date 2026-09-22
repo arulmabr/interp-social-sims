@@ -171,6 +171,12 @@ def train_adapter(peft_model, tok, ro, name: str, trials: Sequence[core.Trial],
     if not params:
         params = [p for p in peft_model.parameters() if p.requires_grad]
     opt = torch.optim.AdamW(params, lr=lr)
+    # Cosine decay to zero. With a constant learning rate the loss went flat
+    # near 0.30 by step 600 while the calibration slope kept swinging between
+    # 0.77 and 0.91 -- the adapter was orbiting a solution rather than settling
+    # on one, so whether it "passed" depended on which step the probe landed.
+    # This is a schedule change, not a change to the objective.
+    sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=max(steps, 1))
 
     ck_path = out / f"ckpt_train_{name}.pt"
     start = 0
@@ -189,6 +195,8 @@ def train_adapter(peft_model, tok, ro, name: str, trials: Sequence[core.Trial],
     order = np.random.default_rng(seed).permutation(len(trials))
     losses: List[float] = []
     trace: List[Dict[str, object]] = []
+    best: Dict[str, object] = {"score": float("inf"), "step": None,
+                               "chk": None, "state": None}
     peft_model.train()
     for step in range(start, steps):
         opt.zero_grad(set_to_none=True)
@@ -208,6 +216,7 @@ def train_adapter(peft_model, tok, ro, name: str, trials: Sequence[core.Trial],
             total += float(loss.item())
         torch.nn.utils.clip_grad_norm_(params, 1.0)
         opt.step()
+        sched.step()
         losses.append(total)
         if (step + 1) % log_every == 0:
             recent = float(np.mean(losses[-log_every:]))
@@ -257,11 +266,32 @@ def train_adapter(peft_model, tok, ro, name: str, trials: Sequence[core.Trial],
                 else:
                     msg += f"  (train-heldout gap {gap:+.3f}; verdict at step {steps})"
             trace.append(row)
+            # Keep the best checkpoint by held-out slope, as item 4 directs.
+            # "Best" is closest to 1.0 among probes that clear both criteria;
+            # if none clears, the closest to 1.0 overall, so the final report
+            # says what the recipe can actually reach.
+            from peft import get_peft_model_state_dict
+            score = abs(held["slope"] - 1.0) + (0.0 if held["PASS"] else 10.0)
+            if score < best["score"]:
+                best.update(score=score, step=step + 1, chk=held,
+                            state={k: v.detach().cpu().clone() for k, v in
+                                   get_peft_model_state_dict(
+                                       peft_model, adapter_name=name).items()})
+                msg += "  [best so far]"
             print(msg, flush=True)
             peft_model.train()
 
     peft_model.eval()
+    # Restore the selected checkpoint so everything downstream -- the cloning
+    # check, the saved adapter, the contrasts -- uses the same weights.
+    if best["state"] is not None:
+        from peft import set_peft_model_state_dict
+        set_peft_model_state_dict(peft_model, best["state"], adapter_name=name)
+        print(f"  {name}: selected step {best['step']} "
+              f"(held-out slope {best['chk']['slope']:.4f})", flush=True)
     return {"adapter": name, "steps": steps, "trace": trace,
+            "selected_step": best["step"],
+            "selected_heldout": best["chk"],
             "final_loss": float(np.mean(losses[-25:])) if losses else float("nan")}
 
 

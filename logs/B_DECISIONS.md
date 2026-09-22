@@ -657,3 +657,22 @@ exclusion will keep failing on it. The fix is `--exclude=node2119`, which is now
 submission — a run of roughly ten GPU-hours is not worth losing to a node the scheduler will not admit
 is broken. Worth the Friday session doing the same; their G4b has now failed twice, once for placement
 and once here, while building a gradient direction that already exists on the share with hashes.
+
+**BD42. Both sessions share a Unix account, so a mass `scancel` from either kills the other's work.**
+At 2026-09-21T20:32:03 eight `cvb_` jobs ended simultaneously, all marked `CANCELLED by 234238` — the
+UID both sessions run as. Four were the Friday session's (`cvb_g4_recon_L48`, `cvb_g4_recon_L50`,
+`cvb_s32`, `cvb_s35`, `cvb_g5b`, `cvb_neutral2`) and two were Track B's: `cvb_b0_num_a100`, queued for
+an hour and a half, and `cvb_b3_lora8b5`, killed **three seconds after submission**. The shape — one
+timestamp, both sessions, jobs that had nothing in common — is a `scancel -u` or equivalent, almost
+certainly the Friday session clearing its own queue without knowing the account is shared.
+
+Nothing was lost beyond queue time: every Track B job checkpoints, and these two had not started. But
+the hazard is real and asymmetric — a single command from either session can destroy a ten-hour 70B
+run that is most of a day's work.
+
+Track B's mitigation, which does not require the other session to change anything: **cancel by explicit
+job id, never by user or account**, which has been the practice here throughout; and treat an
+unexplained `CANCELLED` on a Track B job as an external event to be resubmitted rather than a failure to
+be diagnosed. The `cvb_` prefix was introduced (BD3) so the shared GPU budget could be totalled; it
+does not isolate the two sessions from each other's `scancel`. Worth the authors telling the Friday
+session, since the exposure runs the other way too: a mass cancel from here would kill their G4 runs.
