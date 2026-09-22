@@ -1,7 +1,7 @@
 # B_B3.md — Track B B3: the anchors
 
-**B3.1 (gradient) is complete on Llama-3.3-70B. B3.2 (LoRA) has passed its 8B dry run and is queued
-for the 70B.** Values in `MANIFEST_B.csv`; decisions in `logs/B_DECISIONS.md` BD27, BD37, BD40, BD46.
+**B3.1 (gradient) is complete on Llama-3.3-70B. B3.2 (LoRA) is now complete on Llama-3.3-70B too, and
+GATE B3 FAILS: all three adapters clone, but the preference contrast is unresolved.** Values in `MANIFEST_B.csv`; decisions in `logs/B_DECISIONS.md` BD27, BD37, BD40, BD46.
 
 `$TRACKB_SHARE` is the project directory on the lab share.
 
@@ -140,7 +140,84 @@ r ≈ 0.99995, so the expectation is that it will not, and the contrast numbers 
 - **B3.3 anchor-derived candidates** — the mean activation difference between the preference-shifted
   and reference adapters, a probe trained to separate them, and SAE features ranked by their
   difference. These are families rather than anchors and wait on the 70B adapters.
-- **The fp32-vs-bf16 numerical check** (`b0_numerics`) never completed. Its central question was
-  answered directly by B2-cal — numerical noise across five repeat unbatched reads was bit-identical at
-  1.1e-16 — and it was cancelled when it began competing with the anchor for the same per-user GPU
-  quota. What remains unmeasured is the fp32-vs-bf16 *bias* in z.
+- **The fp32-vs-bf16 numerical check** (`b0_numerics`) **has now completed** (22 Sept, 4x A100-80GB,
+  196 calibration prompts, layer 50, unbatched, no CPU offload). It is no longer an open item, but it
+  does not come back clean. Two different numbers matter and they say different things:
+
+  | quantity | bias (bf16 - fp32) | SD | max abs |
+  |---|---|---|---|
+  | absolute z | **-0.0170** | 0.0990 | 0.3425 |
+  | dosed-minus-baseline difference | **-0.0018** | 0.0998 | 0.2535 |
+
+  bf16 carries a systematic offset of about -0.017 in z, which **largely cancels in a contrast**,
+  leaving -0.0018. So any quantity read as a difference between two conditions on the same stack is
+  safe; an absolute z compared across stacks is not.
+
+  **The number that should worry us is `error_to_effect_ratio = 0.1494`**: the numerical error is about
+  15% of the steering effect it has to resolve. That is small next to a full-dose effect and large next
+  to the B3.2 preference contrast, whose true signal is 0.0302 -- roughly a third of this check's own
+  per-prompt scatter.
+
+  **Limitation.** The dose used was a `matched-norm random stand-in (B3.1 anchor not yet built)`: the
+  sbatch script predates the gradient anchor. The check therefore bounds numerical error along a
+  *random* direction of matched norm, not along the B3.1 anchor. Re-running it against the real anchor
+  is cheap (about 25 min on 4 GPUs) and is the honest way to close this.
+
+---
+
+## 4. The 70B run, and GATE B3
+
+Job 23460913, `ou_bcs_normal`/node3910, 2x A100-80GB PCIe, bf16, 1h38m, 500 steps per adapter.
+Values registered under `B3.2.70b.*`; verdict computed by `cv_bench/anchors/gate_b3.py`.
+
+### All three adapters clone
+
+| adapter | selected step | r | slope | z_sd | cloning residual SD |
+|---|---|---|---|---|---|
+| reference | 250 | 0.9909 | 0.9553 | 3.524 | 0.4740 |
+| preference | 500 | 0.9948 | 0.9761 | 3.674 | 0.3760 |
+| bias | 500 | 0.9930 | 0.9363 | 3.447 | 0.4067 |
+
+Every one clears the bar (r >= 0.95, slope 0.9-1.1), with train-minus-held-out gaps at or below 0.04,
+so this is not memorisation. **Scaling from 8B to 70B did what it was asked to do at the adapter level.**
+
+### The contrasts do not follow
+
+A5 is explicit that the anchors are the **contrasts against the reference adapter**. Each adapter's
+cloning residual has SD ~0.38-0.47 even at r ~= 0.99, and a contrast of two independently trained
+adapters carries the two in quadrature:
+
+| contrast | true signal | noise floor SD | buried | estimate | 95% CI | resolved |
+|---|---|---|---|---|---|---|
+| preference - reference | 0.0302 | 0.6050 | **20.0x** | 0.0474 | [-0.0291, +0.1239] | **no** |
+| bias - reference | 0.6000 | 0.6246 | 1.0x | 0.4968 | [+0.4178, +0.5759] | yes, biased low |
+
+**The preference point estimate lands 0.98 MDC from the truth — and that is luck, not measurement.**
+The interval is 4.35 MDC wide and contains zero. It cannot separate the true shift from no shift, nor
+from four times the shift. The 8B had it buried 24x (BD46); the 70B has it buried 20x. Scale did not
+fix it, and there is no reason to expect the next model size to either.
+
+The bias contrast resolves because its signal is 20x larger, but it recovers 0.497 against a truth of
+0.600 — 5.9 MDC low, so it is detected and mis-estimated rather than measured.
+
+### Verdict
+
+**GATE B3 = FAIL**, on the preference anchor. `ICLR_PLAN.md:186` routes a failing preference anchor to
+**"fix cloning or the estimator"**, not to B3.3 or B4. Per the standing amendment a numeric gate that
+fails stops that branch and reports, so nothing downstream has been started and no family result was
+consulted in reaching this.
+
+**What would actually move it.** The failure is variance, not correctness: the estimator recovers the
+large signal and the adapters clone. Three levers, cheapest first:
+1. **Paired adapters.** The floor is two *independent* residuals added in quadrature. Training the
+   preference adapter from the reference adapter's weights, or with a shared data order and seed at
+   every step, correlates the residuals and cancels most of the floor. This is a training-protocol
+   change and needs an author decision.
+2. **A larger true signal.** 0.0302 is the mean dz from shifting alpha by its MDC. Anchoring at a
+   multiple of the MDC would lift the signal without touching the estimator, at the cost of no longer
+   testing the detection limit.
+3. **More clone rows.** The floor scales as 1/sqrt(n); n=240 now. Resolving a 20x burial needs
+   n ~ 10^5, which is not affordable. **This lever does not work** and is recorded so it is not retried.
+
+**AUTHOR DECISION.** Levers 1 and 2 both change a pre-registered quantity -- the anchor's training
+protocol and the anchor's dose respectively. Track B stops here.

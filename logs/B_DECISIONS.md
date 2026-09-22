@@ -771,3 +771,43 @@ run is a hard stop under the autonomy amendment, so this is reported rather than
 
 The 70B run proceeds as launched: it is worth knowing whether a larger model clones tightly enough to
 lift the preference contrast out of the floor, and that is exactly what its contrast numbers will say.
+
+**BD47. GATE B3 fails on the 70B: the adapters clone, the preference contrast does not resolve, and
+the cause is the same variance arithmetic BD46 found on the 8B.** 22 Sept, job 23460913.
+
+All three adapters pass cloning (r = 0.9909 / 0.9948 / 0.9930, slopes 0.9553 / 0.9761 / 0.9363), so
+the recipe transfers from 8B to 70B. But the anchors are the contrasts, and each adapter's cloning
+residual has SD 0.38-0.47 even at r ~= 0.99; two independent adapters give a floor of 0.605. Against a
+true preference signal of 0.0302 that is a **20.0x burial** (8B: 24x). The estimate 0.0474 has a 95%
+interval of [-0.0291, +0.1239] -- 4.35 MDC wide, containing zero.
+
+*The trap this avoids.* |estimate - truth| = 0.98 MDC, so a gate implemented as "is the point estimate
+within one MDC" would read PASS. `cv_bench/anchors/gate_b3.py` therefore requires the estimate to be
+**resolved** as well as close: CI excluding zero and half-width <= 1 MDC. Reporting the point estimate
+alone would have been the single most misleading number available in this run, and it would have sent
+Track B into B4 on a measurement that cannot tell the effect from nothing.
+
+*Route.* `ICLR_PLAN.md:186` sends a failing preference anchor to "fix cloning or the estimator". B3.3
+and B4 are not started. Levers and their costs are in `reports/B_B3.md` section 4; increasing n is
+recorded there as **not viable** (a 20x burial needs n ~ 1e5 against the present 240) so that it is not
+retried. The two workable levers -- correlating the adapters' residuals by training the preference
+adapter from the reference weights, and anchoring at a multiple of the MDC -- each change a
+pre-registered quantity, so both are AUTHOR DECISION.
+
+**BD48. `b0_numerics` completed, and bf16's bias cancels in a contrast but not in absolute z.**
+22 Sept, job 23462886, 4x A100-80GB, 196 calibration prompts, layer 50, unbatched, no CPU offload.
+
+Absolute z carries bf16-minus-fp32 bias **-0.0170** (SD 0.0990, max 0.3425); the dosed-minus-baseline
+difference carries **-0.0018** (SD 0.0998). Differences on one stack are safe; absolute z compared
+across stacks is not. `error_to_effect_ratio = 0.1494` -- numerical error is ~15% of the effect it must
+resolve, which is small against a full dose and large against B3.2's 0.0302 preference signal.
+
+*Limitation, recorded rather than smoothed over.* The dose was a `matched-norm random stand-in (B3.1
+anchor not yet built)`; the sbatch predates the gradient anchor. This bounds numerical error along a
+random matched-norm direction, not along B3.1. Re-running against the real anchor costs ~25 min on
+4 GPUs and is the honest close-out.
+
+*Scheduling note.* This job sat unschedulable for hours because it asked `--mem=256G`. With 4x 80GB the
+fp32 weights (282 GB) are entirely resident on-GPU, so host RAM only streams shards; at 64G it placed
+within minutes. The cluster had idle a100s throughout -- the binding constraint was allocatable RAM,
+not GPUs. Also fixed: generic `--gres=gpu:4` (could land on l40s, useless at 80 GB) and `ou_bcs_low`.

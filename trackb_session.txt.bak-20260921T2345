@@ -1,0 +1,525 @@
+================================================================================
+TRACK B SESSION RECORD
+Repository : ~/shrey/risk-trackB   (git worktree, branch iclr-trackB)
+Project    : "Interpreting and Steering LLM Agents for Social Simulations"
+             ICLR 2027 submission, paper deadline 2026-09-25 23:59 AoE
+Session    : 2026-09-21/22
+Scope done : B1 complete. B2 complete and gated. B3 NOT started (stopped at Gate B2).
+Head commit: 8e8fb9d
+================================================================================
+
+--------------------------------------------------------------------------------
+0. HOW TO READ THIS FILE
+--------------------------------------------------------------------------------
+Everything below is drawn from files in the repository or from Slurm accounting.
+No number here was typed from memory (CLAUDE.md rule 1). Numbers carry the id
+they are registered under in MANIFEST_B.csv where one exists.
+
+Key artefacts:
+  reports/B_B1.md        B1 report
+  reports/B_B2.md        B2 report and the Gate B2 verdict
+  logs/B_DECISIONS.md    BD1-BD15, the decision log (why things are as they are)
+  logs/B_DEVIATIONS.md   Track B deviations (currently empty - none occurred)
+  MANIFEST_B.csv         35 registered values, each with script, input and git SHA
+  $TRACKB_SHARE          /orcd/data/gabrieli/001/guna23/iclr_risk_2027/
+                         Track B artefacts live under trackB/ there.
+
+--------------------------------------------------------------------------------
+1. SESSION CONTEXT AND THE RULES THIS SESSION RAN UNDER
+--------------------------------------------------------------------------------
+Two Claude sessions ran in parallel on the same repository:
+  * the "Friday session" in ~/shrey/risk on branch iclr-extension (V and G tasks)
+  * this "Track B session" in ~/shrey/risk-trackB on branch iclr-trackB
+
+Track B's standing constraints, as given by the authors:
+  * Write only under cv_bench/tasks/, cv_bench/estimator/, cv_bench/anchors/,
+    results/B/, reports/B_*, logs/B_DECISIONS.md, logs/B_DEVIATIONS.md,
+    MANIFEST_B.csv.
+  * Never edit CLAUDE.md, FRIDAY_PLAN.md, ICLR_PLAN.md, GATE_S0_RESPONSE.md or
+    the shared logs. Obtain shared modules by merging iclr-extension, never by
+    rewriting them.
+  * Never touch the Friday session's working tree.
+  * Slurm job names start with cvb_; the 400 GPU-hour cap is SHARED with the
+    Friday session and is evaluated on sacct totals for that prefix.
+  * Large artefacts go to the lab share under trackB/, never to the pool
+    filesystem (which stood at 99.44% of quota).
+  * Every prompt goes through the chat template.
+  * CPU work runs as Slurm jobs, never on the login node.
+  * The test split stays locked.
+
+Author amendment in force (22 Sept, appended to CLAUDE.md rules 6 and 7 by the
+Friday session in commit 7ec24ff, reached this worktree by merge):
+  * CUTOFF Wed 23 Sept 23:00 PDT = Thu 24 Sept 06:00 UTC replaces the results
+    freeze.
+  * Rule 6 amended: gates whose criteria are numbers become AUTOMATIC checks.
+    Gate B2 and Gate B3 are evaluated exactly as ICLR_PLAN.md writes them with
+    plan v4's thresholds. Pass = continue and report. Fail = stop that branch
+    and report; for B2, iterate on the synthetic grid only, never thresholds.
+  * Rule 7 amended: the 8 GPU-hour per-job approval is replaced by a single
+    shared 400 GPU-hour cap until the cutoff.
+  * Unchanged: rule 1 (no number without a file), rule 2, rule 4 (the outcome
+    never decides a rerun), rule 5, rule 9, rule 12; the test split stays locked.
+
+--------------------------------------------------------------------------------
+2. HOW THE SESSION STARTED - TWO BLOCKERS, BOTH RESOLVED
+--------------------------------------------------------------------------------
+At the start, three governing documents (CLAUDE.md, ICLR_PLAN.md,
+GATE_S0_RESPONSE.md) were MISSING from this worktree, and readout.py/steer.py
+did not exist on any branch. The session stopped and said so rather than
+guessing, as instructed.
+
+Both were resolved by fast-forward merging iclr-extension, which by then carried:
+  5b4e01f  the governing documents
+  82daf32  cv_bench/readout.py and steer.py, with 14 passing tests
+  7ec24ff  the scheduling amendment
+
+A third apparent blocker - G4b and G6 named in the amendment but undefined -
+was flagged by both sessions independently and has since been defined by the
+Friday session (FRIDAY_PLAN.md lines 161 and 167).
+
+One cross-session flag was closed that only this session could close: the
+Friday session's D38 recorded that the 400 GPU-hour cap "replaces the earlier
+40 and 60" while only 40 had ever reached that session. The 60 was Track B's
+own allowance, communicated only here. Recorded as BD1.
+
+--------------------------------------------------------------------------------
+3. B1 - TRIAL GENERATORS, FORMATS, SPLITS          STATUS: COMPLETE
+--------------------------------------------------------------------------------
+Implements ICLR_PLAN.md B1.
+
+Code:
+  cv_bench/tasks/core.py      504 lines  Trial/Lottery/Format, splits, the test
+                                         lock, the transfer lock, chat-template
+                                         rendering, domain-aware label sets
+  cv_bench/tasks/risk.py      262 lines  sure-gain, sure-loss, mixed (A1),
+                                         paired (A3), three catch families,
+                                         stated-CE and recall prompts
+  cv_bench/tasks/social.py    211 lines  responder, proposer, dictator (A7),
+                                         mini-ultimatum, accept-bias control
+  cv_bench/tasks/transfer.py  150 lines  Holt-Laury, Gneezy-Potters,
+                                         Eckel-Grossman (A11)
+  cv_bench/tasks/build.py     135 lines  materialises the dataset
+  cv_bench/tasks/b1_build.sbatch         Slurm CPU job
+  cv_bench/tests/test_tasks.py 407 lines 44 tests
+
+Dataset (job cvb_b1_build 23381188, CPU, 6 seconds):
+  919 content trials -> 14,704 rows after expanding by option order (2)
+  x label set (2) x response format (2) x instruction template (2 per split)
+  sha256 5942c9fa255ee6e9176d5337076ebece093315dbc602e4d9ce815769f0cd59c2
+  path   $TRACKB_SHARE/trackB/b1_trials/20260921T104414Z_00c9fcc/trials.jsonl
+
+  by domain : risk 726, social 168, transfer 25
+  by split  : disc 339, sel 309, cal 271, test 0
+  by role   : core 157, heldout 762
+  catch     : 168 content trials
+  dominated : 272 content trials (flagged, kept - see BD6)
+
+  The legacy cell is present exactly: p=0.5, s=50, x=10..240 step 5, 47 levels,
+  so every new result has a cell that lines up with the published runs.
+
+THREE INVARIANTS ENFORCED IN CODE, NOT DOCUMENTATION
+  1. Every prompt goes through the chat template. to_trial_spec always sets
+     use_chat_template=True. The only function that renders without it,
+     render_raw_unsafe, raises unless explicitly acknowledged; nothing calls it.
+     Basis: reports/G2_legacy_format.md - the legacy raw-string format yields no
+     answer on 88.3% of trials (989 of 1,120).
+  2. The test split cannot be materialised. check_test_access raises
+     TestSplitLocked unless given the SHA that the prereg-v1 tag points at; the
+     tag does not exist, so it cannot be unlocked at all. Every attempt is
+     appended to logs/TEST_ACCESS.log. build.py additionally asserts before exit
+     that no test row reached the output.
+  3. The transfer battery is evaluation-only (added later, BD7). `role` is a
+     REQUIRED argument of every transfer generator with no default, so a caller
+     cannot materialise it without declaring who is looking. Only "unmodified"
+     and "anchor" are admitted until B9's predictions are COMMITTED at
+     results/B/b9_transfer_predictions.json (committed in HEAD, not merely
+     present on disk). Everything else raises TransferLocked. All access is
+     logged to logs/B_TRANSFER_ACCESS.log. It remains barred from sel and cal
+     entirely (TransferMisuse).
+
+--------------------------------------------------------------------------------
+4. B2 - SYNTHETIC AGENTS, ESTIMATOR, RECOVERY STUDY   STATUS: COMPLETE, GATE FAILED
+--------------------------------------------------------------------------------
+Implements ICLR_PLAN.md B2. CPU only.
+
+Code:
+  cv_bench/estimator/agents.py      433 lines  CPT with contextual utility,
+                                    Tversky-Kahneman weighting, logit rule with
+                                    temperature/action/position/label bias, the
+                                    belief distortion, and the two deliberately
+                                    misspecified agents (mean-variance utility,
+                                    an arbitrary monotone curve). Includes a
+                                    vectorised path asserted equal to the
+                                    readable scalar definition for all ten
+                                    agents (max diff < 1e-9) and 254x faster,
+                                    which turns the study from a day of CPU into
+                                    minutes.
+  cv_bench/estimator/fit.py         340 lines  nested parametric models,
+                                    per-template intercepts, two observation
+                                    modes, Akaike-style shares on held-out
+                                    reward levels, Vuong, paired cluster
+                                    bootstrap over reward level x template
+  cv_bench/estimator/fingerprint.py 285 lines  model-free D1-D7
+  cv_bench/estimator/decision.py    174 lines  the decision rule and the
+                                    automatic Gate B2 check; plan v4's
+                                    thresholds live here in one place and a test
+                                    asserts them so they cannot drift
+  cv_bench/estimator/recovery.py    223 lines  the study driver
+  cv_bench/estimator/b2_recovery.sbatch        Slurm CPU array, 18 tasks
+  cv_bench/tests/test_estimator.py  269 lines  22 tests
+
+Study design: 18 configurations = 3 template-noise levels (0.5, 1, 2 logits)
+x 3 numerical-noise levels (0, 0.1, 0.25) x 2 dominated-trial policies
+(exclude, lapse), 20 replications each, 9 agent types per replication.
+Run as array cvb_b2_recovery 23410348, 18 CPU tasks in parallel, about 7 minutes.
+
+================================================================================
+GATE B2 VERDICT: **FAIL** - 0 of 18 configurations pass
+Track B stopped here and reported, as the amended rule 6 requires.
+================================================================================
+
+At the primary configuration (template noise 0.5, numerical noise 0, exclude):
+
+  REQUIREMENT                                        RESULT        VERDICT
+  alpha RMSE <= 0.05                                 0.0091        PASS
+  gamma RMSE <= 0.05                                 0.0044        PASS
+  lambda RMSE <= 0.15                                0.416         FAIL
+  >=95% of preference agents called preference-like  0.70 / 0.70 / 0.00   FAIL
+  >=95% of action/belief/noise/format called NOT     1.00 each     PASS
+  the two misspecified agents handled                both          PASS
+
+WHAT PASSES, AND IT IS MOST OF IT
+  Specificity is perfect and is not bought cheaply. Every non-preference agent
+  is matched on behavioural effect size BEFORE the comparison - action, belief,
+  noise and format all move behaviour by about 0.012 mean |dP| against the
+  preference agents' 0.018 - and every one is rejected in every one of 20
+  replications in all 18 configurations. Each is caught by the diagnostic meant
+  to catch it: format bias by D5's transfer ratio (0.00 in band), belief
+  distortion by D6's recall check (0.00 intact), action and noise by the
+  parametric share (0.000).
+
+FAILURE 1 - LAMBDA IS NOT IDENTIFIED ON THIS GRID
+  Predicted analytically in BD10 BEFORE any fitting, and written down first so
+  the grid change, if it happens, is visibly a response to a pre-stated
+  structural fact rather than to an unwelcome number.
+  Under the contextual-utility normalisation the plan mandates, lambda cancels
+  exactly on any trial whose outcomes share a sign: every value scales by
+  lambda, the utility range scales by lambda, the normalised difference is
+  unchanged. Measured on the B1 grid, the largest change in z from moving lambda
+  by its full minimum detectable change (0.30) is:
+      sure_gain  (245 trials)  0.000000
+      sure_loss  (245 trials)  0.000000
+      mixed      ( 36 trials)  0.105034
+      paired     ( 68 trials)  0.043920
+  So lambda is identified on 104 of 726 risk trials and weakly at that. A
+  full-MDC lambda shift moves behaviour by 0.0013 mean |dP| - below the noise
+  floor. REMEDY: a denser mixed-frame grid. NOT a looser bound.
+
+FAILURE 2 - THE DECISION RULE IS POWER-LIMITED AT THE MDC
+  For a true alpha shift the individual criteria pass at 0.90 (preference
+  share), 0.85 (out-of-frame prediction) and 0.70 (action rejected); requiring
+  all seven at once gives 0.70 against the required 0.95.
+  Nothing is mis-measured; the effect is simply small:
+      mean dz at the minimum detectable change      +0.0109 logits
+      numerical-noise floor on a format subset mean  0.0023
+  so the transfer RATIO carries about 24% error against a band of +/-25%.
+  REMEDY: holding the 0.8-1.25 band needs roughly NINE TIMES the rows per format
+  subset, or about nine independent reads per prompt to average the numerical
+  noise down. Widening the band instead is an AUTHOR DECISION frozen at B6.
+
+THE FINDING THE AUTHORS ASKED FOR (amendment item 5b)
+  An independent numerical-noise component at SD 0.1 and 0.25 was added on top
+  of the template-level noise, standing for the Friday session's measured
+  SD ~ 0.094 in z across batch compositions on the 70B in bf16.
+
+      numerical noise SD       pref_alpha classified correctly
+      0.00                     0.70
+      0.10  (~ the measured bf16 value)   0.25
+      0.25                     0.05
+
+  AT THE NOISE LEVEL ACTUALLY MEASURED ON THE 70B IN bf16, THE DECISION RULE'S
+  SENSITIVITY FALLS FROM 0.70 TO 0.25. Numerical non-determinism alone, with no
+  change to the science, is enough to break the diagnostic at the minimum
+  detectable change. This is the strongest argument for amendment item 5(a) -
+  read unbatched for anything reported - and it says B3 and B4 will need either
+  fp32 reads, repeated reads averaged per prompt, or an effect larger than the
+  MDC to be detectable at all.
+
+THE DOMINATED-TRIAL POLICY (amendment item 4) RESOLVES TO "EXCLUDE"
+  Fixed in advance in BD9 so the result could not pick the policy. Excluding the
+  flagged dominated trials from the parametric likelihood beats keeping them
+  with a free lapse parameter on alpha (0.0091 vs 0.0111), on lambda (0.416 vs
+  0.661) and on the classification rate the gate actually reads (0.70 vs 0.50).
+  The lapse variant is better on gamma alone (0.0007 vs 0.0044).
+  DEFAULT STANDS: dominated trials feed D1 only.
+
+--------------------------------------------------------------------------------
+5. BUGS FOUND AND FIXED - THE MOST IMPORTANT SECTION
+--------------------------------------------------------------------------------
+Six bugs were found, four of which changed results. All but one were caught by
+tests or by a study failing for the wrong reason, not by reading code.
+
+B1-1  THE MINI-ULTIMATUM'S NO-ALTERNATIVE CONDITION WAS GENERATED ZERO TIMES.
+      Its four alternatives - (5,5), (2,8), (10,0) and no alternative - are
+      experimental CONDITIONS, not reward levels. Applying the plan's mod-4
+      split rule to them put each in exactly one split and the no-alternative
+      condition in the LOCKED TEST SPLIT, so the contrast the design exists to
+      measure was absent from the dataset entirely.
+      Fix: conditions are replicated across splits; only reward levels are
+      divided. (BD5)
+
+B1-2  THE TRANSFER BATTERY WAS CUT TO A QUARTER.
+      Splitting Holt-Laury by item index left 3 of 10 decisions in disc, and a
+      ladder with three rungs has no switching point - the instrument measures
+      nothing. Fix: each instrument is emitted whole within each split. (BD5)
+
+B1-3  SOCIAL TRIALS SCORED FAIRNESS AS A DOMINANCE VIOLATION.
+      Accepting always pays a responder at least as much as rejecting, so
+      marking every monetary shortfall as dominated would have counted every
+      inequity-averse rejection - the preference under study - as an attention
+      failure. Fix: dominance is recorded only on catch trials, where by
+      construction no preference explains the choice.
+
+B1-4  LABEL SETS WERE APPLIED ACROSS DOMAINS. (BD13)
+      expand_formats defaulted to EVERY label set in LABEL_SETS, so once the
+      social pairs were added it dressed lottery trials in Reject/Accept and
+      Yes/No, producing prompts that read:
+          Reject: $20 for sure
+          Accept: a 10% chance of $60 and otherwise nothing
+      Three-quarters of the risk grid carried a label pair that does not
+      describe the choice, and the label-bias term was computed against that.
+      DOMAIN_LABEL_SETS existed but was never wired in. The expanded grid fell
+      from 29,408 rows to the correct 14,704. The first B1 dataset and the first
+      two B2 submissions were built on the wrong grid and were rebuilt.
+
+B2-1  TEMPLATE EFFECTS WERE REDRAWN PER CONDITION. (BD11)
+      A template effect is a property of the TEMPLATE, so a real experiment that
+      runs baseline and intervention on the same prompts sees the same offset in
+      both and it cancels in the comparison. Redrawing it put the difference of
+      two independent draws into every trial as a CONSTANT SHIFT - which is
+      exactly the signature of an action bias - so a genuine preference shift at
+      the MDC was being attributed to action. The symptom was seed dependence
+      that should not have existed: on one seed pref_alpha gave a preference
+      share of 0.996, on another an action share of 0.89. With the draw shared,
+      the true model wins in both. Only the numerical-noise component is
+      redrawn per condition, which is correct.
+
+B2-2  THE BELIEF DISTORTION HAD EXACTLY ZERO EFFECT.
+      Scaling every amount by kappa multiplies both the utility difference and
+      the contextual utility range by kappa^alpha, so it cancels and cannot
+      change any behaviour. Fix: the distortion applies to the GAMBLE's x, which
+      is what B1 means by x, and not to the sure amount s.
+
+B0-1  free(model) DELETED A LOCAL NAME, NOT THE CALLER'S.
+      Passing the model to a helper and deleting the parameter there drops only
+      that helper's local reference; the caller still held it, so 282 GB of fp32
+      weights stayed resident and the bf16 load OOMed. Fix: one process per
+      dtype, so the operating system does the freeing.
+
+THREE FURTHER ESTIMATOR CORRECTIONS (BD14)
+The first full recovery run failed Gate B2 in all 18 configurations with EVERY
+agent, preference shifts included, classified as not preference-like. A rule
+that rejects everything has perfect specificity for free and is not a rule, so
+the failure was diagnosed rather than reported:
+  (a) THE MODEL HAD NO TEMPLATE TERM. B1 gives each split two templates and the
+      plan asks B2 to simulate template variation of 0.5-2 logits; with no
+      per-template intercept that variation is unmodelled misfit, and the
+      comparison between nested models is decided by which one best absorbs it.
+      Adding intercepts raised the preference share for a true alpha shift from
+      0.265 to 0.591. They are not separately identified - templates are nested
+      within splits, so a template effect is confounded with that split's reward
+      levels - and only differences matter; the first is pinned at zero.
+  (b) THE FIT USED BINARY CHOICES WHEN THE INSTRUMENT RETURNS z. The plan's own
+      diagnostics are written on z and dz and the logit readout returns z
+      directly; fitting one Bernoulli draw per row discards most of the
+      measurement. With a Gaussian observation mode on z, alpha's RMSE fell from
+      0.055 to 0.0054 and gamma's to 0.0032, and the preference share for a true
+      shift went to 1.000 with the action model rejected in every draw. Both
+      modes are kept: "choice" is what sampled generation gives, "logit" what
+      the readout gives.
+  (c) D5's TRANSFER RATIO DIVIDED TWO SQUASHED PROBABILITY DIFFERENCES. A change
+      in choice probability is a few points wide, so the ratio of two of them
+      swung outside the pre-registered band on noise alone and failed genuine
+      preference shifts about half the time. It now uses mean dz, like the
+      plan's other diagnostics, and a zero effect in both formats is scored as
+      perfect transfer rather than as a ratio of 0/0.
+
+NO THRESHOLD WAS EVER TOUCHED. Plan v4's numbers live in one place in
+decision.py and a test (test_gate_thresholds_are_plan_v4) asserts them.
+
+--------------------------------------------------------------------------------
+6. DECISION LOG - BD1 to BD15 (full text in logs/B_DECISIONS.md)
+--------------------------------------------------------------------------------
+BD1   The "60" in the amendment's 400 GPU-hour cap was Track B's budget; closes
+      the Friday session's open D38 flag. The 400 is SHARED, not 400 each.
+BD2   B3.2's LoRA anchors blocked on peft; the 4-bit fallback unverified, not
+      broken (the warning was seen on a GPU-less login node). Closed by BD8.
+BD3   Track B's write scope, the cvb_ job prefix, and the trackB/ artefact
+      location. The prefix closes the accounting gap SCHEDULE.md section 6 left
+      open: the shared cap can be totalled from sacct without either session
+      reading the other's registry.
+BD4   Every prompt goes through the chat template, enforced not documented, on
+      the G2 evidence of an 88.3% no-answer rate for the raw format.
+BD5   Experimental conditions are replicated across splits; only reward levels
+      are divided. (bugs B1-1 and B1-2)
+BD6   The low end of the plan's reward grid is statewise dominated (104 of 726
+      risk trials) and the cells are kept, but flagged.
+BD7   The transfer battery is locked in the runner as evaluation-only.
+BD8   peft 0.13.2 was ALREADY installed and pinned by the Friday session, so
+      Track B installed nothing. BD2 closed.
+BD9   The dominated-trial policy, recorded BEFORE any model data was fitted.
+BD10  Lambda is unidentified outside mixed frames, predicted analytically
+      BEFORE fitting, with the failure of Gate B2 predicted in advance.
+BD11  Template effects are drawn once and shared between conditions. (bug B2-1)
+BD12  "The action model is rejected" operationalised as a 0.95 paired
+      cluster-bootstrap probability - flagged as an AUTHOR DECISION because the
+      plan does not define it.
+BD13  Label sets are chosen per family and domain. (bug B1-4)
+BD14  The three estimator corrections above.
+BD15  What Gate B2 still fails on, with the arithmetic of the remedy.
+
+--------------------------------------------------------------------------------
+7. JOBS RUN AND COMPUTE ACCOUNTING
+--------------------------------------------------------------------------------
+All Track B jobs carry the cvb_ prefix so the shared cap is totalled from sacct.
+
+  cvb_b1_build   23380437  COMPLETED  5s   CPU   (superseded grid)
+  cvb_b1_build   23380458  COMPLETED  4s   CPU   (superseded grid)
+  cvb_b1_build   23380488  COMPLETED  3s   CPU   (superseded grid)
+  cvb_b1_build   23381188  COMPLETED  6s   CPU   <- the dataset in use
+  cvb_b2_recovery 23381052 CANCELLED  18 tasks   cancelled: buggy code (B2-1)
+  cvb_b2_recovery 23381113 CANCELLED  18 tasks   cancelled: buggy code (B1-4)
+  cvb_b2_recovery 23381189 COMPLETED  18 tasks   superseded by the estimator fix
+  cvb_b2_recovery 23410348 COMPLETED  18 tasks   <- the study reported
+  cvb_b0_numerics 23381225 FAILED     13m  4 GPU  OOM from bug B0-1
+  cvb_b0_numerics 23409642 PENDING         4 GPU  resubmitted, queued on Priority
+
+GPU-hours consumed by Track B: 0.872 of the shared 400, all of it the failed
+fp32 job. Every other Track B job is CPU-only and consumes none.
+Total across the shared cvb_ prefix (both sessions): 2.781 of 400.
+
+The two cancellations were made because the code was wrong, not because a
+result was unwelcome (CLAUDE.md rule 4). Their outputs were deleted before any
+result was read from them.
+
+--------------------------------------------------------------------------------
+8. THE fp32 vs bf16 NUMERICAL CHECK (amendment item 5c) - NOT YET COMPLETE
+--------------------------------------------------------------------------------
+  cv_bench/anchors/numerics_fp32.py  230 lines
+  cv_bench/anchors/b0_numerics.sbatch
+
+Asks whether bf16 numerical error is small compared with the difference between
+conditions that an anchor dose produces. About 200 calibration-split prompts
+spanning the grid, read UNBATCHED (item 5a), in fp32 and then in bf16, at
+baseline and at one dose, on 4 GPUs as instructed.
+
+Established so far: THE 70B IN fp32 DOES FIT ON 4 GPUs. It loaded in 346 seconds
+across 4x A100 80GB with NO CPU offload - 282 GB of fp32 weights against 320 GB
+of card. The first run then failed on bug B0-1; the resubmission splits each
+dtype into its own process and is queued.
+
+KNOWN LIMITATION: B3.1's gradient anchor does not exist yet, so the "one anchor
+dose" uses a matched-norm random direction, labelled as a stand-in in the output
+(dose_kind) so it can never be mistaken for an anchor result. The error-to-effect
+ratio this job reports does not depend much on which direction moves the model,
+but the job should be re-run against the real anchor once B3.1 exists.
+
+--------------------------------------------------------------------------------
+9. TESTS
+--------------------------------------------------------------------------------
+  cv_bench/tests/test_tasks.py       44 tests  (B1)
+  cv_bench/tests/test_estimator.py   22 tests  (B2)
+  cv_bench/tests/test_readout_steer.py 14 tests (inherited, unchanged)
+  TOTAL 80 passing.
+
+Tests assert properties of the design, not just of the code, which is how five
+of the six bugs above were found. Examples:
+  - no risk prompt may contain "Reject:" or "Accept:"
+  - lambda moves z by exactly zero on single-sign trials
+  - the packed vectorised path equals the scalar definition for all ten agents
+  - template effects shared between conditions cancel exactly
+  - the transfer battery's `role` argument has no default
+  - plan v4's thresholds are what decision.py holds
+
+--------------------------------------------------------------------------------
+10. OPEN QUESTIONS FOR THE AUTHORS
+--------------------------------------------------------------------------------
+1. THE MIXED-FRAME GRID. Lambda needs many more mixed trials to be identified at
+   all. How many is a budget question.
+2. D5's TRANSFER BAND, OR THE GRID BEHIND IT. Holding 0.8-1.25 at the MDC needs
+   roughly nine times the rows per format subset, or about nine independent
+   reads per prompt. Widening the band instead is an AUTHOR DECISION frozen at
+   B6 and is not Track B's to make.
+3. THE READING OF "including for the two misspecified agents on the model-free
+   layer". Mean-variance utility genuinely violates stochastic dominance, so D1
+   flags it. Track B reads the requirement as "not called preference-like, AND
+   the model-free layer is what catches it", rather than "must look clean".
+   Under the other reading these two agents fail.
+4. THE 0.95 CLUSTER-BOOTSTRAP THRESHOLD for "the action model is rejected"
+   (BD12). The plan requires the action model rejected but does not say how.
+
+--------------------------------------------------------------------------------
+11. WHAT WAS NOT DONE
+--------------------------------------------------------------------------------
+  * B3 (anchors) - NOT STARTED. Gate B2 failed and the amended rule 6 says a
+    failed gate stops that branch and reports. B3.1 (gradient anchor) and B3.2
+    (LoRA anchors) are unblocked dependency-wise: peft 0.13.2 is installed and
+    pinned, and the plan is bf16 on 4 GPUs with 4-bit only as a recorded
+    deviation if 4 GPUs cannot be obtained.
+  * B2 ran on the RISK DOMAIN ONLY. The social and transfer generators exist and
+    are tested, but the plan's agent zoo and decision rule are written for the
+    risk fingerprint.
+  * D6 is SIMULATED, not decoded. The recall probes exist as prompts; the ridge
+    fact probes for log x and log s need a forward pass and belong with B3.
+  * TEST-SPLIT TEMPLATES are deliberately absent - the plan says a human author
+    writes them and they are added at unlock.
+  * Nothing from Track B has gone into paper_patches/ or the Sept 25 PDF, and
+    nothing may without Gate B2 and Gate B3 passed, the label "exploratory,
+    selection split, not pre-registered", and an author having read the report.
+  * THE TEST SPLIT WAS NEVER MATERIALISED, and the audit trail proves it rather
+    than asserting it. logs/TEST_ACCESS.log holds 55 access attempts - from the
+    test suite exercising the lock and from one manual probe - of which
+    GRANTED = 0 and REFUSED = 55. Callers recorded: risk.generate_risk (18),
+    risk.generate_catch (18), social.generate_responder (18),
+    transfer.generate_holt_laury (1). No test-split trial was ever produced.
+  * The transfer lock has a matching trail. logs/B_TRANSFER_ACCESS.log holds 191
+    accesses: 160 granted (142 "unmodified", 18 "anchor") and 31 REFUSED, being
+    the intervention roles probe (7), sae (6), persona (6), prompt_family (6)
+    and lora (6). No intervention family has seen the battery.
+
+--------------------------------------------------------------------------------
+12. REPRODUCING THIS WORK
+--------------------------------------------------------------------------------
+  git checkout iclr-trackB          # head 8e8fb9d
+  python -m pytest cv_bench/tests/ -q                       # 80 tests
+  sbatch cv_bench/tasks/b1_build.sbatch                     # the B1 dataset
+  sbatch cv_bench/estimator/b2_recovery.sbatch              # the 18-config study
+  sbatch cv_bench/anchors/b0_numerics.sbatch                # fp32 vs bf16, 4 GPU
+
+  Outputs land under $TRACKB_SHARE/trackB/{b1_trials,b2_recovery,b0_numerics}/.
+  Every reported value is in MANIFEST_B.csv with its script, input and git SHA.
+
+--------------------------------------------------------------------------------
+13. COMMITS MADE BY THIS SESSION (newest first)
+--------------------------------------------------------------------------------
+  8e8fb9d  GATE B2: FAIL in all 18 configurations, with the reasons measured
+  96ebb49  B2: three estimator corrections, and the measured reason Gate B2
+           still fails
+  3f6512c  MANIFEST_B: re-register B1 on the corrected 14,704-row grid
+  00c9fcc  Fix label sets applied across domains, and add the fp32 numerics job
+  0e070d3  B2: estimator, fingerprint, decision rule and Gate B2 as an automatic
+           check
+  7ffe6f8  B2: synthetic agents, and the identification facts recorded before
+           fitting
+  8e8971e  B1 addendum: lock the transfer battery as evaluation-only
+  0130e64  B1 complete: dataset built, MANIFEST_B.csv, reports/B_B1.md
+  7f63fba  B1: prompt wording matches the plan's own phrasing
+  5459b56  B1: trial generators, formats, splits and the test lock
+  d94445f  Move Track B decisions out of the shared log into logs/B_DECISIONS.md
+  1876057  Log D41-D42 (superseded by d94445f, which restored the shared log
+           byte-for-byte and moved the entries to logs/B_DECISIONS.md)
+  plus merge commits ac3d75a and 7d25cd8 bringing in iclr-extension.
+
+================================================================================
+END OF RECORD
+================================================================================

@@ -1,0 +1,435 @@
+================================================================================
+TRACK B SESSION RECORD  (supersedes the earlier version of this file)
+Repository : ~/shrey/risk-trackB   (git worktree, branch iclr-trackB)
+Project    : "Interpreting and Steering LLM Agents for Social Simulations"
+             ICLR 2027 submission, paper deadline 2026-09-25 23:59 AoE
+Written    : 2026-09-22 ~00:05 UTC
+Head       : aaa5eaa  (+ uncommitted log renumbering)
+Cutoff     : Thu 24 Sept 06:00 UTC (author amendment; replaces the results freeze)
+================================================================================
+
+--------------------------------------------------------------------------------
+0. ONE-PARAGRAPH SUMMARY
+--------------------------------------------------------------------------------
+B1 (trial generators) and B2 (estimator, decision rule, recovery study) are
+built, tested and run. Gate B2 was evaluated and FAILED, twice, for reasons that
+were measured rather than guessed. B3.1 (gradient anchor) ran on the 70B; its
+headline conclusion was WITHDRAWN after a prompt bug was found. B3.2 (LoRA
+anchors) is built but has not cloned the target agent in three dry runs on the
+8B, and has never run on the 70B. Late in the session, asking whether the
+prompts matched the paper uncovered three separate prompt defects, two of them
+mine, which invalidated most numbers produced up to that point. Those numbers
+are withdrawn, the prompts are rebuilt, and the chain is being re-run from B1.
+128 tests pass. 34 decisions and 4 deviations are logged.
+
+--------------------------------------------------------------------------------
+1. WHAT IS DELIVERED, WHAT IS WITHDRAWN, WHAT IS OUTSTANDING
+--------------------------------------------------------------------------------
+DELIVERED AND STANDING
+  * cv_bench/tasks/      B1 generators: risk, social, transfer + splits + locks
+  * cv_bench/estimator/  B2: agents, parametric fit, D1-D7, decision rule,
+                         Gate B2, recovery driver, lambda grid sweep, B2-cal
+  * cv_bench/anchors/    B3.1 gradient, B3.2 LoRA, fp32-vs-bf16 numerics
+  * reports/B_B1.md, reports/B_B2.md, reports/B_PROMPT_AUDIT.md
+  * logs/B_DECISIONS.md (BD1-BD34), logs/B_DEVIATIONS.md (4 entries)
+  * MANIFEST_B.csv
+  * 128 passing tests
+
+WITHDRAWN (produced before the prompt bugs were found; do not cite)
+  * B2-cal's theta0 (alpha 0.814, gamma 1.499, tau 0.106), its template-noise
+    estimate, its slope table and its "z is monotone in x within cells" result
+  * BD27's conclusion that the readout gradient is "predominantly a position
+    direction" (cos(g1,g2) = -0.814)
+  * The claim in reports/B_B1.md that the legacy cell "lines up with the
+    published runs" -- wrong in wording AND in range
+  * The first B2 recovery study's 18-configuration results
+  * The readout-vs-free-generation agreement of 0.36 (bug: no chat template)
+
+OUTSTANDING
+  * B3.2 has never run on the 70B, and its 8B dry run has not passed cloning
+  * The social families have no game text (BD31), acknowledged and accepted
+  * Free text is scored like multiple choice, not by sequence log-probability
+  * b0_numerics (fp32 vs bf16) has never completed
+
+--------------------------------------------------------------------------------
+2. THE PROMPT DEFECTS -- THE MOST IMPORTANT SECTION
+--------------------------------------------------------------------------------
+Asked late in the session whether the prompts matched the paper. They did not.
+Three separate defects, found in sequence, each invalidating work already done.
+
+2.1 OPTION ORDER RELABELLED THE OPTIONS INSTEAD OF REORDERING THEM  (BD28)
+    Every order-1 legacy prompt read:
+        Safe Option: a 25% chance of $37 and otherwise nothing
+        Risky Option: $20 for sure
+    body_text paired each label with a POSITION rather than with its lottery, so
+    the gamble was announced as "Safe Option" and the sure amount as "Risky
+    Option". z stayed content-anchored, so nothing was inverted, but half of
+    every legacy comparison was asking a different question.
+    THIS INVALIDATED BD27. cos(g1,g2) = -0.814 had been reported as evidence
+    that the readout gradient is predominantly a position direction. The simpler
+    explanation is the bug: the word naming the gamble flips between orders, so
+    a model with any prior toward "Safe" has its z-raising direction flipped.
+    The measurement cannot separate the two, so the claim was withdrawn rather
+    than qualified.
+
+2.2 THE LABELS, CURRENCY AND GRID DIVERGED FROM THE PLAN FOR NO REASON  (BD29)
+    ICLR_PLAN.md:153 specifies legacy "Safe/Risky" and neutral "A/B".
+    Probes/tasks/prompts.py denominates everything in TOKENS.
+    This code had "Safe Option"/"Risky Option", "Option A"/"Option B", dollars.
+    None of it was a decision; it was written without checking the spec and
+    never recorded as a deviation.
+    THE NEUTRAL DIVERGENCE CAUSED A BUG I THEN "DISCOVERED". "Option A" and
+    "Option B" share their first token, so z = log p(Option) - log p(Option) = 0
+    on every neutral trial, and half the B3.1 gradient prompts contributed
+    exactly zero. I reported that as a finding about the readout and built a
+    per-label-set stem to work around it. The plan's "A"/"B" tokenise
+    distinctly ([32,362] vs [33,426]); the fix was to use the specified labels.
+
+2.3 THE SOCIAL GAMES HAVE NO GAME TEXT, AND FREE TEXT IS NOT FREE TEXT  (BD31)
+    Found by reading the rendered prompt audit. A responder trial renders as
+        Reject: nothing
+        Accept: 90 tokens for sure
+    All three legacy stacks state the proposer, the pie, and that rejection
+    gives BOTH parties zero. Track B states none of it. Without the framing,
+    rejecting a low offer is an arithmetic error rather than inequity aversion,
+    and the mini-ultimatum's alternatives never reach the model at all.
+    Separately, ICLR_PLAN.md:153 says free text is "scored by sequence
+    log-probability"; both response formats use the same first-token readout,
+    so "freetext" is a second multiple-choice arm in different wording.
+    Author replied "audit ok" with these known. Recorded in B_DEVIATIONS.md with
+    a standing caveat: NO SOCIAL NUMBER FROM THIS BUILD MAY BE REPORTED AS A
+    SOCIAL PREFERENCE. Nothing in the current chain reads them.
+
+2.4 WHY EVERY TEST PASSED THROUGH ALL OF THIS
+    The suite compared the code against itself. `risky_label` agreed with
+    `body_text` because both applied the same wrong rule; no test ever read a
+    rendered prompt. The check that finally caught it compared the RENDERED
+    PROMPT against what the readout claimed to be scoring -- an external
+    consistency check, not an internal one. reports/B_PROMPT_AUDIT.md now
+    renders 1,248 prompts across 624 cell types verbatim after the chat
+    template, with the exact token ids scored per label, and a test asserts from
+    the rendered text alone that each label names the right option.
+
+2.5 "CONSISTENT WITH THE PAPER" HAS NO SINGLE ANSWER  (BD32, corrects BD29)
+    | stack              | wording                  | answer tokens | grid        |
+    | Probes             | SAFE VS. RISKY, numbered | 'Safe'/'Risky'| 20..240 (45)|
+    | SAE                | prose                    | safe/risky    | 10..180 (35)|
+    | Revised Prompting  | prose + CoT              | safe/risky    | 10..180 (35)|
+    Common to all three: safe = 50 tokens, p = 0.5, tokens, EV crossover at 100.
+    BD29 asserted the published grid "is" 20..240 and the plan simply wrong.
+    In fact 20..240 is the PROBE stack's grid; the SAE stack -- which produced
+    the paper's headline layer-50 SAE results -- used 10..180. ICLR_PLAN.md's
+    10..240 is the union of the two. Which grid the bridging cell should
+    reproduce depends on which figure it bridges to. AUTHOR DECISION; the build
+    currently uses 20..240 by my choice, not by instruction.
+
+--------------------------------------------------------------------------------
+3. B1 -- TRIAL GENERATORS                                    STATUS: REBUILT
+--------------------------------------------------------------------------------
+Rebuilt after "audit ok": 915 content trials, 14,640 rows, sha256 a494a21d...
+  risk 722, social 168, transfer 25; splits disc/sel/cal; test split = 0 rows.
+Three invariants enforced in code, not documentation:
+  1. every prompt goes through the chat template (render_raw_unsafe refuses)
+  2. the test split cannot be materialised without the prereg-v1 SHA; 55
+     attempts are logged in logs/TEST_ACCESS.log, ALL REFUSED, none granted
+  3. the transfer battery is evaluation-only; `role` is a required argument;
+     191 accesses logged, 31 refused (probe, sae, persona, prompt_family, lora)
+Design bugs found by tests during construction: the mini-ultimatum's
+no-alternative condition was generated ZERO times (mod-4 split over four
+conditions put it in the locked test split); the transfer battery was cut to
+3 of 10 Holt-Laury decisions; social trials scored fairness as a dominance
+violation.
+
+--------------------------------------------------------------------------------
+4. B2 -- ESTIMATOR AND GATE                     STATUS: FAILED, TO BE RE-RUN
+--------------------------------------------------------------------------------
+GATE B2 FAILED in all 18 configurations, both before and after the author's
+restructure. All of these numbers predate the prompt fixes and are withdrawn;
+they are recorded because the REASONS survive the rebuild.
+
+After the author's items 2 and 3 (Gate B2 on alpha and gamma only; misspecified
+agents become BASES crossed with interventions):
+    alpha RMSE 0.0091, gamma 0.0044   (limit 0.05)          PASS
+    lambda RMSE 0.416                 (limit 0.15)          FAIL -> own gate
+    CPT preference classified          0.70                 FAIL (needs 0.95)
+    every non-preference intervention  0.00                 PASS (perfect)
+    misspecified model-free accuracy   9 of 10 cells at 1.00
+
+THREE ESTIMATOR CORRECTIONS, each found by the study failing for the wrong
+reason (BD14):
+  * no per-template intercept -> template variation was unmodelled misfit that
+    decided the model comparison. Preference share 0.265 -> 0.591.
+  * the fit used binary choices when the readout returns z. Fitting z took
+    alpha's RMSE from 0.055 to 0.0054 and the preference share to 1.000.
+  * D5 divided two squashed probability differences and failed genuine
+    preference shifts on noise alone; it now uses mean dz.
+No threshold was ever touched; plan v4's numbers live in one place and a test
+asserts them.
+
+TWO BASE AGENTS WERE BROKEN, BOTH SCALING FAULTS (BD22, BD24)
+  * the monotone base was INDIFFERENT on every trial: z sd 0.0073, P(risky)
+    spread 0.0105. The contextual-utility range was measured in dollars for
+    every family, but that family's utility is a bounded tanh.
+  * the mean-variance base was SATURATED: z to -90.32, sd 10.27. mean - b*var
+    is not scale-invariant (variance grows as the stake squared). Switched to
+    mean - b*SD.
+  A degenerate base passes every specificity check for free, so both would have
+  read as the misspecification test working.
+
+STRUCTURAL FINDING THAT SURVIVED THE RESCALING (BD25)
+  On a mean-SD base a preference change is observationally an ACTION BIAS.
+  After contextual normalisation the risk term is sqrt(p(1-p)), with no
+  dependence on the reward level, so the shift is nearly constant in z:
+  dz mean -0.2611, sd 0.0753 (ratio 0.29) against a CPT alpha shift's 0.99,
+  which changes sign across x. The model-free separation of preference from
+  action is MODEL-DEPENDENT. Reported, not fixed: fixing it would mean handing
+  the classifier the answer.
+
+LAMBDA: NO GRID IN THE SWEPT FAMILY IDENTIFIES IT  (BD26)
+  24 grids, 576 to 18,432 mixed rows. With alpha and gamma free, RMSE PLATEAUS
+  at about 0.26 and gets WORSE with density (0.2695 -> 0.3206) because each new
+  mixed trial adds alpha/lambda confounding faster than lambda information.
+  With alpha and gamma HELD at the baseline fit it improves monotonically and
+  PASSES at 12,288 mixed rows (2.01x the B1 grid), RMSE 0.1487.
+  => lambda is identifiable only if alpha is pinned on the gain frame, and then
+     needs about twice the grid. "Buy more mixed trials" alone is the wrong
+     purchase. Predicted before fitting in BD10: lambda cancels EXACTLY outside
+     mixed frames (max |dz| = 0.000000 across all 490 single-sign trials).
+
+NUMERICAL NOISE  (author item 3)
+  B2-cal measured it directly: five repeat unbatched reads, BIT-IDENTICAL,
+  max_abs_range = 0.0. So the primary recovery configuration is numerical noise
+  0, with 0.1 and 0.25 kept as sensitivity rows labelled "batched reads only".
+  This matches the Friday session's D50: the floor is not stable across
+  allocations (0.094 in one 70B run, 0.000 in another).
+
+DOMINATED-TRIAL POLICY  (BD9, decided before any fit)
+  "exclude" beats "lapse" on alpha (0.0091 vs 0.0111), lambda (0.416 vs 0.661)
+  and the classification rate the gate reads (0.70 vs 0.50). Default stands.
+
+--------------------------------------------------------------------------------
+5. B2-CAL -- CALIBRATING THE AGENTS TO THE MODEL     STATUS: RE-RUNNING
+--------------------------------------------------------------------------------
+Author item 1: the B2 agents were scaled without a model, so every power number
+was about an assumed choice function. B2-cal reads the unmodified 70B unbatched
+on the calibration split and returns theta0, the temperature, the template and
+numerical noise measured IN THE SAME RUN, and a within-cell slope test.
+
+FIRST RUN (872 rows, 17:38 on 4 GPUs) -- ALL NUMBERS NOW WITHDRAWN because they
+were read on the pre-fix prompts. What it did establish, and what survives:
+  * the real z is far steeper than the synthetic agents: sd 4.84 against 1.69
+  * numerical noise in that run was EXACTLY ZERO
+  * the author's three checks (item 2) came back: provenance CLEAN; the
+    within-cell slope is +3.10 mean and POSITIVE at every stake at p=0.5, so
+    "undermines the contextual-utility assumption" WAS WITHDRAWN -- the original
+    negative slopes were an artefact of pooling over p, since x and p are
+    negatively correlated by construction
+  * gamma 1.50 is S-SHAPED weighting (underweights small p); plan v4's 0.61 is
+    the inverse-S. I had this backwards and was corrected.
+  * CPT residuals are systematically -4.5 to -4.8 at p = 0.1 across every stake,
+    against z sd 4.84 -- the CPT fit is poor at low p, not merely oddly
+    parameterised
+
+RE-RUNNING NOW on the rebuilt 864-row grid (job 23433343).
+
+--------------------------------------------------------------------------------
+6. THE ANCHORS (B3)
+--------------------------------------------------------------------------------
+B3.1 GRADIENT -- ran on the 70B, conclusion withdrawn, to be re-run.
+  Completed in 8:40 on 4 GPUs. Ten directions at layers 48 and 50 with sha256
+  each and a how_to_load block. Gradient taken w.r.t. the OUTPUT of
+  model.model.layers[L], which is the tensor SteeringHook adds to -- a gradient
+  taken anywhere else would not be the direction a dose moves.
+  Per-order decomposition (author item 4): g1, g2, g1+g2 (order-invariant
+  anchor), g1-g2 (position-bias control), and one-format for the Friday
+  session's G4b.
+  cos(g1,g2) = -0.814 (L48), -0.823 (L50). REPORTED AS A FINDING, THEN
+  WITHDRAWN: the option-order bug relabels the options between the two orders,
+  so the measurement cannot separate a position effect from the relabelling.
+  Within-order coherence was 0.927-0.941, so each direction was real.
+  An 8B dry run caught a real bug first: freezing every parameter left nothing
+  in the graph requiring grad, so retain_grad raised. Fixed with
+  enable_input_require_grads.
+
+B3.2 LoRA -- built, never run on the 70B, has not passed cloning on the 8B.
+  Three adapters per A5 (reference at theta0, alpha-shifted, bias-shifted),
+  identical data order and schedule, one loaded base switched with set_adapter.
+  Loss is soft-label cross-entropy over the full vocabulary at the answer token.
+  Trains on disc+cal so the selection split is genuinely held out.
+  Cloning bar: correlation >= 0.95 AND calibration slope 0.9-1.1.
+  THREE DRY RUNS, NONE PASSED:
+    v1  lr 1e-4, 300 steps  loss 0.81->0.31  r 0.976  slope 0.714   FAIL
+    v2  lr 3e-4, 600 steps  loss 0.83->0.74 FLAT  r 0.000  slope 0.000  COLLAPSE
+    v3  lr 1e-4, slope curve every 250 steps:
+            step 250  r 0.966  slope 0.821  z_sd 4.165
+            step 500  r 0.976  slope 0.704  z_sd 3.534
+  v2 was MY ERROR: v1's evidence pointed only at step count, and I raised the
+  learning rate as well to try to shorten the eventual 70B run. At 3e-4 the loss
+  never fell and the adapters learned nothing. Cost ~21 min of 8B GPU and about
+  an hour of wall clock.
+  v3 shows the slope moving AWAY from the bar with more training, which kills
+  the under-training hypothesis. A plausible mechanism is that soft-label CE has
+  a vanishing gradient at saturated targets, so extreme-z trials contribute
+  almost nothing and the model never learns the full range.
+  v3 was cancelled mid-flight when the prompt bug was found -- it was training
+  on contradictory prompts.
+  Author item 4 sets the order of investigation: re-measure the slope curve on
+  corrected prompts, reporting TRAIN-SET slope beside HELD-OUT slope at every
+  probe. If held-out < 0.9 while train ~ 1 it is generalisation (more prompts,
+  weight decay, lower rank, checkpoint selection), and only if the train slope
+  also stays below 0.9 is the objective at fault.
+
+--------------------------------------------------------------------------------
+7. INFRASTRUCTURE BUILT ALONG THE WAY
+--------------------------------------------------------------------------------
+CHECKPOINT AND RESUME  (BD21, BD33)
+  Slurm jobs already survive a dropped connection; they do not survive
+  preemption, and ou_bcs_low/mit_preemptable are preemptible. Every long job now
+  resumes: an append-only on-disk array flushed every chunk, written atomically
+  via temp-and-rename so a kill mid-flush leaves the previous good checkpoint.
+  numerics_fp32 additionally skips a finished dtype stage (so a requeue after
+  fp32 does not pay 346 s to reload it); a recovery array task whose output
+  exists returns immediately; LoRA training checkpoints adapter and optimizer
+  state every 25 steps.
+  TESTED BY INTERRUPTION, not by assertion: test_resume_integration.py crashes
+  the real read loops mid-pass and asserts they resume to the IDENTICAL answer
+  and do not redo finished work.
+  A LATENT BUG FOUND WHILE VERIFYING: the no-checkpoint branch built a Partial
+  over /dev/null.npz and raised PermissionError the moment anyone took it.
+  A REAL BUG FOUND BEFORE THE RERUN: a checkpoint keyed on trial ids would have
+  silently reused stale reads after the prompt rewrite. A trial_id hashes
+  content and format but NOT the words shown to the model, so renaming labels
+  left every id identical while every prompt differed. The resume would have
+  declared all 872 rows done and returned the old run's z. items_key now folds
+  the rendered prompt text into the key.
+
+FAILURE WATCHDOG
+  A Monitor polling every 60 s, reporting new job failures, preemptions,
+  completions, error signatures in logs, and stalled heartbeats. Built badly
+  twice first: version 1 replayed 12 hours of history and called my own
+  deliberate cancellations failures; version 2 flagged the heartbeats of
+  COMPLETED jobs as hangs because it asked "is anything running" rather than
+  "is THIS job running". Both were the same shape of mistake -- a global check
+  where a per-job one was needed.
+
+--------------------------------------------------------------------------------
+8. SLURM AND PLACEMENT -- LESSONS PAID FOR
+--------------------------------------------------------------------------------
+  * GPUs were often free while my jobs sat PENDING. The causes were mine:
+    over-large memory requests (128-256 GB when a 70B needs ~20-40 GB of host
+    RAM), the wrong QOS (--qos=normal instead of mit_amf_advanced_gpu, which
+    tripped a per-user CPU cap filled by an unrelated project), and submitting
+    to a partition that looked large (mit_preemptable: 1,038 GPUs) but had 1,043
+    jobs queued.
+  * A generic --gres=gpu:N gets PINNED to a specific card type (l40s), which
+    silently narrows eligibility. It also nearly OOMed the 70B gradient: pinned
+    to l40s:2 = 96 GB for a model needing ~141 GB.
+  * The 8B LoRA sat 17 minutes on mit_preemptable without being placed; moving
+    it to mit_normal_gpu started it in seconds.
+  * RULE ADOPTED: measure free capacity per card type before submitting, request
+    the type explicitly, and move a job that has not started in ~5 minutes.
+  * Compute nodes cannot see the session scratchpad; helper scripts must live in
+    the repo.
+
+--------------------------------------------------------------------------------
+9. DECISION LOG BD1-BD34 (full text in logs/B_DECISIONS.md)
+--------------------------------------------------------------------------------
+BD1  the "60" in the 400 GPU-hour cap was Track B's budget (closes Friday's D38)
+BD2  B3.2 blocked on peft; the 4-bit fallback unverified, not broken
+BD3  Track B's write scope, cvb_ job prefix, trackB/ artefact location
+BD4  every prompt goes through the chat template, enforced not documented
+BD5  conditions replicated across splits; only reward levels divided
+BD6  the low end of the plan's grid is statewise dominated; cells kept, flagged
+BD7  the transfer battery locked in the runner as evaluation-only
+BD8  peft was already installed by the Friday session; Track B installs nothing
+BD9  the dominated-trial policy, fixed BEFORE any model data was fitted
+BD10 lambda unidentified outside mixed frames, predicted BEFORE fitting
+BD11 template effects drawn once and shared between conditions
+BD12 "the action model is rejected" = 0.95 cluster-bootstrap probability
+BD13 label sets chosen per family and domain
+BD14 three estimator corrections found by the study failing for the wrong reason
+BD15 what Gate B2 failed on, with the arithmetic of the remedy
+BD16 B2-cal: agents calibrated to the model before any power number is believed
+BD17 B2-cal on legacy labels only; carries the readout-vs-generation check
+BD18 BD12's 0.95 threshold approved, with Vuong beside it
+BD19 the D5 band stays at 0.8-1.25
+BD20 a failed Gate B2 stops evaluation, not construction
+BD21 every long job checkpoints and resumes; the resume is tested by interrupting
+BD22 the monotone base agent was indifferent on every trial
+BD23 the effect-size matching was the slowest thing in the study
+BD24 mean-variance becomes mean minus b*SD (scale invariance)
+BD25 on a mean-SD base a preference change IS an action bias -- structural
+BD26 no mixed-frame grid identifies lambda; alpha must be pinned
+BD27 (WITHDRAWN by BD28) the gradient is "predominantly a position direction"
+BD28 option order relabelled the options; BD27 withdrawn
+BD29 the prompts diverged from the plan and the paper for no reason
+BD30 prompts are now audited as text, not as code
+BD31 the social games have no game text; free text is scored like MC
+BD32 the three legacy stacks disagree with each other; corrects BD29
+BD33 a checkpoint keyed on trial ids would have reused stale reads
+BD34 external check 2(a): use chat64 (100% answered), not chat (32%)
+
+DEVIATIONS (logs/B_DEVIATIONS.md): 4 entries, including Gate B2's text changing
+twice before any model data was fitted, and B1 rebuilt with the social framing
+defect knowingly unfixed.
+
+--------------------------------------------------------------------------------
+10. OPEN QUESTIONS FOR THE AUTHORS
+--------------------------------------------------------------------------------
+ 1. WHICH LEGACY GRID should the bridging cell reproduce? Probes uses 20..240
+    (45), SAE uses 10..180 (35), the plan says 10..240 which nobody ran. The
+    build currently uses 20..240 BY MY CHOICE, not by instruction. (BD32)
+ 2. THE SOCIAL FRAMING. Accepted as-is for now, but no social number from this
+    build can be reported as a social preference. (BD31)
+ 3. FREE TEXT scoring by sequence log-probability is not implemented, so the
+    response-format factor is not the factor the plan defines. (BD31)
+ 4. LAMBDA needs alpha pinned on the gain frame plus ~2x the grid. (BD26)
+ 5. IF THE LoRA TRAIN-SET SLOPE also stays below 0.9, the plan's specified loss
+    cannot meet the plan's specified cloning bar -- a spec conflict. (item 4)
+ 6. THE MISSPECIFIED-BASE RESULT (BD25) says the model-free preference/action
+    separation is model-dependent. That is a paper-level finding.
+
+--------------------------------------------------------------------------------
+11. COMPUTE
+--------------------------------------------------------------------------------
+All Track B jobs carry the cvb_ prefix so the shared 400 GPU-hour cap is
+totallable from sacct. Track B GPU-hours consumed: roughly 4-5 of 400, nearly
+all of it B2-cal (2 runs x ~18 min x 4 GPUs) and the B3.1 gradient (8:40 x 4).
+Everything else is CPU. Two jobs were cancelled mid-flight for bad code, not for
+unwelcome results, and their outputs were deleted before being read.
+
+--------------------------------------------------------------------------------
+12. REPRODUCING
+--------------------------------------------------------------------------------
+  git checkout iclr-trackB
+  python -m pytest cv_bench/tests/ -q                 # 128 tests
+  python -m cv_bench.tasks.prompt_audit               # regenerate the audit
+  sbatch cv_bench/tasks/b1_build.sbatch               # the B1 dataset
+  sbatch cv_bench/estimator/b2_cal.sbatch             # theta0 and the noise floor
+  sbatch cv_bench/estimator/b2_recovery.sbatch        # 18-config study
+  sbatch cv_bench/anchors/b3_gradient.sbatch          # B3.1
+  # B3.2: python -m cv_bench.anchors.lora --model llama8b --clone-every 250
+Outputs under $TRACKB_SHARE/trackB/. Every reported value is in MANIFEST_B.csv
+with its script, input and git SHA.
+
+--------------------------------------------------------------------------------
+13. HONEST NOTE ON THIS SESSION'S ERROR RATE
+--------------------------------------------------------------------------------
+A large share of the elapsed time went to my own mistakes, not to compute:
+  * three prompt defects, two of them mine (BD28, BD29), which invalidated
+    B2-cal, B3.1's conclusion and the first recovery study
+  * a learning-rate change made alongside a step-count change, which collapsed
+    an 8B dry run and destroyed its diagnostic value
+  * a watchdog built wrong twice, both times a global check where a per-job one
+    was needed
+  * repeated queue stalls caused by over-large resource requests and the wrong
+    QOS
+  * an over-claim ("the legacy cell lines up with the published runs") and a
+    reversed statement about gamma's shape, both corrected by the authors
+The pattern in the technical ones is the same: checking a thing against itself
+rather than against an external reference. The prompt audit, the rendered-text
+tests, the interruption tests for resume, and the prompt-text checkpoint key are
+all attempts to close that gap.
+================================================================================
+END OF RECORD
+================================================================================

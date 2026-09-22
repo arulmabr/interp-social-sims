@@ -277,8 +277,14 @@ def main(argv=None) -> int:
     base_override = None
     if args.fitted_scale:
         base_override, noise = fitted_base()
-        if noise:
+        # --fitted-scale sets theta0 always. It sets the NOISE only when the
+        # caller did not name one: the array sweeps noise deliberately, and
+        # overriding it collapsed all 18 configurations onto the measured point,
+        # so they shared a filename and overwrote each other -- five tasks
+        # "completed" leaving one output.
+        if noise and "--template-noise" not in sys.argv:
             args.template_noise = noise["template_noise_sd"]
+        if noise and "--numerical-noise" not in sys.argv:
             args.numerical_noise = noise["numerical_noise_sd"]
         print(f"running at B2-cal's fitted scale: {base_override.as_dict()}")
         print(f"  measured noise: template {args.template_noise:.4f}, "
