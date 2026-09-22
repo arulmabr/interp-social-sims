@@ -697,3 +697,42 @@ reads measured bit-identical at 1.1e-16; 0.1 and 0.25 remain as sensitivity rows
 batched-reads-only (author item 3). The CPT base is the fitted theta0 rather than plan v4's defaults,
 with the other two families rescaled to it. Every Gate B2 verdict before this was computed at a quarter
 of the real noise on an agent that was not this model, and is superseded rather than merely re-run.
+
+**BD45. Gate B2 at the measured scale: 0 of 18 pass, and the failure is power, not correctness.**
+Run at B2-cal's fitted theta0 (alpha 0.701, gamma 1.685, tau 0.119) with template noise swept 1.0 /
+2.13 / 3.0 around the measured 2.1338 and numerical noise 0 / 0.1 / 0.25, numerical 0 being primary
+because unbatched reads measured bit-identical. 20 replications per cell, 17 cells per replication.
+
+| criterion | result |
+|---|---|
+| alpha RMSE <= 0.05 | **17 of 18 configurations pass** |
+| gamma RMSE <= 0.05 | **16 of 18 pass** |
+| specificity: no bias called preference-like | **18 of 18 perfect** |
+| sensitivity >= 0.95 | **0 of 18**; best 0.90, typically 0.05-0.50 |
+
+Parameter recovery works and specificity is flawless — across every configuration, no action, belief,
+noise or format intervention was ever mistaken for a preference, even matched on behavioural effect
+size. The single failure is sensitivity, and it tracks noise exactly:
+
+| | numerical 0 | 0.1 | 0.25 |
+|---|---|---|---|
+| template 1.00 | **0.90** | 0.85 | 0.05 |
+| template 2.13 (measured) | 0.50 | 0.25 | 0.05 |
+| template 3.00 | 0.20 | 0.35 | 0.15 |
+
+So **at this model's measured template noise the minimum detectable change is too small to detect
+reliably**. That is a statement about the design, not about the estimator: the same code reaches 0.90
+at template 1.0 and would presumably pass at lower noise still. The remedies are the family already
+identified for lambda — more rows, repeated reads to average the template effect down, or a larger
+minimum detectable change — and all three are author decisions.
+
+Two things this settles. First, **every earlier Gate B2 verdict was measured in the wrong regime**: the
+first study called template noise 0.5 primary when the model's value is 2.13, so it reported power at
+roughly a quarter of the real noise on an agent that was not this model. Second, **author item 3 is
+vindicated twice**: numerical noise of 0.25 collapses sensitivity to 0.05 even at low template noise,
+and B2-cal measured the real unbatched figure as bit-identical zero. Reading batched would have
+introduced precisely the noise that destroys the diagnostic.
+
+The one misspecified cell that fails at every configuration is `mean_variance/preference`, which is
+BD25's structural result and not a power effect: on a mean-SD base a preference change is
+observationally an action bias.
