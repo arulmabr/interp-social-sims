@@ -327,7 +327,8 @@ def main(argv=None) -> int:
     # this direction rather than build a second one, so what it is and how to
     # apply it has to travel with the file.
     summary["how_to_load"] = {
-        "numpy": "vec = np.load('grad_L50_legacy_both_orders.npy')",
+        "numpy": ("vec = np.load('grad_L50_legacy_sum.npy')       # Track B's anchor\n"
+                  "vec = np.load('grad_L50_legacy_one_format.npy')  # what G4b loads"),
         "apply": ("cv_bench.steer.Intervention(layer=L, vectors=vec, scale=s, "
                   "positions='last', mode='add', norm_unit=median_residual_norm(...))"),
         "note": ("the vector is the gradient of z with respect to the OUTPUT of "

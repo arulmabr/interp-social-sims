@@ -640,3 +640,20 @@ For the Friday session's G4b: the directions are on the share with sha256 each a
 block. Their `cvb_g4b` run failed in `fallback_gradient` — it was building its own direction, which
 item 3 exists to avoid — with a placement error (`36 module(s) landed on disk rather than a GPU`).
 These files are the ones to load; `legacy_one_format` is the version item 3 named for them.
+
+**BD41. node2119 is silently bad and Slurm keeps scheduling onto it.** Four `cvb_` jobs failed in
+quick succession, all the Friday session's, and three of them were on the same node:
+
+| job | node | error |
+|---|---|---|
+| `cvb_g4b` 23433140 | node3512 | 36 modules landed on disk rather than a GPU (placement) |
+| `cvb_g5` 23437066 | **node2119** | `CUDA error: CUDA-capable device(s) is/are busy or unavailable` |
+| `cvb_g4b` 23437067 | **node2119** | same |
+| `cvb_g3` 23437069 | **node2119** | `CUDA error: unspecified launch failure` |
+
+`sinfo` reports node2119 as `mix` with **no drain reason**, so the scheduler believes it is healthy and
+keeps placing work there; every job that lands dies inside a minute. Anything retried without an
+exclusion will keep failing on it. The fix is `--exclude=node2119`, which is now on Track B's 70B LoRA
+submission — a run of roughly ten GPU-hours is not worth losing to a node the scheduler will not admit
+is broken. Worth the Friday session doing the same; their G4b has now failed twice, once for placement
+and once here, while building a gradient direction that already exists on the share with hashes.
