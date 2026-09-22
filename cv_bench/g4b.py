@@ -343,12 +343,26 @@ def main() -> int:
     ap.add_argument("--game", default="both", choices=["lottery", "ultimatum", "both"])
     a = ap.parse_args()
     if a.fallback:
-        for game in (GAMES if a.game == "both" else (a.game,)):
-            if trackB_gradient(a.layer, game, "legacy_one_format") is not None:
-                print(f"[g4b] Track B's B3.1 is committed for L{a.layer} {game}; "
-                      f"not computing a duplicate")
-                continue
-            fallback_gradient(a.layer, game)
+        # One load for every (layer, game). Separate sruns per layer could not
+        # work: the second reloads 141 GB while the first still holds the GPUs
+        # (D75). `--layer 0` means every layer in LAYERS, and is the default --
+        # an explicit layer is still honoured.
+        layers = [L for L in LAYERS if L in (48, 50)] if a.layer == 0 else [a.layer]
+        if any(L not in (48, 50) for L in layers):
+            raise SystemExit(f"refusing to compute a gradient at {layers}: "
+                             f"B3.1 is defined at layers 48 and 50")
+        games = GAMES if a.game == "both" else (a.game,)
+        todo = [(L, g) for L in layers for g in games
+                if not (OUT / f"fallback_gradient_L{L}_{g}.npy").exists()
+                and trackB_gradient(L, g, "legacy_one_format") is None]
+        if not todo:
+            print("[g4b] every gradient is on disk or committed by Track B", flush=True)
+        else:
+            from cv_bench.s21_fix import load as _load
+            shared = _load("llama", "bf16")
+            print(f"[g4b] model loaded once for {len(todo)} pairs: {todo}", flush=True)
+            for L, g in todo:
+                fallback_gradient(L, g, loaded=shared)
     geometry()
     return 0
 

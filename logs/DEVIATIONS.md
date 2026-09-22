@@ -386,3 +386,29 @@ directions: it returns my nine pending ids and refuses Track B's `23437501` with
 **Not remediated by me, deliberately.** Track B has already resubmitted — `cvb_b3_lora8b5` is running
 and `cvb_b0_num` is queued. Resubmitting or otherwise touching their work to "fix" my mistake would
 repeat the original error. The authors have been told.
+
+---
+
+## 2026-09-22 04:20 UTC — D-2026-09-21-12: a gradient was computed at layer 0 and written to disk
+
+**What happened.** `cvb_g4b` wrote `fallback_gradient_L0_lottery.npy` and
+`fallback_gradient_fmtavg_L0_lottery.npy` — the readout gradient evaluated at **layer 0**, which is
+not a quantity B3.1 defines and not a layer this project steers.
+
+**Cause, and it is mine.** D75 changed `--layer`'s default to `0` meaning "every layer", and added a
+block that expands it. The edit that was supposed to *replace* the old single-layer loop silently
+failed to match, so the old block survived and ran with `a.layer = 0`. I reported the fix as applied
+without reading the file back. This is the fifth time tonight an edit of mine did not match its
+anchor; the four earlier ones were caught by a later check, this one reached disk.
+
+**What changed.**
+* Both L0 files are moved to `g4b/quarantine/`, not deleted.
+* The old block is gone, verified by reading the source back and asserting on both the new text being
+  present and the old text being absent.
+* `--layer 0` now expands only to `[48, 50]`, and any other layer raises `SystemExit` before a model
+  is loaded: *"refusing to compute a gradient at [...]: B3.1 is defined at layers 48 and 50."*
+* Every patch from here is verified by re-reading the patched region, not by the absence of an error.
+
+**No result is affected.** Nothing consumed the L0 files: `geometry()` reads
+`fallback_gradient_L{48,50}_*.npy` by name, and the L48 lottery gradient — the one legitimate
+artefact from that job — is untouched and still on disk.
