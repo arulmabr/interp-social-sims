@@ -1,282 +1,248 @@
 ================================================================================
-FRIDAY_SESSION.TXT
-Session record for the ICLR 2027 submission "Interpreting and Steering LLM
-Agents for Social Simulations"
+FRIDAY_SESSION.TXT — what was done, how, and what was found
+ICLR 2027 submission: "Interpreting and Steering LLM Agents for Social
+Simulations"
 
-Repository : /home/guna23/shrey/risk  (github.com/arulmabr/interp-social-sims)
-Branch     : iclr-extension   (Track B runs in parallel on iclr-trackB)
-Rewritten  : 2026-09-22 01:05 UTC   (supersedes the 23:55 version)
-Cutoff     : Thu 24 Sept 06:00 UTC  -- 53 hours away
-G4 report  : Wed 23 Sept 15:00 UTC (08:00 PDT) -- 38 hours away
-Deadline   : Fri 25 Sept 23:59 AoE
-Spend      : 24.84 of 400 GPU-hours (this session 18.21, Track B 6.63)
+Repository : /home/guna23/shrey/risk   branch iclr-extension
+Session     : 2026-09-21 ~05:00 UTC → 2026-09-22 09:16 UTC (ends idle)
+Cutoff      : Thu 24 Sept 06:00 UTC  ·  Deadline: Fri 25 Sept 23:59 AoE
+Spend       : 55.5 of 400 GPU-hours (this session 43.8; Track B 11.7)
 
-NOTE ON TIMES. The cluster reports local time (EDT, UTC-4). Everything in this
-file is UTC. Two estimates earlier tonight were four hours optimistic because I
-read the scheduler's local timestamps as UTC; the figures below are converted.
+All times in this file are UTC. The cluster reports EDT (UTC−4); two estimates
+during the session were four hours wrong from conflating them.
 ================================================================================
 
 CONTENTS
-  1. What is running and what is pending
-  2. What has finished and is verified
+  1. What was done
+  2. How it was done
   3. What was found
-  4. Incidents: what went wrong and what changed
-  5. Blockers and decisions waiting on the authors
-  6. Governing rules as they now stand
-  7. Next steps and deadlines
+  4. What was corrected in my own work
+  5. What is not done, and what blocks it
+  6. Where everything lives
 
 ================================================================================
-1. WHAT IS RUNNING AND WHAT IS PENDING            (as of 2026-09-22 01:05 UTC)
+1. WHAT WAS DONE
 ================================================================================
 
-RUNNING (mine): the monitor only. No compute job of mine is on a GPU.
+76 commits. 35 modules, 3 test files (51 tests), 18 Slurm scripts, 24 reports,
+1,300 registered values in MANIFEST.csv, 77 decisions, 13 deviations, 16
+completion markers.
 
-PENDING (mine), nine:
+RECONNAISSANCE AND RE-ANALYSIS (no new compute)
+  S0    repo map, provenance table, stack audit, probe provenance, excluded
+        arms; 234 values recomputed
+  S1.1–S1.8  dominated choices, catch trials, 68 switching points with two
+        bootstrap schemes, what the probe encodes, per-judge orderings, four
+        judge-independent text measures, the prompting ladder, cross-stack
+        personas
+  V1    which dataset produced Figure 5 — 1,175 cells searched
+  V2    judge identities and archival ids per scoring pass
+  V3/V4/V5  checkpoint ids, Slurm entitlements, whether the legacy coding can
+        be audited
 
-  job                what it settles                     waiting on
-  cvb_g4_recon_L48   G4 reconstruction + G4b baselines   est. start 03:44 UTC
-  cvb_g4_recon_L50   the same at layer 50                est. start 09:30 UTC
-  cvb_g4b            the readout gradient, both layers   backfill
-  cvb_g6             SAE ablation and attribution        backfill
-  cvb_neutral2       the neutral framing, spanned range  backfill
-  cvb_g3             label and option-order transfer     afterok cvb_neutral2
-  cvb_s32            position policies at two doses      backfill
-  cvb_s35            temperature 1.0 unsteered arm       backfill
-  cvb_g5b            creativity generations              backfill
+NEW COMPUTE (all on Llama-3.3-70B-Instruct bf16 unless noted)
+  G1    model + SAE download, hash-verified
+  G2    the committed code path at λ=0: 3 arms × 2 models × 2 games, every raw
+        generation saved, 2 codings
+  G4    the probe rebuild: 2 variants × 2 layers, 11 doses, 7 directions,
+        894 sampled cells + 4,928 readout cells per replica
+  G4b   readout gradient at layers 48 and 50, both games, plus the direction
+        geometry (90 cosines)
+  G4q   the same rebuild on Qwen2-7B at layer 17
+  G5    the 8 logged SAE features steered locally at the published doses
+  G6    SAE ablation against 100 activation-matched random features, and
+        attribution rank among all 65,536
+  G5b   creativity arms generated locally (240 generations), scored by 2 judges
+  G3    label and option-order transfer, forward passes only
+  S3.2  the probe under three position policies at two doses
+  S3.5  one unsteered arm per game at temperature 1.0
+  instr the instrument check: residual norms, readout-vs-free-generation, and
+        the token-cap measurement
+  neutral  three neutral label framings, unsteered, calibration prompts only
 
-The seven backfill jobs return no start estimate, which means the scheduler
-intends to slot them into gaps rather than reserve capacity; they are short and
-will almost certainly run before the replicas.
-
-WHEN IT FINISHES. The two reconstruction replicas set the critical path:
-recon_L48 starts ~03:44 and runs ~4.5 h, finishing ~08:15; recon_L50 starts
-~09:30 and runs ~3.5 h (it resumes at cell 131 of 894), finishing **~13:00 UTC**
--- about 12 hours from writing. That leaves 41 hours to the cutoff and 26 hours
-between the data landing and the G4 report deadline.
-
-TRACK B, read-only and not touched: cvb_b3_lora8b5 running, cvb_b0_num and a
-cvb_b2_recovery array queued.
+WRITING
+  reports/G4_DECISION.md — the probe-figure memo, 34 h before its deadline
+  reports/G2_RESULTS.md, REVIEW_CROSSREF.md, SCHEDULE.md
+  paper_patches/CLAIMS.csv — 46 rows, every reviewer point with the sentence
+  the PDF will carry
+  CLAUDE.md rule 16 (autonomy with four hard stops); logs/DECISIONS.md D1–D77
 
 ================================================================================
-2. WHAT HAS FINISHED AND IS VERIFIED
+2. HOW IT WAS DONE
 ================================================================================
 
-Verified means a completion marker on disk AND the expected row count, not a
-Slurm status field -- that field reported a crashed job as COMPLETED twice
-tonight.
+RESUMABILITY. Every long job writes one fsynced JSON record per unit of work,
+keyed by the work itself, and re-reads that file on start. A truncated final
+line is dropped rather than parsed. Jobs carry --requeue and a TERM handler that
+stops at a unit boundary. This was tested by events rather than by intent: a
+preemption, four node faults, two OOMs and eight of my own cancellations cost
+**zero** completed units all session.
 
-  done_instr_llama.json                50 norms, 128 readout grid, 840 free gens
-  done_neutral_llama.json              344 mass rows
-  done_g4_as_written_L48.json          678 sampled cells, 2,816 readout cells
-  done_g4_as_written_L50.json          678 sampled cells, 2,816 readout cells
-  done_g4_qwen_reconstruction_L17.json 436 sampled cells, 2,310 readout cells
-  done_g5_llama.json                   109 cells, the eight logged SAE features
+VERIFICATION BY CONTENT, NOT BY STATUS. A Slurm status of COMPLETED proved
+untrustworthy three times. Completion is now checked as: marker present AND
+expected row count AND — after the judge incident — the records actually mean
+something. `cv_bench/monitor.py` runs this every 10 minutes as a Slurm job.
 
-Finished earlier without markers (they predate the mechanism): G2 on both models
-and all three arms, V1, V2, the G4 cell benchmark, the S2.1-fix phases.
+EVERY GENERATION CODED THREE WAYS. `legacy` (last label mention, the published
+rule), `strict` (first mention), `phrase` (the label after an explicit decision
+phrase, else no_answer). No agreement figure is ever reported without the trials
+on which both codings produced a choice, that share, and both no-answer rates.
 
-PARTIAL: reconstruction L50 has its **complete** readout arm -- 4,928 cells,
-seven directions x 11 doses x 64 levels -- and 130 of 894 sampled cells, which
-survived a preemption intact and will be skipped on resume.
+CHOICES FIXED BEFORE THEY COULD BE INFLUENCED. G4's dose grid was written into
+DECISIONS.md before any steered run: λ ∈ {0, 0.3, 0.5, 1, 2, 3, 4.5, 6} from the
+legacy calibration grid, divided by the measured median residual norm, plus
+{0.25, 0.5, 1.0} of that norm so a null at legacy doses could be told from a null
+everywhere.
 
-ANALYSES COMPLETE: the instrument comparison (instr_agreement.csv,
-instr_cap.csv), the three-coding G4 report (g4_curves.csv 672 rows,
-g4_agreement.csv 504 rows, four sweeps), V1's Figure 5 search, V2's judge
-inventory, the review cross-reference (CLAIMS.csv, 46 rows).
+COST MEASURED BEFORE IT WAS SPENT. One G4 cell was timed before committing to
+894 of them, which is how the session learned that 40-way batching is *slower*
+per sequence at a long cap — a batch runs until its last straggler stops while a
+single sequence ends at EOS after ~10 tokens.
+
+SECRETS. `working_apis/` (nine key files) and `hf_token.txt` were in the
+repository root. Both were untracked and in no commit on any branch — verified —
+and now live in ~/secrets at 700/600. The in-repo fallback in the token loader
+was removed rather than re-pointed. X1 was implemented (it had been only a
+specification): allow-list in, deny-list check, build fails on a match, and a
+credential match is reported as file/line/rule with the text withheld.
 
 ================================================================================
 3. WHAT WAS FOUND
 ================================================================================
 
-3.1 THE READOUT DOES NOT TRACK FREE GENERATION. Sampled generation is primary.
-    The instrument check (FRIDAY amendment item 2) compared the logit readout
-    against G2's free generation at the same grid points. The bar was crossings
-    within one grid step and a slope in 0.8-1.2.
+3.1 THE RELEASED CODE CANNOT HAVE PRODUCED THE PUBLISHED PROBE FIGURES.
+    Run exactly as committed, the pipeline answers nothing on 88.3% of Llama
+    lottery trials and 89.6% of Qwen's. The published probe data has **0
+    unparseable rows in 21,040**. No caller retries, falls back or filters; no
+    commit on any branch put a chat template in Probes/; the four probe files
+    have one commit each dated 2026-05-25 while the runs are dated Oct–Nov 2025.
+    Under steering it is worse: 97–99% of trials state no decision at any dose.
 
-      coding     readout crossing   free crossing   gap      slope    r
-      legacy           234.1             62.6      34 steps  0.751  0.26
-      strict           234.1            110.0      25 steps  0.268  0.16
-      decision         234.1             63.2      34 steps  0.959  0.31
+3.2 LAYER 48 HAS NO DOSE-RESPONSE.
+    Rebuilt probe, chat template, 60-fold range of dose:
+        L48   104.1 → 107.1 → 104.3     (under one grid step)
+        L50   104.1 → 122.9 → 155.3 → 124.5   (~10 grid steps, non-monotone)
+    The layer the paper's probe figures steer does not move the choice curve.
+    L50 moves and then reverses at the top dose.
 
-    Every row fails. Under the standing rule, **sampled generation is primary
-    and the readout is a secondary measurement.** The decision-coding slope sits
-    inside the band, but with r = 0.31 that is a slope through noise.
+3.3 THE READOUT DOES NOT MEASURE WHAT FREE GENERATION MEASURES.
+        coding   readout   free     gap        slope    r
+        legacy    234.1     62.6    34 steps   0.751   0.26
+        strict    234.1    110.0    25 steps   0.268   0.16
+        phrase    234.1     63.2    34 steps   0.959   0.31
+    Bar was one grid step and slope 0.8–1.2. Sampled generation is primary.
+    Separately, the calibration slope that had validated the readout was
+    **circular**: both its columns came from the same forced-answer prompt.
 
-3.2 THE AS-WRITTEN VARIANT PRODUCES NO USABLE DOSE-RESPONSE CURVE.
-    Llama, layer 48, probe direction, lottery, under the coding that requires an
-    explicitly stated decision: **97-99% no answer at every dose**, from zero to
-    1.0 of the median residual norm. The few crossings that appear come from the
-    `legacy` and `strict` codings, which resolve by label position and so read
-    the prompt's own option ordering. The readout never crosses 0.5 on the grid.
-    Run exactly as committed, the probe pipeline yields nothing to fit a curve to.
-    This corroborates G2 from the steered side.
+3.4 CODING DISAGREEMENT IS A TOKEN-CAP ARTEFACT.
+    G2 chat64 (64 tokens): legacy vs strict agree on 0.591; the switching point
+    is 74.6 under one rule and 222.7 under the other on identical text, because
+    the model is still restating the prompt's two options when the cap lands.
+    At 12 tokens agreement is 0.982 (27,120 trials); at 256 tokens the decision
+    rate is 1.000 and legacy and phrase agree to 0.3 tokens.
 
-3.3 CODING AGREEMENT IS A PROPERTY OF THE TOKEN CAP, NOT OF THE CODING.
-      G2 chat64, 64 new tokens      0.591
-      G4 as-written, 12 new tokens  0.982 over 27,120 trials per replica
-    Twelve tokens leave no room to reason, so there is one label in the text and
-    both rules read it. Neither figure is quoted without the trials on which both
-    codings produced a choice, that share, and both no-answer rates.
+3.5 THE PROBE DIRECTION IS NOT THE READOUT DIRECTION.
+    Cosines against a null of 1/√8192 = 0.011:
+        probe × readout gradient          +0.029 / +0.031    (2.6–2.8×)
+        probe × difference-of-means (CAA) +0.188 / +0.192    (17×)
+        probe × first PCA (RepE)          +0.101 / +0.109    (9–10×)
+        gradient × gradient, both orders  +0.638 / +0.642    (58×)
+    On Qwen L17 a probe for "payoff above the grid median" is **1.000 accurate**
+    and cos(choice, reward) = +0.590, ~35× that model's null.
+    About a third of the gradient anchor is format rather than readout.
 
-3.4 QWEN's CHOICE PROBE SHARES A DIRECTION WITH A PAYOFF CODE.
-    G4q, layer 17, rebuilt probe:
+3.6 FIGURE 5 CANNOT BE REPRODUCED FROM ANY SCORING PASS IN THE RELEASE.
+    1,175 cells searched; 21 single-value matches found; **21.0 is exactly what
+    chance predicts at that width**. Requiring a coherent pair — both halves from
+    the same pass, task, column and judge subset — **none** matches.
 
-                      lottery   ultimatum
-      probe accuracy    0.898     0.931
-      reward probe      1.000     1.000
-      cos(choice, reward)  +0.590    +0.540
-      cos(choice, diffmean) +0.766   +0.668
-      cos(choice, pca1)     +0.447   +0.447
-      cos(choice, ridge log n) +0.510 +0.765
+3.7 THE JUDGE EVIDENCE IS THINNER THAN THE PAPER IMPLIES.
+    The four single-judge passes are gpt-5 alone with an api_response_id on every
+    row. The three five-judge passes carry **none**. The 0.77 inter-judge
+    agreement is a pooling artefact: 0.458 and 0.353 within task, 0.135 and
+    0.020 within the prompting condition. Four of five judges rate SAE steering
+    *below* baseline on brick.
 
-    A probe for "is the payoff above the grid median" is **perfectly accurate**,
-    above the choice probe's own accuracy. The cosine null for this hidden size
-    is about 0.017, so +0.59 is roughly 35x the scale of two unrelated
-    directions. This is the extension plan's hypothesis 1 measured directly for
-    the first time. It does not settle it -- 0.59 is shared direction, not
-    identity -- but it is a number rather than a structural argument.
-
-3.5 THE TOKEN CAP IS THE WHOLE STORY FOR THE CHAT TEMPLATE.
-      cap  64   decision rate 0.707   truncated 0.343
-      cap 128   decision rate 0.821   truncated 0.264
-      cap 256   decision rate 1.000   truncated 0.000
-    G4's sampled arm runs at 256 rather than inheriting 64.
-
-3.6 EARLIER FINDINGS, UNCHANGED. The committed probe path answers nothing on
-    88.3% of Llama lottery trials while the published data has 0 unparseable
-    rows in 21,040; the four probe files postdate their runs by seven months;
-    the preference probe sees 45 prompts differing in one integer and the
-    capability probe two; the legacy hook steers zero generated tokens; the 0.77
-    judge agreement is a pooling artefact (0.135 and 0.020 within the prompting
-    condition); Llama under the chat template accepts 760 of 760 ultimatum
-    offers; V1 finds no scoring pass that reproduces Figure 5 (21 matches across
-    1,175 cells against 21.0 expected by chance, and no coherent pair); V2 finds
-    the five-judge passes carry no API response ids.
+3.8 OTHER FINDINGS THAT SURVIVE.
+    The released hook steers zero generated tokens. Every λ in the repository is
+    negative and no λ=0 row exists. Under the chat template Llama accepts 760 of
+    760 ultimatum offers, at temperature 0.7 and at 1.0. The preference probe
+    sees 45 prompts differing in one integer; the capability probe sees two.
+    Neutral labels fail on the lottery specifically — on the ultimatum two
+    framings track free generation inside the 0.8–1.2 band, on the lottery none
+    does, and the counterbalanced ultimatum crossing moves 38 tokens from
+    swapping which option is labelled A.
 
 ================================================================================
-4. INCIDENTS: WHAT WENT WRONG AND WHAT CHANGED
+4. WHAT WAS CORRECTED IN MY OWN WORK
 ================================================================================
 
-Since about 22:00 UTC most of the effort went into the scaffolding, not the
-science. Eleven deviations are logged (D-2026-09-21-00 .. -11) and decisions run
-to D68.
+13 deviations logged. The ones that changed a published number or destroyed
+something:
 
-4.1 I CANCELLED SEVEN OF TRACK B'S JOBS, TWO MID-RUN.  (D-2026-09-21-11)
-    b3_lora8b3 lost 15 min 20 s and b3_lora8b4 lost 18 min 39 s of LoRA anchor
-    training -- the task the authors had said was not this session's to build.
-    Cause: rebuilding my queue with `squeue | grep cvb_ | xargs scancel`. The
-    `cvb_` prefix is shared by both sessions so the GPU-hour caps read off one
-    sacct total: it is a **budget** key and I used it as an **ownership** key. On
-    a preemptable partition a running job drops to pending constantly, so a Track
-    B job with 18 minutes of work looked exactly like a stale submission of mine.
-    This also broke rule 8. `cv_bench/mine.py` is now the only sanctioned answer
-    to "which jobs may I cancel"; it refuses anything matching ^cvb_b\d and was
-    verified in both directions. No prefix sweep is used again. Track B's work
-    was not touched afterwards to remediate -- that would repeat the error.
+  * The decision detector missed this model's own convention — reason, then the
+    answer alone on the last line. Decision rates by cap were 0.31/0.34/0.34;
+    they are **0.41/0.64/1.00**. This corrected a committed claim in
+    G2_RESULTS.md. Recoded from saved text, no model rerun.
+  * The neutral free generation ran over a range entirely below the switching
+    point, making a constant result inevitable. Withdrawn and rerun over a
+    spanning range.
+  * A gradient was computed at **layer 0** and written to disk, because a patch
+    silently failed to match and left the old code path live. Quarantined.
+  * **I cancelled seven of Track B's jobs, two mid-run** (15 and 18 minutes of
+    LoRA anchor training), by sweeping `squeue | grep cvb_ | xargs scancel`. The
+    `cvb_` prefix is shared by both sessions for *budget* accounting; I used it
+    as an *ownership* key. `cv_bench/mine.py` is now the only sanctioned cancel
+    path and refuses anything matching ^cvb_b\d.
+  * 720 judge calls succeeded and **all 720 were recorded as failures** — the
+    scores were searched for in the re-serialised envelope where every quote is
+    escaped. The completion marker had been written and the row count was right;
+    only reading `parse_status` showed it was empty.
+  * I stopped a running job at 188/240 to chase H200s, having read `sinfo`'s
+    idle+mix count as availability. There was one genuinely idle node, then
+    none; it cost ~25 minutes and eight cancelled job records.
 
-4.2 FIVE MECHANISMS THAT TURNED A FAILURE INTO A SILENCE.
-    * a dependency that fired on cancellation (afterany where afterok was meant),
-      releasing G3 against a framing selection built from zero rows;
-    * a selection written from zero free-generation levels, which parsed cleanly;
-    * `srun ...` followed by `echo exit=$?`, so the echo's status became the
-      script's and a crashed job reported COMPLETED to sacct;
-    * only the last srun propagating, so a two-phase job whose first phase
-      crashed reported COMPLETED in 24 seconds;
-    * a failure watcher whose sacct query used UTC on a cluster that runs EDT,
-      so it errored and returned nothing -- which looks exactly like "all fine".
-    All fixed and, where testable, tested. The guards themselves all worked: the
-    placement assertion, the empty-selection refusal and the completion markers
-    each fired. What failed was the reporting path between the guard and me.
-
-4.3 ONE BAD NODE ACCOUNTED FOR FIVE FAILURES.  (D68)
-    node2119: cvb_g3, cvb_g4b, cvb_g5 twice, cvb_neutral2, with two different
-    CUDA faults. Every other failing node failed once, from a capacity fault now
-    fixed. `--exclude=node2119` everywhere. cvb_g5 failed four times before this
-    and succeeded on the fifth attempt, on a different node.
-
-4.4 A GPU REQUEST THAT DID NOT FIT, AND A LOADER THAT NOW REFUSES TO PRETEND.
-    `--gres=gpu:2` can land on two L40S: 80.1 GiB usable against 141.1 GB
-    needed, so 36 layers went to disk. Every 70B job now asks for a100:2
-    (142.6 GiB). Earlier the same class of fault put the whole model on the CPU
-    while the job looked healthy; `load()` now waits for GPU memory, caps CPU at
-    0 GiB so accelerate must place on a GPU or raise, asserts the device map,
-    and retries a busy-device probe rather than dying on it.
-
-4.5 CORRECTIONS TO PUBLISHED NUMBERS.
-    The decision detector missed this model's own convention -- reason, then the
-    answer alone on the last line. Recoded from saved text, no rerun:
-    decision rate 0.31/0.34/0.34 by cap became 0.41/0.64/1.00, and
-    reports/G2_RESULTS.md's claim that the rate was "identical" at 12 and 64
-    tokens became 32.0% and 41.3%. The neutral free generation ran over a range
-    entirely below the switching point, making a constant result inevitable;
-    that selection is withdrawn and the rerun spans the crossing.
+Grouping ~20 job failures by cause: 5 from one bad node (node2119, excluded), 4
+from resources I specified wrongly, 5 from paths that turned a crash into a
+silence, 5 from patches that silently did not match. Only the first group was
+environmental.
 
 ================================================================================
-5. BLOCKERS AND DECISIONS WAITING ON THE AUTHORS
+5. WHAT IS NOT DONE, AND WHAT BLOCKS IT
 ================================================================================
 
-(a) HOW WERE THE ORIGINAL PROBE RUNS MADE?  Deadline Wed 23 Sept 09:00 PDT
-    (16:00 UTC), ~39 hours away. Absent an explanation the patches proceed on
-    the basis that the PDF reports the reconstruction and removes legacy probe
-    figures that were not rebuilt. Section 3.2 strengthens the case: run as
-    committed, the pipeline produces no curve at all.
-
-(b) G5b's JUDGING CANNOT RUN -- no API credentials are set and none is on disk.
-    The $50 approval does not help without keys. G5b is split so the generations
-    and the judge-independent measures land regardless; only `--phase judge` is
-    blocked.
-
-(c) THE LATEX SOURCE. Every text patch waits on paper_src/. The built PDF is in
-    the repository root and has been used for V1; the source is not.
-
-(d) IS THE mit_amf_advanced_gpu ALLOCATION FAIR GAME? Used under rule 16 and the
-    scheduling amendment; it is a different allocation and worth confirming.
-
-(e) bitsandbytes has no GPU support in this environment, so 4-bit is unavailable.
+  * **W1–W8, the paper text.** Blocked on paper_src/, which is not in the
+    repository. CLAIMS.csv holds the sentence for every point meanwhile.
+  * **The supplement.** X1 finds 0 credential matches and **1,160 anonymity
+    matches**, almost all the hard-coded lab-share path in every module's
+    default. It cannot be built until those are parameterised.
+  * **Judges.** deepseek-v4-pro and kimi-k2.6 have no credentials here;
+    gemini-2.5-pro rate-limited at 0.5 rows/min. G5b is a **two-judge** figure
+    (gpt-5 240/240 mean 7.651; claude-sonnet-4-6 240/240 mean 6.316) and says so.
+  * **Track B's B3.1.** Not landed, so G4b's gradients remain the Friday-session
+    duplicate, to be reconciled.
+  * **The author explanation** of how the original probe runs were made, due
+    Wed 23 Sept 16:00 UTC. Absent it, the default applies: the PDF reports the
+    reconstruction and unrebuilt legacy probe figures are removed.
+  * **Deferred to the extension plan, not to a patch:** ITI, SemDis or
+    human-normed AUT, multi-turn and multi-agent settings, personality
+    batteries, the proposer role and mini-ultimatum.
 
 ================================================================================
-6. GOVERNING RULES AS THEY NOW STAND
+6. WHERE EVERYTHING LIVES
 ================================================================================
 
-CLAUDE.md carries rules 1-12, the 22 Sept amendment to rules 6 and 7, and
-**rule 16: autonomy with four hard stops** -- a pre-registered threshold or
-metric, an anchor's training objective after its dry run passed, the GPU budget
-(400 here to the cutoff, 1,000 for Track B through 5 Nov), and paid API spend
-above the standing $50. Everything else: keep every threshold and lock intact,
-choose the option cheapest to reverse, record it with the alternatives, proceed.
+  reports/          24 files; G4_DECISION.md is the memo, REVIEW_CROSSREF.md
+                    maps the review, G2_RESULTS.md the committed-code finding
+  paper_patches/    CLAIMS.csv (46 rows), appendix_prompts.md
+  cv_bench/         35 modules; resume.py, monitor.py and mine.py are the
+                    infrastructure, x1_supplement.py the anonymity gate
+  logs/             DECISIONS.md (D1–D77), DEVIATIONS.md (13), AI_USE_LOG.md
+  results/S/s1/     the table view of every figure and analysis
+  MANIFEST.csv      1,300 values, each with its script, inputs and git SHA
+  run outputs       /orcd/data/gabrieli/001/guna23/iclr_risk_2027/
 
-The test-split unlock is now a 24-hour veto window after the prereg-v1 tag.
-Silence is consent under that rule, so the window's opening and expiry are
-posted in logs/DECISIONS.md when it opens and nothing is touched before the full
-24 hours elapse. The tag does not yet exist.
-
-Unchanged: no number without a file behind it; the legacy directories are
-read-only; the outcome never decides a rerun; every arm that runs is reported;
-secrets are never printed or committed; the authors decide the paper text.
-
-================================================================================
-7. NEXT STEPS AND DEADLINES
-================================================================================
-
-  ~03:44 UTC 22 Sept   recon_L48 starts
-  ~08:15 UTC 22 Sept   recon_L48 finishes
-  ~09:30 UTC 22 Sept   recon_L50 starts
-  ~13:00 UTC 22 Sept   everything finishes
-  16:00 UTC 23 Sept    author explanation deadline (a)
-  15:00 UTC 23 Sept    reports/G4_DECISION.md due
-  06:00 UTC 24 Sept    cutoff -- only finished, verified, committed work counts
-  23:59 AoE 25 Sept    submission
-
-G4_DECISION.md must carry: as-written against reconstruction at both layers,
-no-answer rates, agreement with denominators, crossings under all three codings
-and the readout, excess over the staircase, the G4b cosines, and which legacy
-probe figures the results support keeping, replacing or dropping. Two of its
-inputs are already in hand -- section 3.1 settles which measurement is primary,
-and section 3.2 settles what the as-written arm can support.
-
-Nothing stops for writing. Every result lands in a report with MANIFEST ids as
-it finishes. MANIFEST.csv holds 1,050 registered values; 33 modules in cv_bench;
-51 tests passing.
-================================================================================
-end of file
+Nothing in cleaned/, Probes/, "Revised Prompting/" or SAE/ was modified, moved
+or deleted at any point. The test split was never touched; PREREG.md is not
+tagged, so rule 16's 24-hour veto window has not opened.
 ================================================================================
