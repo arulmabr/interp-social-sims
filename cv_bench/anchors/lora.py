@@ -245,8 +245,17 @@ def train_adapter(peft_model, tok, ro, name: str, trials: Sequence[core.Trial],
                 row["train"] = tr
                 row["train_z_sd"] = tr_sd
                 msg += f" | train r={tr['correlation']:.4f} slope={tr['slope']:.4f}"
-                msg += ("  -> generalisation" if tr["slope"] >= 0.9 > held["slope"]
-                        else "  -> objective suspect" if tr["slope"] < 0.9 else "")
+                # The verdict is only meaningful once training has converged.
+                # Early on both slopes are low simply because the adapter is
+                # under-trained, and calling that "objective suspect" at step
+                # 250 reads as a conclusion when it is a starting point.
+                gap = tr["slope"] - held["slope"]
+                if step + 1 >= steps:
+                    msg += ("  -> generalisation gap" if gap > 0.1
+                            else "  -> objective suspect" if tr["slope"] < 0.9
+                            else "  -> clones")
+                else:
+                    msg += f"  (train-heldout gap {gap:+.3f}; verdict at step {steps})"
             trace.append(row)
             print(msg, flush=True)
             peft_model.train()

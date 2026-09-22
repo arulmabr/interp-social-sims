@@ -604,3 +604,39 @@ The within-cell slope on corrected prompts is again positive: mean **+2.74**, al
 positive (2.77, 5.97, 2.91, 2.35), joint within-cell log x **+3.00** against a pooled log p of +5.12.
 Two of 40 cells run negative, both in the saturated floor. The withdrawal of "undermines the
 contextual-utility assumption" therefore stands on the corrected prompts as well.
+
+**BD40. B3.1 on corrected prompts: the gradient is predominantly ORDER-INVARIANT. BD27 was exactly
+backwards.** Re-run on the rebuilt grid with no prior claim attached, 4:01 on 4 GPUs, layers 48 and 50,
+calibration-split core prompts, legacy labels, gradient w.r.t. the output of `model.model.layers[L]`.
+
+| | withdrawn run (buggy prompts) | corrected prompts |
+|---|---|---|
+| cos(g1, g2) at L48 | **-0.8140** | **+0.7274** |
+| cos(g1, g2) at L50 | **-0.8232** | **+0.7386** |
+| \|g1\| , \|g2\| at L48 | 13.74 , 8.82 | 13.19 , 11.20 |
+| \|g1+g2\| (order-invariant) | 8.32 | **22.68** |
+| \|g1-g2\| (position) | 21.54 | **9.19** |
+| position / order-invariant | **2.59** | **0.41** |
+
+The conclusion reverses completely. BD27 reported that the position component was **2.6 times larger**
+than the part surviving a change of presentation order, and read that as A6's warning confirmed — the
+readout gradient being "not merely somewhat action-like but predominantly a position signal". On
+corrected prompts the order-invariant component is **2.4 times larger than the position component**,
+and the two orders are strongly *positively* aligned.
+
+The whole of the original effect was the relabelling bug: under the old code the word naming the gamble
+swapped between orders, so the direction that raises z swapped with it. Withdrawing the claim outright
+rather than qualifying it was the right call — a qualified version would have survived as "the gradient
+is somewhat position-contaminated", which is also false.
+
+What stands: within a single order the per-prompt gradients are coherent at **0.88-0.93**, so each of
+g1 and g2 is a real direction; the magnitudes are now close (13.19 against 11.20, against 13.74 against
+8.82 before), which is itself evidence the relabelling had been distorting one order more than the
+other. **Track B's B3.1 anchor is `legacy_sum`**, and on this evidence it is a strong direction rather
+than the weak residual BD27 implied. `legacy_diff` remains the position control and is now the smaller
+of the two, as a control should be.
+
+For the Friday session's G4b: the directions are on the share with sha256 each and a `how_to_load`
+block. Their `cvb_g4b` run failed in `fallback_gradient` — it was building its own direction, which
+item 3 exists to avoid — with a placement error (`36 module(s) landed on disk rather than a GPU`).
+These files are the ones to load; `legacy_one_format` is the version item 3 named for them.
