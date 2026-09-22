@@ -378,21 +378,15 @@ def main(argv=None) -> int:
 
     args.out.mkdir(parents=True, exist_ok=True)
     torch.manual_seed(args.seed)
+    retrain = [s for s in args.retrain.split(",") if s]
 
     train = training_trials(max_content=args.max_content)
     clone = cloning_trials(max_content=args.clone_content)
     print(f"{len(train)} training rows (disc+cal, legacy labels), "
           f"{len(clone)} selection-split rows for the cloning check", flush=True)
 
-    t0 = datetime.now(timezone.utc)
-    model, tok = load_base(args.model, four_bit=args.four_bit)
-    peft_model = attach_adapters(model, rank=args.rank)
-    from cv_bench.readout import Readout
-    ro = Readout(peft_model, tok)
-    trainable = sum(p.numel() for p in peft_model.parameters() if p.requires_grad)
-    print(f"loaded in {(datetime.now(timezone.utc)-t0).total_seconds():.0f}s; "
-          f"{trainable/1e6:.1f}M trainable LoRA params; "
-          f"4bit={args.four_bit}", flush=True)
+    # Everything that can fail on a typo is built BEFORE the 640-second
+    # model load, so a wiring mistake costs seconds rather than a GPU hour.
 
     results: Dict[str, object] = {
         "utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -408,11 +402,25 @@ def main(argv=None) -> int:
 
     agents = {n: agent_for(n, args.tau, args.bias) for n in ADAPTERS}
     targets = {n: soft_targets(train, p) for n, p in agents.items()}
-    for n in ADAPTERS:
-        results["adapters"][n] = {"params": agents[n].as_dict(),
-                                  "target_mean_p_risky": float(targets[n].mean())}
 
-    retrain = [s for s in args.retrain.split(",") if s]
+    t0 = datetime.now(timezone.utc)
+    model, tok = load_base(args.model, four_bit=args.four_bit)
+    peft_model = attach_adapters(model, rank=args.rank)
+    from cv_bench.readout import Readout
+    ro = Readout(peft_model, tok)
+    trainable = sum(p.numel() for p in peft_model.parameters() if p.requires_grad)
+    print(f"loaded in {(datetime.now(timezone.utc)-t0).total_seconds():.0f}s; "
+          f"{trainable/1e6:.1f}M trainable LoRA params; "
+          f"4bit={args.four_bit}", flush=True)
+
+    for n in ADAPTERS:
+        # recorded for every adapter, not only the retrained ones: a paired
+        # adapter and an independently initialised one carry different contrast
+        # noise floors, so which it was must never have to be inferred.
+        results["adapters"][n] = {"params": agents[n].as_dict(),
+                                  "target_mean_p_risky": float(targets[n].mean()),
+                                  "init_from_reference": False}
+
     if args.adapters_from is not None:
         # Re-probe an existing run's adapters. Nothing is trained, so the
         # adapters are bit-identical to the ones that produced the first result
