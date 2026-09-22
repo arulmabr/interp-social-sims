@@ -861,3 +861,46 @@ actually returns rather than remembered selectively.
 the residuals rather than **assumed** from a formula; `empirical_floor()` falls back to the independent
 form and says so when the per-row residuals are absent, which is the case for every run before the
 fullrows rerun.
+
+**BD50. The paired adapter recovers the planted shift BETTER, and the gate's own statistic says the
+opposite, because the mean of dz is confounded by a constant offset.** 22 Sept, job 23509283.
+
+The preference adapter was retrained from the reference adapter's weights (author-directed, pass 2).
+Cloning improved on every axis: r 0.9939 -> **0.9968**, slope 0.9696 -> **0.9947**, residual SD
+0.3827 -> **0.2830**, and the residual correlation rose +0.576 -> **+0.662**, dropping the contrast
+floor 0.3805 -> 0.3274. All as intended.
+
+**But the mean contrast flipped sign**: estimate **-0.0251**, 95% CI [-0.0453, -0.0050], against a
+planted **+0.0220**. Decomposing the measured mean into its parts settles why, and it is not the
+cloning slope:
+
+| run | planted-shift term | slope confound | **intercept difference** | measured mean |
+|---|---|---|---|---|
+| fullrows | +0.02135 | -0.00069 | **+0.00813** | +0.02879 |
+| paired | +0.02190 | -0.00202 | **-0.04501** | -0.02513 |
+
+The paired preference adapter sits at a **constant offset 0.045 lower in z** than the reference. That
+is an action bias acquired during retraining, twice the planted preference signal, and it is what
+flips the sign. Starting from the reference weights let the adapter express the new target partly as a
+constant shift instead of the curvature change that was planted.
+
+**The right statistic tells the opposite story.** An alpha shift changes how z depends on the payoff,
+so it belongs in the SLOPE of the model contrast on the agent contrast, where a faithful anchor gives
+1.0 and the intercept absorbs exactly the offset that contaminates the mean:
+
+| run | slope | 95% CI (cluster bootstrap over content) | intercept |
+|---|---|---|---|
+| fullrows | +0.620 | [+0.499, +0.735] | +0.01515 |
+| **paired** | **+0.774** | **[+0.641, +0.895]** | -0.04217 |
+
+So pairing moved recovery from 0.62 to 0.77 of the planted shift. Neither interval contains 1.0, so
+recovery is real but incomplete on both.
+
+**GATE B3 = FAIL on both runs, and the failure is now diagnostic rather than merely under-powered.**
+The anchor is measurable; `mean dz` is the wrong instrument for it.
+
+**HARD STOP -- AUTHOR DECISION.** Changing the anchor's statistic from the mean of dz to the
+slope-with-intercept is a change to a pre-registered metric, which Track B may not make on its own
+initiative. Nothing downstream has been started on the slope statistic and no gate threshold has been
+touched. The numbers above are reported so the choice can be made on evidence; if the authors decline,
+the standing result is the mean-dz one and Gate B3 fails on both runs.
