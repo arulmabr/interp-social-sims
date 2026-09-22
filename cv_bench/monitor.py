@@ -394,6 +394,15 @@ def write_status(cycle: int, live: List[dict], hist: List[dict],
 
 
 def main() -> int:
+    # A running monitor holds the table it imported at start. Editing monitor.py
+    # does not change a live process, and a stale table resubmits retired task
+    # names -- which is how a job called cvb_neutral appeared hours after that
+    # task was renamed. Print the file's timestamp so a stale process is
+    # identifiable from its own log.
+    _src = Path(__file__)
+    print(f"[monitor] table from {_src.name} modified "
+          f"{datetime.fromtimestamp(_src.stat().st_mtime, timezone.utc):%Y-%m-%dT%H:%M:%SZ}; "
+          f"watching {len(EXPECTED)} tasks: {', '.join(sorted(EXPECTED))}", flush=True)
     state = load_state()
     cycle = 0
     names = list(EXPECTED)

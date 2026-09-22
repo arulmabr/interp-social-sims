@@ -688,3 +688,18 @@ overwrote a crash's exit status, and a loop that discarded all but its final ite
 wrong *result*; each was a missing *signal*. The guards that caught them — the placement assertion,
 the empty-selection refusal, the completion markers — all worked. What failed was the reporting path
 between the guard and me.
+
+**D67. A running monitor holds a stale table, and now says so.**
+A job named `cvb_neutral` was submitted hours after that task had been renamed to `cvb_neutral2`.
+Cause: the monitor process imported its `EXPECTED` table at start and had been running since before
+the rename. Editing `monitor.py` does not change a live process.
+
+The monitor now prints its own file's modification time and the task names it is watching at
+startup, so a stale process is identifiable from its log rather than from a mystery job in the queue.
+The operational rule that follows: **restart the monitor whenever `monitor.py` changes**, which this
+session had not been doing consistently.
+
+Separately, four duplicate submissions (`cvb_s32`, `cvb_s35`, `cvb_g5b` twice each) were **mine** --
+I resubmitted a batch without cancelling the previous one. The monitor was not at fault there; it
+treats a PENDING job as live and does not double-submit. All duplicates cancelled, one job per name
+verified.
