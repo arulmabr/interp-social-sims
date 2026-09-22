@@ -6,6 +6,7 @@ transfer battery cannot be used for selection.
 """
 
 import math
+from pathlib import Path
 
 import pytest
 
@@ -399,10 +400,17 @@ def test_label_sets_suit_the_domain():
         assert t.fmt.label_set in ("legacy", "neutral")
 
 
-def test_accept_bias_control_uses_yes_no():
-    sets = {t.fmt.label_set for t in core.expand_formats(list(social.generate_social()))
-            if t.family == "accept_bias_control"}
-    assert sets == {"accept_reject", "yes_no"}
+def test_the_two_bias_controls_use_the_vocabulary_that_fits_them():
+    """ICLR_PLAN B1 asks for both accept/reject and yes/no control items.
+
+    They are two families, so a true/false statement is never dressed in
+    accept/reject clothing and vice versa.
+    """
+    got = {}
+    for t in core.expand_formats(list(social.generate_social())):
+        got.setdefault(t.family, set()).add(t.fmt.label_set)
+    assert got["accept_bias_control"] == {"yes_no", "neutral"}
+    assert got["offer_bias_control"] == {"accept_reject", "neutral"}
 
 
 def test_no_prompt_mislabels_its_options():
@@ -555,3 +563,72 @@ def test_labels_and_currency_follow_the_plan_and_the_paper():
     t = next(iter(risk.generate_risk()))
     assert t.currency == "tokens"                              # Probes/tasks/prompts.py
     assert "tokens" in core.body_text(t)
+
+
+# -- the three automatic checks that replace "audit ok" (author amendment) --
+
+def test_check_b_legacy_cell_equals_the_paper_character_for_character():
+    """(b) The legacy cell's user turn IS the paper's prompt, byte for byte."""
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+    from Probes.tasks.prompts import lottery_prompt
+
+    cells = [t for t in core.expand_formats(list(risk.generate_risk()))
+             if core.is_legacy_cell(t)]
+    assert cells, "no legacy-cell trials generated"
+    for t in cells:
+        assert core.prompt_text(t) == lottery_prompt(int(t.param_dict["x"])), \
+            f"legacy cell diverges from the paper at x={t.param_dict['x']}"
+    # The 45-level grid minus the test split, which is never materialised.
+    xs = sorted({int(t.param_dict["x"]) for t in cells})
+    full = [n for n in range(20, 245, 5)]
+    assert set(xs) < set(full), "legacy x values must be a subset of 20..240"
+    assert len(xs) == len([n for i, n in enumerate(full) if i % 4 != 3]), \
+        "every non-test level of the legacy cell should be present"
+    # The paper's text has no template or order variation, so the generator's
+    # template attribute is deliberately inert here; several trials render
+    # identically and that is correct.
+    assert len({core.prompt_text(t) for t in cells}) == len(xs)
+
+
+def test_check_c_every_social_prompt_states_the_game():
+    """(c) proposer, pie, offer and the consequence of rejecting, as strings."""
+    need = {
+        "responder": ["proposer", "offer", "reject", "0 tokens"],
+        "proposer": ["responder", "split", "reject", "0 tokens"],
+        "dictator": ["give", "cannot refuse", "keeping"],
+        "mini_ultimatum": ["proposer", "offered", "reject", "0 tokens"],
+    }
+    seen = set()
+    for t in core.expand_formats(list(social.generate_social())):
+        if t.family not in need:
+            continue
+        text = core.prompt_text(t).lower()
+        for token in need[t.family]:
+            assert token.lower() in text, \
+                f"{t.family} prompt is missing {token!r}:\n{core.prompt_text(t)}"
+        # the pie and the offer must appear as numbers
+        pr = t.param_dict
+        for k in ("pie", "offer", "give"):
+            if k in pr:
+                assert f"{pr[k]:,.0f}" in core.prompt_text(t), (k, pr[k])
+        seen.add(t.family)
+    assert seen == set(need)
+
+
+def test_bias_control_items_are_all_present_in_every_split():
+    """Fixed probe items are replicated, not divided (BD5).
+
+    Regression: 4 offer items divided by a mod-4 rule put one in the locked
+    test split, so only 3 were ever generated.
+    """
+    by = {}
+    for t in social.generate_accept_bias_control():
+        by.setdefault((t.family, t.split), set()).add(t.param_dict["index"])
+    fams = {f for f, _ in by}
+    assert fams == {"accept_bias_control", "offer_bias_control"}
+    for (fam, split), idx in by.items():
+        other = [k for k in by if k[0] == fam]
+        assert all(by[k] == idx for k in other), f"{fam} differs across splits"
+    offers = [v for (f, _), v in by.items() if f == "offer_bias_control"]
+    assert all(len(v) == 4 for v in offers), f"expected 4 offer items, got {offers}"

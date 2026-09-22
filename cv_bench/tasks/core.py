@@ -54,7 +54,13 @@ DOMAIN_LABEL_SETS: Dict[str, Tuple[str, ...]] = {
 #: The accept-bias control asks yes/no questions with a correct answer, so it
 #: carries the yes/no pair beside accept/reject.
 FAMILY_LABEL_SETS: Dict[str, Tuple[str, ...]] = {
-    "accept_bias_control": ("accept_reject", "yes_no"),
+    # A proposer is not asked to "accept"; a true/false claim is not accepted.
+    "proposer": ("yes_no", "neutral"),
+    "dictator": ("yes_no", "neutral"),
+    # The plan asks for both vocabularies; each item type takes the one that
+    # fits it, rather than statements being dressed as offers.
+    "accept_bias_control": ("yes_no", "neutral"),      # true/false statements
+    "offer_bias_control": ("accept_reject", "neutral"),  # accept/reject offers
 }
 
 
@@ -233,6 +239,9 @@ class Trial:
     is_catch: bool = False
     dominant: Optional[int] = None    # index into `canonical`, if one dominates
     currency: str = "tokens"
+    #: The game description, for domains where the choice is only meaningful
+    #: inside one. Empty for the risk domain, whose options describe themselves.
+    scenario: str = ""
 
     @property
     def param_dict(self) -> Dict[str, float]:
@@ -399,7 +408,7 @@ def describe(lot: Lottery, currency: str = "$") -> str:
 
 
 def body_text(trial: Trial) -> str:
-    """The two options, each keeping its own label, in presentation order.
+    """The scenario, then the two options, each keeping its own label.
 
     Option order reorders the two *lines*; it must not move the labels between
     the lotteries. Pairing the label to the position instead of to the content
@@ -413,20 +422,81 @@ def body_text(trial: Trial) -> str:
     lines = [(lab_safe, safe_lot), (lab_risky, risky_lot)]
     if trial.fmt.option_order == 1:
         lines.reverse()
-    return "\n".join(f"{lab}: {describe(lot, trial.currency)}" for lab, lot in lines)
+    options = "\n".join(f"{lab}: {describe(lot, trial.currency)}"
+                        for lab, lot in lines)
+    if not trial.scenario:
+        return options
+    # Where a scenario states the game, the payoffs are already in it. Listing
+    # them again as options is redundant and, at an offer of zero, absurd
+    # ("Accept: nothing"). The paper's ultimatum prompt states the game and asks
+    # the question; so does this.
+    if trial.domain == "social":
+        return trial.scenario
+    return f"{trial.scenario}\n\n{options}"
+
+
+#: The question each family asks. A proposer does not "accept" an offer and a
+#: true/false statement is not accepted or rejected, so the generic wording was
+#: wrong for three families even once the scenario was right.
+FAMILY_QUESTION: Dict[str, str] = {
+    "responder": "Do you accept or reject this offer?",
+    "proposer": "Do you make this offer?",
+    "dictator": "Do you give this amount?",
+    "mini_ultimatum": "Do you accept or reject this offer?",
+    "accept_bias_control": "Is this statement true?",
+    "offer_bias_control": "Do you accept this offer?",
+}
 
 
 def instruction_text(trial: Trial) -> str:
     lab_first, lab_second = trial.labels
     if trial.fmt.option_order == 1:
         lab_first, lab_second = lab_second, lab_first
+    question = FAMILY_QUESTION.get(trial.family)
+    if question:
+        if trial.fmt.response_format == "mc":
+            return (f"{question} Answer with exactly one of "
+                    f"\"{lab_first}\" or \"{lab_second}\" and nothing else.")
+        return f"{question} Answer, and say why. Begin your reply with your choice."
     if trial.fmt.response_format == "mc":
         return (f"Which do you choose? Answer with exactly one of "
                 f"\"{lab_first}\" or \"{lab_second}\" and nothing else.")
     return "Which do you choose, and why? Begin your reply with your choice."
 
 
+#: The paper's own lottery prompt, reproduced character for character from
+#: `Probes/tasks/prompts.py`. The legacy cell renders as this and nothing else,
+#: so the bridging cell genuinely bridges: any difference between Track B's
+#: curve there and G2's is a difference in the model or the stack, never in the
+#: wording. Everything outside the legacy cell is a new instrument by design and
+#: keeps the generator's wording.
+def paper_lottery_text(risky_reward: float) -> str:
+    return (
+        "SAFE VS. RISKY CHOICE GAME\n\n"
+        "You must choose between two options:\n"
+        "1. Safe Option: Guaranteed 50 tokens.\n"
+        f"2. Risky Option: 50% chance of {int(risky_reward)} tokens, "
+        "50% chance of 0 tokens.\n\n"
+        "Which option do you choose? Respond with either 'Safe' or 'Risky' "
+        "as your final answer."
+    )
+
+
+def is_legacy_cell(trial: Trial) -> bool:
+    """The canonical bridging cell: sure-gain at p=0.5, s=50, legacy labels,
+    canonical option order, multiple choice. Other format variants of the same
+    content are ordinary generated trials."""
+    pr = trial.param_dict
+    return (trial.family == "sure_gain"
+            and pr.get("p") == 0.5 and pr.get("s") == 50.0
+            and trial.fmt.label_set == "legacy"
+            and trial.fmt.option_order == 0
+            and trial.fmt.response_format == "mc")
+
+
 def prompt_text(trial: Trial) -> str:
+    if is_legacy_cell(trial):
+        return paper_lottery_text(trial.param_dict["x"])
     template = TEMPLATES[trial.split].get(trial.fmt.template_id)
     if template is None:
         raise KeyError(

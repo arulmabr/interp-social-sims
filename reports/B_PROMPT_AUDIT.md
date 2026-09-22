@@ -1,6 +1,6 @@
 # B_PROMPT_AUDIT.md — every prompt cell, rendered verbatim
 
-Generated 2026-09-21T23:29:23+00:00 with `meta-llama/Llama-3.1-8B-Instruct`'s chat template and tokenizer.
+Generated 2026-09-22T00:08:44+00:00 with `meta-llama/Llama-3.1-8B-Instruct`'s chat template and tokenizer.
 
 **An author replies "audit ok" before B1 is rebuilt.**
 
@@ -17,113 +17,7 @@ Generated 2026-09-21T23:29:23+00:00 with `meta-llama/Llama-3.1-8B-Instruct`'s ch
 
 `ICLR_PLAN.md` B1 states the legacy cell as "10...240 in steps of 5"; the published grid in `Probes/config.py` is `range(20, 245, 5)`. The code follows the paper. **This discrepancy is for the authors.**
 
-624 distinct cell types.
-
-## The three legacy stacks do not agree with each other
-
-Checked against `Probes/`, `SAE/` and `Revised Prompting/`. "Consistent with the
-paper" has no single answer, because the three stacks that produced the paper's
-figures used **different wordings and different grids**.
-
-### Lottery
-
-| stack | prompt | answer tokens | reward grid |
-|---|---|---|---|
-| `Probes/tasks/prompts.py` | `SAFE VS. RISKY CHOICE GAME` + numbered `1.`/`2.` list | `'Safe'` / `'Risky'` | `range(20, 245, 5)` — **20..240, 45** |
-| `SAE/examples/games/safe_risky.py` | prose: "Option safe gives 50 tokens for sure. Option risky gives N tokens with 50 percent probability…" | `safe` / `risky` (lower case) | `range(10, 181, 5)` — **10..180, 35** |
-| `Revised Prompting/games/safe_risky_strong_prompting.py` | as SAE, plus CoT variants | `safe` / `risky` | `range(10, 181, 5)` — **10..180, 35** |
-| `ICLR_PLAN.md` B1 | — | — | "10…240 step 5" — **47** |
-| **Track B (this build)** | `Safe:` / `Risky:` lines | `Safe` / `Risky` | **20..240, 45** |
-
-Common to all three: the safe option is **50 tokens**, p = **0.5**, everything is
-denominated in **tokens**, and the expected-value crossover is at 100.
-
-**The plan's "10…240" is neither stack**: the 10 is the SAE/Revised-Prompting
-lower bound, the 240 is the Probes upper bound. It is the union, not a grid
-anyone ran.
-
-**This corrects BD29.** That entry asserted the published grid "is" 20..240 and
-that the plan was simply wrong. That was too confident: 20..240 is the *probe*
-stack's grid, while the SAE stack — which produced the layer-50 SAE steering
-results — used 10..180. Which grid the bridging cell should reproduce depends on
-which figure it is meant to bridge to, and that is an author decision.
-
-### Ultimatum
-
-| stack | framing | offers |
-|---|---|---|
-| `Probes` | proposer, 100 tokens, "If you reject, both of you get 0 tokens" | `range(10, 105, 5)` — 10..100 |
-| `SAE` | proposer, "N tokens out of 100", "If you reject, both players receive 0" | `range(10, 91, 5)` — 10..90 |
-| `Revised Prompting` | as SAE | `range(10, 91, 5)` — 10..90 |
-| **Track B (this build)** | **none — a bare payoff pair** | 0..100% of pies 20/100/1000 |
-
-All three legacy stacks state the proposer, the pie and the mutual zero. Track B
-states none of them, which is the defect recorded above.
-
-## Problems this audit found, before any rebuild
-
-Reading the rendered text surfaced two things that no test caught, because both
-are about what the prompt *says*, not about what the code computes. **Neither is
-fixed yet** — they change what the instrument measures, so they are put here for
-an author rather than patched.
-
-### 1. The social games are not described at all
-
-Every social family renders as a bare payoff pair with the generic risk-domain
-body. The responder trial reads:
-
-```
-Reject: nothing
-Accept: 90 tokens for sure
-```
-
-The published prompt (`Probes/tasks/prompts.py`) reads:
-
-```
-ULTIMATUM GAME
-
-A proposer was given 100 tokens and has decided to offer you 90 tokens out of their 100 tokens.
-If you accept, you keep the proposed amount and the proposer keeps the rest.
-If you reject, both of you get 0 tokens.
-
-Do you accept or reject this offer? Respond with either 'Accept' or 'Reject' as your final answer.
-```
-
-There is no proposer, no pie, and no "both of you get 0" in the Track B version.
-The entire social framing — the thing that makes rejecting a low offer a
-*preference* rather than an error — has been stripped out, leaving a plain
-comparison of two sure amounts. `responder`, `proposer`, `dictator` and
-`mini_ultimatum` are all affected; `accept_bias_control` is correct, since it is
-meant to be socially empty.
-
-This is a consequence of representing the social games as degenerate lotteries
-so that they could share the risk domain's machinery. Sharing the *splits* and
-the *format* logic is right; sharing the *body text* is not. The fix is a
-per-family body that states the game, keeping everything else.
-
-**Consequence if not fixed:** every social number measures a payoff comparison,
-not a social preference, and the mini-ultimatum's alternatives — the whole point
-of that family — never appear in the prompt at all.
-
-### 2. Free text is scored exactly like multiple choice
-
-`ICLR_PLAN.md:153` specifies the two response formats as "multiple choice; free
-text **scored by sequence log-probability**". Both currently use the same
-`Answer:` stem and the same first-token readout; the only difference is the
-instruction wording. Sequence log-probability scoring is not implemented, so the
-`freetext` cells in this audit are a second multiple-choice arm wearing a
-different instruction.
-
-**Consequence if not fixed:** the response-format factor in D5's transfer ratio
-and in the B2 format-bias term is not the factor the plan defines, and any claim
-that an effect "survives the response format" is unsupported.
-
-### 3. Minor: the transfer instruments read oddly in tokens
-
-Holt-Laury renders "a 30% chance of 1.60 tokens", since its payoffs are dollar
-amounts from the published instrument. Either the instrument keeps dollars and
-the audit notes the mixed denomination, or the payoffs are rescaled. Flagged
-only; it does not affect what is measured.
+672 distinct cell types.
 
 ## Token ids the readout scores
 
@@ -613,12 +507,13 @@ Today Date: 26 Jul 2024
 
 <|eot_id|><|start_header_id|>user<|end_header_id|>
 
-Please answer the following question.
+SAFE VS. RISKY CHOICE GAME
 
-Safe: 50 tokens for sure
-Risky: a 50% chance of 105 tokens and otherwise nothing
+You must choose between two options:
+1. Safe Option: Guaranteed 50 tokens.
+2. Risky Option: 50% chance of 105 tokens, 50% chance of 0 tokens.
 
-Which do you choose? Answer with exactly one of "Safe" or "Risky" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Which option do you choose? Respond with either 'Safe' or 'Risky' as your final answer.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -15646,10 +15541,11 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-Reject: nothing
-Accept: 90 tokens for sure
+A proposer was given 100 tokens and has decided to offer you 90 tokens out of their 100 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -15667,10 +15563,11 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-Reject: nothing
-Accept: 70 tokens for sure
+A proposer was given 100 tokens and has decided to offer you 70 tokens out of their 100 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -15692,10 +15589,11 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-Reject: nothing
-Accept: 900 tokens for sure
+A proposer was given 1,000 tokens and has decided to offer you 900 tokens out of their 1,000 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -15713,10 +15611,11 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-Reject: nothing
-Accept: 30 tokens for sure
+A proposer was given 100 tokens and has decided to offer you 30 tokens out of their 100 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -15738,10 +15637,11 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-Reject: nothing
-Accept: 60 tokens for sure
+A proposer was given 100 tokens and has decided to offer you 60 tokens out of their 100 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -15759,10 +15659,11 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-Reject: nothing
-Accept: 80 tokens for sure
+A proposer was given 100 tokens and has decided to offer you 80 tokens out of their 100 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -15784,10 +15685,11 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-Reject: nothing
-Accept: 16 tokens for sure
+A proposer was given 20 tokens and has decided to offer you 16 tokens out of their 20 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -15805,10 +15707,11 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-Reject: nothing
-Accept: 80 tokens for sure
+A proposer was given 100 tokens and has decided to offer you 80 tokens out of their 100 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -15830,10 +15733,11 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-Reject: nothing
-Accept: 17 tokens for sure
+A proposer was given 20 tokens and has decided to offer you 17 tokens out of their 20 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -15851,10 +15755,11 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-Reject: nothing
-Accept: 5 tokens for sure
+A proposer was given 100 tokens and has decided to offer you 5 tokens out of their 100 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -15876,10 +15781,11 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-Reject: nothing
-Accept: 65 tokens for sure
+A proposer was given 100 tokens and has decided to offer you 65 tokens out of their 100 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -15897,10 +15803,11 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-Reject: nothing
-Accept: 5 tokens for sure
+A proposer was given 20 tokens and has decided to offer you 5 tokens out of their 20 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -15922,10 +15829,11 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-Reject: nothing
-Accept: 30 tokens for sure
+A proposer was given 100 tokens and has decided to offer you 30 tokens out of their 100 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -15943,10 +15851,11 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-Reject: nothing
-Accept: 2 tokens for sure
+A proposer was given 20 tokens and has decided to offer you 2 tokens out of their 20 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -15968,10 +15877,11 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-Reject: nothing
-Accept: 900 tokens for sure
+A proposer was given 1,000 tokens and has decided to offer you 900 tokens out of their 1,000 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -15989,10 +15899,11 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-Reject: nothing
-Accept: 14 tokens for sure
+A proposer was given 20 tokens and has decided to offer you 14 tokens out of their 20 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -16014,10 +15925,11 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-Reject: nothing
-Accept: nothing
+A proposer was given 1,000 tokens and has decided to offer you 0 tokens out of their 1,000 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -16035,10 +15947,11 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-Reject: nothing
-Accept: nothing
+A proposer was given 20 tokens and has decided to offer you 0 tokens out of their 20 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -16060,10 +15973,11 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-Reject: nothing
-Accept: 8 tokens for sure
+A proposer was given 20 tokens and has decided to offer you 8 tokens out of their 20 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -16081,10 +15995,11 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-Reject: nothing
-Accept: 100 tokens for sure
+A proposer was given 100 tokens and has decided to offer you 100 tokens out of their 100 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -16106,10 +16021,11 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-Reject: nothing
-Accept: 85 tokens for sure
+A proposer was given 100 tokens and has decided to offer you 85 tokens out of their 100 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -16127,10 +16043,11 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-Reject: nothing
-Accept: 650 tokens for sure
+A proposer was given 1,000 tokens and has decided to offer you 650 tokens out of their 1,000 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -16152,10 +16069,11 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-Reject: nothing
-Accept: 1 tokens for sure
+A proposer was given 20 tokens and has decided to offer you 1 tokens out of their 20 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -16173,10 +16091,11 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-Reject: nothing
-Accept: 450 tokens for sure
+A proposer was given 1,000 tokens and has decided to offer you 450 tokens out of their 1,000 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -16198,10 +16117,11 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-Accept: 500 tokens for sure
-Reject: nothing
+A proposer was given 1,000 tokens and has decided to offer you 500 tokens out of their 1,000 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -16219,10 +16139,11 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-Accept: 90 tokens for sure
-Reject: nothing
+A proposer was given 100 tokens and has decided to offer you 90 tokens out of their 100 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -16244,10 +16165,11 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-Accept: 300 tokens for sure
-Reject: nothing
+A proposer was given 1,000 tokens and has decided to offer you 300 tokens out of their 1,000 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -16265,10 +16187,11 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-Accept: 500 tokens for sure
-Reject: nothing
+A proposer was given 1,000 tokens and has decided to offer you 500 tokens out of their 1,000 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -16290,10 +16213,11 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-Accept: 8 tokens for sure
-Reject: nothing
+A proposer was given 20 tokens and has decided to offer you 8 tokens out of their 20 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -16311,10 +16235,11 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-Accept: 4 tokens for sure
-Reject: nothing
+A proposer was given 20 tokens and has decided to offer you 4 tokens out of their 20 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -16336,10 +16261,11 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-Accept: 12 tokens for sure
-Reject: nothing
+A proposer was given 20 tokens and has decided to offer you 12 tokens out of their 20 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -16357,10 +16283,11 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-Accept: 100 tokens for sure
-Reject: nothing
+A proposer was given 100 tokens and has decided to offer you 100 tokens out of their 100 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -16382,10 +16309,11 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-Accept: 45 tokens for sure
-Reject: nothing
+A proposer was given 100 tokens and has decided to offer you 45 tokens out of their 100 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -16403,10 +16331,11 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-Accept: 5 tokens for sure
-Reject: nothing
+A proposer was given 100 tokens and has decided to offer you 5 tokens out of their 100 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -16428,10 +16357,11 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-Accept: 1 tokens for sure
-Reject: nothing
+A proposer was given 20 tokens and has decided to offer you 1 tokens out of their 20 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -16449,10 +16379,11 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-Accept: 25 tokens for sure
-Reject: nothing
+A proposer was given 100 tokens and has decided to offer you 25 tokens out of their 100 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -16474,10 +16405,11 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-Accept: 10 tokens for sure
-Reject: nothing
+A proposer was given 100 tokens and has decided to offer you 10 tokens out of their 100 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -16495,10 +16427,11 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-Accept: 2 tokens for sure
-Reject: nothing
+A proposer was given 20 tokens and has decided to offer you 2 tokens out of their 20 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -16520,10 +16453,11 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-Accept: 30 tokens for sure
-Reject: nothing
+A proposer was given 100 tokens and has decided to offer you 30 tokens out of their 100 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -16541,10 +16475,11 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-Accept: 2 tokens for sure
-Reject: nothing
+A proposer was given 20 tokens and has decided to offer you 2 tokens out of their 20 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -16566,10 +16501,11 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-Accept: 16 tokens for sure
-Reject: nothing
+A proposer was given 20 tokens and has decided to offer you 16 tokens out of their 20 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -16587,10 +16523,11 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-Accept: 12 tokens for sure
-Reject: nothing
+A proposer was given 20 tokens and has decided to offer you 12 tokens out of their 20 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -16612,10 +16549,11 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-Accept: 20 tokens for sure
-Reject: nothing
+A proposer was given 20 tokens and has decided to offer you 20 tokens out of their 20 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -16633,10 +16571,11 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-Accept: 100 tokens for sure
-Reject: nothing
+A proposer was given 100 tokens and has decided to offer you 100 tokens out of their 100 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -16658,10 +16597,11 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-Accept: 450 tokens for sure
-Reject: nothing
+A proposer was given 1,000 tokens and has decided to offer you 450 tokens out of their 1,000 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -16679,10 +16619,11 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-Accept: 9 tokens for sure
-Reject: nothing
+A proposer was given 20 tokens and has decided to offer you 9 tokens out of their 20 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -16704,10 +16645,11 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-Accept: 9 tokens for sure
-Reject: nothing
+A proposer was given 20 tokens and has decided to offer you 9 tokens out of their 20 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -16725,10 +16667,11 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-Accept: 45 tokens for sure
-Reject: nothing
+A proposer was given 100 tokens and has decided to offer you 45 tokens out of their 100 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -16750,10 +16693,11 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-A: nothing
-B: 14 tokens for sure
+A proposer was given 20 tokens and has decided to offer you 14 tokens out of their 20 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -16771,10 +16715,11 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-A: nothing
-B: 300 tokens for sure
+A proposer was given 1,000 tokens and has decided to offer you 300 tokens out of their 1,000 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -16796,10 +16741,11 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-A: nothing
-B: 18 tokens for sure
+A proposer was given 20 tokens and has decided to offer you 18 tokens out of their 20 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -16817,10 +16763,11 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-A: nothing
-B: 10 tokens for sure
+A proposer was given 100 tokens and has decided to offer you 10 tokens out of their 100 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -16842,10 +16789,11 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-A: nothing
-B: 200 tokens for sure
+A proposer was given 1,000 tokens and has decided to offer you 200 tokens out of their 1,000 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -16863,10 +16811,11 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-A: nothing
-B: 20 tokens for sure
+A proposer was given 100 tokens and has decided to offer you 20 tokens out of their 100 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -16888,10 +16837,11 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-A: nothing
-B: 16 tokens for sure
+A proposer was given 20 tokens and has decided to offer you 16 tokens out of their 20 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -16909,10 +16859,11 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-A: nothing
-B: 1,000 tokens for sure
+A proposer was given 1,000 tokens and has decided to offer you 1,000 tokens out of their 1,000 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -16934,10 +16885,11 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-A: nothing
-B: 250 tokens for sure
+A proposer was given 1,000 tokens and has decided to offer you 250 tokens out of their 1,000 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -16955,10 +16907,11 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-A: nothing
-B: 25 tokens for sure
+A proposer was given 100 tokens and has decided to offer you 25 tokens out of their 100 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -16980,10 +16933,11 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-A: nothing
-B: 17 tokens for sure
+A proposer was given 20 tokens and has decided to offer you 17 tokens out of their 20 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -17001,10 +16955,11 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-A: nothing
-B: 9 tokens for sure
+A proposer was given 20 tokens and has decided to offer you 9 tokens out of their 20 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -17026,10 +16981,11 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-A: nothing
-B: 90 tokens for sure
+A proposer was given 100 tokens and has decided to offer you 90 tokens out of their 100 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -17047,10 +17003,11 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-A: nothing
-B: 10 tokens for sure
+A proposer was given 20 tokens and has decided to offer you 10 tokens out of their 20 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -17072,10 +17029,11 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-A: nothing
-B: 30 tokens for sure
+A proposer was given 100 tokens and has decided to offer you 30 tokens out of their 100 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -17093,10 +17051,11 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-A: nothing
-B: 10 tokens for sure
+A proposer was given 100 tokens and has decided to offer you 10 tokens out of their 100 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -17118,10 +17077,11 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-A: nothing
-B: 400 tokens for sure
+A proposer was given 1,000 tokens and has decided to offer you 400 tokens out of their 1,000 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -17139,10 +17099,11 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-A: nothing
-B: 60 tokens for sure
+A proposer was given 100 tokens and has decided to offer you 60 tokens out of their 100 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -17164,10 +17125,11 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-A: nothing
-B: 60 tokens for sure
+A proposer was given 100 tokens and has decided to offer you 60 tokens out of their 100 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -17185,10 +17147,11 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-A: nothing
-B: 100 tokens for sure
+A proposer was given 100 tokens and has decided to offer you 100 tokens out of their 100 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -17210,10 +17173,11 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-A: nothing
-B: 13 tokens for sure
+A proposer was given 20 tokens and has decided to offer you 13 tokens out of their 20 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -17231,10 +17195,11 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-A: nothing
-B: 17 tokens for sure
+A proposer was given 20 tokens and has decided to offer you 17 tokens out of their 20 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -17256,10 +17221,11 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-A: nothing
-B: 5 tokens for sure
+A proposer was given 100 tokens and has decided to offer you 5 tokens out of their 100 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -17277,10 +17243,11 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-A: nothing
-B: 450 tokens for sure
+A proposer was given 1,000 tokens and has decided to offer you 450 tokens out of their 1,000 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -17302,10 +17269,11 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-B: 70 tokens for sure
-A: nothing
+A proposer was given 100 tokens and has decided to offer you 70 tokens out of their 100 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -17323,10 +17291,11 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-B: 10 tokens for sure
-A: nothing
+A proposer was given 20 tokens and has decided to offer you 10 tokens out of their 20 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -17348,10 +17317,11 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-B: 50 tokens for sure
-A: nothing
+A proposer was given 100 tokens and has decided to offer you 50 tokens out of their 100 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -17369,10 +17339,11 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-B: 2 tokens for sure
-A: nothing
+A proposer was given 20 tokens and has decided to offer you 2 tokens out of their 20 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -17394,10 +17365,11 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-B: 8 tokens for sure
-A: nothing
+A proposer was given 20 tokens and has decided to offer you 8 tokens out of their 20 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -17415,10 +17387,11 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-B: nothing
-A: nothing
+A proposer was given 100 tokens and has decided to offer you 0 tokens out of their 100 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -17440,10 +17413,11 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-B: 20 tokens for sure
-A: nothing
+A proposer was given 20 tokens and has decided to offer you 20 tokens out of their 20 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -17461,10 +17435,11 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-B: 400 tokens for sure
-A: nothing
+A proposer was given 1,000 tokens and has decided to offer you 400 tokens out of their 1,000 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -17486,10 +17461,11 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-B: 25 tokens for sure
-A: nothing
+A proposer was given 100 tokens and has decided to offer you 25 tokens out of their 100 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -17507,10 +17483,11 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-B: 65 tokens for sure
-A: nothing
+A proposer was given 100 tokens and has decided to offer you 65 tokens out of their 100 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -17532,10 +17509,11 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-B: 65 tokens for sure
-A: nothing
+A proposer was given 100 tokens and has decided to offer you 65 tokens out of their 100 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -17553,10 +17531,11 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-B: 85 tokens for sure
-A: nothing
+A proposer was given 100 tokens and has decided to offer you 85 tokens out of their 100 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -17578,10 +17557,11 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-B: 70 tokens for sure
-A: nothing
+A proposer was given 100 tokens and has decided to offer you 70 tokens out of their 100 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -17599,10 +17579,11 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-B: 14 tokens for sure
-A: nothing
+A proposer was given 20 tokens and has decided to offer you 14 tokens out of their 20 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -17624,10 +17605,11 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-B: 10 tokens for sure
-A: nothing
+A proposer was given 20 tokens and has decided to offer you 10 tokens out of their 20 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -17645,10 +17627,11 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-B: 900 tokens for sure
-A: nothing
+A proposer was given 1,000 tokens and has decided to offer you 900 tokens out of their 1,000 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -17670,10 +17653,11 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-B: nothing
-A: nothing
+A proposer was given 100 tokens and has decided to offer you 0 tokens out of their 100 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -17691,10 +17675,11 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-B: nothing
-A: nothing
+A proposer was given 20 tokens and has decided to offer you 0 tokens out of their 20 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -17716,10 +17701,11 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-B: 60 tokens for sure
-A: nothing
+A proposer was given 100 tokens and has decided to offer you 60 tokens out of their 100 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -17737,10 +17723,11 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-B: 40 tokens for sure
-A: nothing
+A proposer was given 100 tokens and has decided to offer you 40 tokens out of their 100 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -17762,10 +17749,11 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-B: 5 tokens for sure
-A: nothing
+A proposer was given 100 tokens and has decided to offer you 5 tokens out of their 100 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -17783,10 +17771,11 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-B: 65 tokens for sure
-A: nothing
+A proposer was given 100 tokens and has decided to offer you 65 tokens out of their 100 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -17808,10 +17797,11 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-B: 17 tokens for sure
-A: nothing
+A proposer was given 20 tokens and has decided to offer you 17 tokens out of their 20 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -17829,10 +17819,11 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-B: 65 tokens for sure
-A: nothing
+A proposer was given 100 tokens and has decided to offer you 65 tokens out of their 100 tokens.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -17842,1110 +17833,6 @@ Answer:
 ---
 
 # Family: `proposer`
-
-### `accept_reject` · order 0 · freetext · `t_cal_0`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>293544f532641655 — {'offer': 900.0, 'offer_frac': 0.9, 'pie': 1000.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Read the options below and decide.
-
-Reject: 100 tokens for sure
-Accept: 900 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>32d7baac5966954b — {'offer': 300.0, 'offer_frac': 0.3, 'pie': 1000.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Read the options below and decide.
-
-Reject: 700 tokens for sure
-Accept: 300 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 0 · freetext · `t_cal_1`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>0c7c6f02696b8f31 — {'offer': 6.0, 'offer_frac': 0.3, 'pie': 20.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-A choice is described below.
-
-Reject: 14 tokens for sure
-Accept: 6 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>1b418fe082c08193 — {'offer': 10.0, 'offer_frac': 0.1, 'pie': 100.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-A choice is described below.
-
-Reject: 90 tokens for sure
-Accept: 10 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 0 · freetext · `t_disc_0`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>0c8f95711788e833 — {'offer': 16.0, 'offer_frac': 0.8, 'pie': 20.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-You are taking part in a study of decision making.
-
-Reject: 4 tokens for sure
-Accept: 16 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>0e76677b393d8f06 — {'offer': 4.0, 'offer_frac': 0.2, 'pie': 20.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-You are taking part in a study of decision making.
-
-Reject: 16 tokens for sure
-Accept: 4 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 0 · freetext · `t_disc_1`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>027b6e3dd894da09 — {'offer': 4.0, 'offer_frac': 0.2, 'pie': 20.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Consider the following choice.
-
-Reject: 16 tokens for sure
-Accept: 4 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>0c1f77a1e933d708 — {'offer': 16.0, 'offer_frac': 0.8, 'pie': 20.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Consider the following choice.
-
-Reject: 4 tokens for sure
-Accept: 16 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 0 · freetext · `t_sel_0`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>081a058a60a3e1eb — {'offer': 5.0, 'offer_frac': 0.25, 'pie': 20.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Please answer the following question.
-
-Reject: 15 tokens for sure
-Accept: 5 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>0d71c77f256f0ae5 — {'offer': 13.0, 'offer_frac': 0.65, 'pie': 20.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Please answer the following question.
-
-Reject: 7 tokens for sure
-Accept: 13 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 0 · freetext · `t_sel_1`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>11c6fbf8a068ef86 — {'offer': 13.0, 'offer_frac': 0.65, 'pie': 20.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Here is a decision problem.
-
-Reject: 7 tokens for sure
-Accept: 13 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>1f05af4f1e8ab819 — {'offer': 650.0, 'offer_frac': 0.65, 'pie': 1000.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Here is a decision problem.
-
-Reject: 350 tokens for sure
-Accept: 650 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 0 · mc · `t_cal_0`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>009d65febdaf9d2a — {'offer': 30.0, 'offer_frac': 0.3, 'pie': 100.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Read the options below and decide.
-
-Reject: 70 tokens for sure
-Accept: 30 tokens for sure
-
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>1f268133af1ce0d5 — {'offer': 50.0, 'offer_frac': 0.5, 'pie': 100.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Read the options below and decide.
-
-Reject: 50 tokens for sure
-Accept: 50 tokens for sure
-
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 0 · mc · `t_cal_1`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>05210b80eed47647 — {'offer': 6.0, 'offer_frac': 0.3, 'pie': 20.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-A choice is described below.
-
-Reject: 14 tokens for sure
-Accept: 6 tokens for sure
-
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>1a8d74a65a638148 — {'offer': 300.0, 'offer_frac': 0.3, 'pie': 1000.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-A choice is described below.
-
-Reject: 700 tokens for sure
-Accept: 300 tokens for sure
-
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 0 · mc · `t_disc_0`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>06dd80b663475dfa — {'offer': 20.0, 'offer_frac': 0.2, 'pie': 100.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-You are taking part in a study of decision making.
-
-Reject: 80 tokens for sure
-Accept: 20 tokens for sure
-
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>2b23b56384cca689 — {'offer': 800.0, 'offer_frac': 0.8, 'pie': 1000.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-You are taking part in a study of decision making.
-
-Reject: 200 tokens for sure
-Accept: 800 tokens for sure
-
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 0 · mc · `t_disc_1`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>03ce6ab12cc1d847 — {'offer': 4.0, 'offer_frac': 0.2, 'pie': 20.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Consider the following choice.
-
-Reject: 16 tokens for sure
-Accept: 4 tokens for sure
-
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>0c947cd926ffc7ce — {'offer': 200.0, 'offer_frac': 0.2, 'pie': 1000.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Consider the following choice.
-
-Reject: 800 tokens for sure
-Accept: 200 tokens for sure
-
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 0 · mc · `t_sel_0`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>01b818a79b1d77b3 — {'offer': 5.0, 'offer_frac': 0.25, 'pie': 20.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Please answer the following question.
-
-Reject: 15 tokens for sure
-Accept: 5 tokens for sure
-
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>0ae0151809f9dd47 — {'offer': 250.0, 'offer_frac': 0.25, 'pie': 1000.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Please answer the following question.
-
-Reject: 750 tokens for sure
-Accept: 250 tokens for sure
-
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 0 · mc · `t_sel_1`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>14a013a8dc7fb9d5 — {'offer': 85.0, 'offer_frac': 0.85, 'pie': 100.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Here is a decision problem.
-
-Reject: 15 tokens for sure
-Accept: 85 tokens for sure
-
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>169243a2e3a37cd5 — {'offer': 9.0, 'offer_frac': 0.45, 'pie': 20.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Here is a decision problem.
-
-Reject: 11 tokens for sure
-Accept: 9 tokens for sure
-
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 1 · freetext · `t_cal_0`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>35629f7c32d4e0cd — {'offer': 300.0, 'offer_frac': 0.3, 'pie': 1000.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Read the options below and decide.
-
-Accept: 300 tokens for sure
-Reject: 700 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>3636a8bb66b6246c — {'offer': 100.0, 'offer_frac': 0.1, 'pie': 1000.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Read the options below and decide.
-
-Accept: 100 tokens for sure
-Reject: 900 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 1 · freetext · `t_cal_1`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>05c3acbaf5638ffd — {'offer': 30.0, 'offer_frac': 0.3, 'pie': 100.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-A choice is described below.
-
-Accept: 30 tokens for sure
-Reject: 70 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>1e39af4883436b21 — {'offer': 90.0, 'offer_frac': 0.9, 'pie': 100.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-A choice is described below.
-
-Accept: 90 tokens for sure
-Reject: 10 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 1 · freetext · `t_disc_0`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>00c4c586d3f6afb4 — {'offer': 4.0, 'offer_frac': 0.2, 'pie': 20.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-You are taking part in a study of decision making.
-
-Accept: 4 tokens for sure
-Reject: 16 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>052ef51bc488dbfe — {'offer': 12.0, 'offer_frac': 0.6, 'pie': 20.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-You are taking part in a study of decision making.
-
-Accept: 12 tokens for sure
-Reject: 8 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 1 · freetext · `t_disc_1`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>06d3284ba2eeee07 — {'offer': 60.0, 'offer_frac': 0.6, 'pie': 100.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Consider the following choice.
-
-Accept: 60 tokens for sure
-Reject: 40 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>193738fee4708ee7 — {'offer': 200.0, 'offer_frac': 0.2, 'pie': 1000.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Consider the following choice.
-
-Accept: 200 tokens for sure
-Reject: 800 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 1 · freetext · `t_sel_0`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>0736d488dcec67a3 — {'offer': 5.0, 'offer_frac': 0.25, 'pie': 20.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Please answer the following question.
-
-Accept: 5 tokens for sure
-Reject: 15 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>0b39ff782cbd2d88 — {'offer': 850.0, 'offer_frac': 0.85, 'pie': 1000.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Please answer the following question.
-
-Accept: 850 tokens for sure
-Reject: 150 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 1 · freetext · `t_sel_1`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>3d5153e8b02c5043 — {'offer': 50.0, 'offer_frac': 0.05, 'pie': 1000.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Here is a decision problem.
-
-Accept: 50 tokens for sure
-Reject: 950 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>4b8094057874532c — {'offer': 65.0, 'offer_frac': 0.65, 'pie': 100.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Here is a decision problem.
-
-Accept: 65 tokens for sure
-Reject: 35 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 1 · mc · `t_cal_0`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>3c665e265145d409 — {'offer': 100.0, 'offer_frac': 0.1, 'pie': 1000.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Read the options below and decide.
-
-Accept: 100 tokens for sure
-Reject: 900 tokens for sure
-
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>4e1abfa84f83ecff — {'offer': 18.0, 'offer_frac': 0.9, 'pie': 20.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Read the options below and decide.
-
-Accept: 18 tokens for sure
-Reject: 2 tokens for sure
-
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 1 · mc · `t_cal_1`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>0a61ddee95449591 — {'offer': 300.0, 'offer_frac': 0.3, 'pie': 1000.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-A choice is described below.
-
-Accept: 300 tokens for sure
-Reject: 700 tokens for sure
-
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>1016545c48a0804d — {'offer': 6.0, 'offer_frac': 0.3, 'pie': 20.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-A choice is described below.
-
-Accept: 6 tokens for sure
-Reject: 14 tokens for sure
-
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 1 · mc · `t_disc_0`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>0972dc979d687e14 — {'offer': 4.0, 'offer_frac': 0.2, 'pie': 20.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-You are taking part in a study of decision making.
-
-Accept: 4 tokens for sure
-Reject: 16 tokens for sure
-
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>198c99beff47a7ad — {'offer': 600.0, 'offer_frac': 0.6, 'pie': 1000.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-You are taking part in a study of decision making.
-
-Accept: 600 tokens for sure
-Reject: 400 tokens for sure
-
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 1 · mc · `t_disc_1`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>002cbafe62a7e294 — {'offer': 400.0, 'offer_frac': 0.4, 'pie': 1000.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Consider the following choice.
-
-Accept: 400 tokens for sure
-Reject: 600 tokens for sure
-
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>087a9ca46936dde0 — {'offer': 0.0, 'offer_frac': 0.0, 'pie': 20.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Consider the following choice.
-
-Accept: nothing
-Reject: 20 tokens for sure
-
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 1 · mc · `t_sel_0`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>162072c7c9baa78d — {'offer': 25.0, 'offer_frac': 0.25, 'pie': 100.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Please answer the following question.
-
-Accept: 25 tokens for sure
-Reject: 75 tokens for sure
-
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>4be9c21b2375324b — {'offer': 5.0, 'offer_frac': 0.25, 'pie': 20.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Please answer the following question.
-
-Accept: 5 tokens for sure
-Reject: 15 tokens for sure
-
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 1 · mc · `t_sel_1`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>2037c802933bc8be — {'offer': 45.0, 'offer_frac': 0.45, 'pie': 100.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Here is a decision problem.
-
-Accept: 45 tokens for sure
-Reject: 55 tokens for sure
-
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>377fb6babb83549f — {'offer': 5.0, 'offer_frac': 0.25, 'pie': 20.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Here is a decision problem.
-
-Accept: 5 tokens for sure
-Reject: 15 tokens for sure
-
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
 
 ### `neutral` · order 0 · freetext · `t_cal_0`
 
@@ -18963,10 +17850,12 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-A: 700 tokens for sure
-B: 300 tokens for sure
+You have been given 1,000 tokens and must propose how to split them with a responder.
+You are considering offering the responder 300 tokens, keeping 700.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you make this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -18984,10 +17873,12 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-A: 10 tokens for sure
-B: 90 tokens for sure
+You have been given 100 tokens and must propose how to split them with a responder.
+You are considering offering the responder 90 tokens, keeping 10.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you make this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -19009,10 +17900,12 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-A: 300 tokens for sure
-B: 700 tokens for sure
+You have been given 1,000 tokens and must propose how to split them with a responder.
+You are considering offering the responder 700 tokens, keeping 300.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you make this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -19030,10 +17923,12 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-A: 10 tokens for sure
-B: 10 tokens for sure
+You have been given 20 tokens and must propose how to split them with a responder.
+You are considering offering the responder 10 tokens, keeping 10.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you make this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -19055,10 +17950,12 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-A: nothing
-B: 20 tokens for sure
+You have been given 20 tokens and must propose how to split them with a responder.
+You are considering offering the responder 20 tokens, keeping 0.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you make this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -19076,10 +17973,12 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-A: 60 tokens for sure
-B: 40 tokens for sure
+You have been given 100 tokens and must propose how to split them with a responder.
+You are considering offering the responder 40 tokens, keeping 60.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you make this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -19101,10 +18000,12 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-A: 600 tokens for sure
-B: 400 tokens for sure
+You have been given 1,000 tokens and must propose how to split them with a responder.
+You are considering offering the responder 400 tokens, keeping 600.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you make this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -19122,10 +18023,12 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-A: 800 tokens for sure
-B: 200 tokens for sure
+You have been given 1,000 tokens and must propose how to split them with a responder.
+You are considering offering the responder 200 tokens, keeping 800.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you make this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -19147,10 +18050,12 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-A: 95 tokens for sure
-B: 5 tokens for sure
+You have been given 100 tokens and must propose how to split them with a responder.
+You are considering offering the responder 5 tokens, keeping 95.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you make this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -19168,10 +18073,12 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-A: 19 tokens for sure
-B: 1 tokens for sure
+You have been given 20 tokens and must propose how to split them with a responder.
+You are considering offering the responder 1 tokens, keeping 19.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you make this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -19193,10 +18100,12 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-A: 55 tokens for sure
-B: 45 tokens for sure
+You have been given 100 tokens and must propose how to split them with a responder.
+You are considering offering the responder 45 tokens, keeping 55.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you make this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -19214,10 +18123,12 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-A: 15 tokens for sure
-B: 85 tokens for sure
+You have been given 100 tokens and must propose how to split them with a responder.
+You are considering offering the responder 85 tokens, keeping 15.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you make this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -19239,10 +18150,12 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-A: 50 tokens for sure
-B: 50 tokens for sure
+You have been given 100 tokens and must propose how to split them with a responder.
+You are considering offering the responder 50 tokens, keeping 50.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you make this offer? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -19260,10 +18173,12 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-A: 10 tokens for sure
-B: 90 tokens for sure
+You have been given 100 tokens and must propose how to split them with a responder.
+You are considering offering the responder 90 tokens, keeping 10.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you make this offer? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -19285,10 +18200,12 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-A: 18 tokens for sure
-B: 2 tokens for sure
+You have been given 20 tokens and must propose how to split them with a responder.
+You are considering offering the responder 2 tokens, keeping 18.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you make this offer? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -19306,10 +18223,12 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-A: 14 tokens for sure
-B: 6 tokens for sure
+You have been given 20 tokens and must propose how to split them with a responder.
+You are considering offering the responder 6 tokens, keeping 14.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you make this offer? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -19331,10 +18250,12 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-A: 1,000 tokens for sure
-B: nothing
+You have been given 1,000 tokens and must propose how to split them with a responder.
+You are considering offering the responder 0 tokens, keeping 1,000.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you make this offer? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -19352,10 +18273,12 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-A: 800 tokens for sure
-B: 200 tokens for sure
+You have been given 1,000 tokens and must propose how to split them with a responder.
+You are considering offering the responder 200 tokens, keeping 800.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you make this offer? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -19377,10 +18300,12 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-A: 1,000 tokens for sure
-B: nothing
+You have been given 1,000 tokens and must propose how to split them with a responder.
+You are considering offering the responder 0 tokens, keeping 1,000.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you make this offer? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -19398,10 +18323,12 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-A: 600 tokens for sure
-B: 400 tokens for sure
+You have been given 1,000 tokens and must propose how to split them with a responder.
+You are considering offering the responder 400 tokens, keeping 600.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you make this offer? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -19423,10 +18350,12 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-A: 55 tokens for sure
-B: 45 tokens for sure
+You have been given 100 tokens and must propose how to split them with a responder.
+You are considering offering the responder 45 tokens, keeping 55.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you make this offer? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -19444,10 +18373,12 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-A: 350 tokens for sure
-B: 650 tokens for sure
+You have been given 1,000 tokens and must propose how to split them with a responder.
+You are considering offering the responder 650 tokens, keeping 350.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you make this offer? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -19469,10 +18400,12 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-A: 11 tokens for sure
-B: 9 tokens for sure
+You have been given 20 tokens and must propose how to split them with a responder.
+You are considering offering the responder 9 tokens, keeping 11.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you make this offer? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -19490,10 +18423,12 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-A: 35 tokens for sure
-B: 65 tokens for sure
+You have been given 100 tokens and must propose how to split them with a responder.
+You are considering offering the responder 65 tokens, keeping 35.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you make this offer? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -19515,10 +18450,12 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-B: 500 tokens for sure
-A: 500 tokens for sure
+You have been given 1,000 tokens and must propose how to split them with a responder.
+You are considering offering the responder 500 tokens, keeping 500.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you make this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -19536,10 +18473,12 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-B: 70 tokens for sure
-A: 30 tokens for sure
+You have been given 100 tokens and must propose how to split them with a responder.
+You are considering offering the responder 70 tokens, keeping 30.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you make this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -19561,10 +18500,12 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-B: 700 tokens for sure
-A: 300 tokens for sure
+You have been given 1,000 tokens and must propose how to split them with a responder.
+You are considering offering the responder 700 tokens, keeping 300.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you make this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -19582,10 +18523,12 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-B: 10 tokens for sure
-A: 10 tokens for sure
+You have been given 20 tokens and must propose how to split them with a responder.
+You are considering offering the responder 10 tokens, keeping 10.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you make this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -19607,10 +18550,12 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-B: 600 tokens for sure
-A: 400 tokens for sure
+You have been given 1,000 tokens and must propose how to split them with a responder.
+You are considering offering the responder 600 tokens, keeping 400.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you make this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -19628,10 +18573,12 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-B: 400 tokens for sure
-A: 600 tokens for sure
+You have been given 1,000 tokens and must propose how to split them with a responder.
+You are considering offering the responder 400 tokens, keeping 600.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you make this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -19653,10 +18600,12 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-B: 1,000 tokens for sure
-A: nothing
+You have been given 1,000 tokens and must propose how to split them with a responder.
+You are considering offering the responder 1,000 tokens, keeping 0.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you make this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -19674,10 +18623,12 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-B: 20 tokens for sure
-A: 80 tokens for sure
+You have been given 100 tokens and must propose how to split them with a responder.
+You are considering offering the responder 20 tokens, keeping 80.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you make this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -19699,10 +18650,12 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-B: 250 tokens for sure
-A: 750 tokens for sure
+You have been given 1,000 tokens and must propose how to split them with a responder.
+You are considering offering the responder 250 tokens, keeping 750.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you make this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -19720,10 +18673,12 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-B: 9 tokens for sure
-A: 11 tokens for sure
+You have been given 20 tokens and must propose how to split them with a responder.
+You are considering offering the responder 9 tokens, keeping 11.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you make this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -19745,10 +18700,12 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-B: 17 tokens for sure
-A: 3 tokens for sure
+You have been given 20 tokens and must propose how to split them with a responder.
+You are considering offering the responder 17 tokens, keeping 3.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you make this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -19766,10 +18723,12 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-B: 5 tokens for sure
-A: 95 tokens for sure
+You have been given 100 tokens and must propose how to split them with a responder.
+You are considering offering the responder 5 tokens, keeping 95.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you make this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -19791,10 +18750,12 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-B: 30 tokens for sure
-A: 70 tokens for sure
+You have been given 100 tokens and must propose how to split them with a responder.
+You are considering offering the responder 30 tokens, keeping 70.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you make this offer? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -19812,10 +18773,12 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-B: 10 tokens for sure
-A: 10 tokens for sure
+You have been given 20 tokens and must propose how to split them with a responder.
+You are considering offering the responder 10 tokens, keeping 10.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you make this offer? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -19837,10 +18800,12 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-B: 6 tokens for sure
-A: 14 tokens for sure
+You have been given 20 tokens and must propose how to split them with a responder.
+You are considering offering the responder 6 tokens, keeping 14.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you make this offer? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -19858,10 +18823,12 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-B: 100 tokens for sure
-A: 900 tokens for sure
+You have been given 1,000 tokens and must propose how to split them with a responder.
+You are considering offering the responder 100 tokens, keeping 900.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you make this offer? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -19883,10 +18850,12 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-B: 40 tokens for sure
-A: 60 tokens for sure
+You have been given 100 tokens and must propose how to split them with a responder.
+You are considering offering the responder 40 tokens, keeping 60.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you make this offer? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -19904,10 +18873,12 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-B: 12 tokens for sure
-A: 8 tokens for sure
+You have been given 20 tokens and must propose how to split them with a responder.
+You are considering offering the responder 12 tokens, keeping 8.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you make this offer? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -19929,10 +18900,12 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-B: 20 tokens for sure
-A: 80 tokens for sure
+You have been given 100 tokens and must propose how to split them with a responder.
+You are considering offering the responder 20 tokens, keeping 80.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you make this offer? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -19950,10 +18923,12 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-B: 100 tokens for sure
-A: nothing
+You have been given 100 tokens and must propose how to split them with a responder.
+You are considering offering the responder 100 tokens, keeping 0.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you make this offer? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -19975,10 +18950,12 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-B: 13 tokens for sure
-A: 7 tokens for sure
+You have been given 20 tokens and must propose how to split them with a responder.
+You are considering offering the responder 13 tokens, keeping 7.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you make this offer? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -19996,10 +18973,12 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-B: 250 tokens for sure
-A: 750 tokens for sure
+You have been given 1,000 tokens and must propose how to split them with a responder.
+You are considering offering the responder 250 tokens, keeping 750.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you make this offer? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -20021,10 +19000,12 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-B: 450 tokens for sure
-A: 550 tokens for sure
+You have been given 1,000 tokens and must propose how to split them with a responder.
+You are considering offering the responder 450 tokens, keeping 550.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you make this offer? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -20042,10 +19023,1212 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-B: 5 tokens for sure
-A: 95 tokens for sure
+You have been given 100 tokens and must propose how to split them with a responder.
+You are considering offering the responder 5 tokens, keeping 95.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you make this offer? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `yes_no` · order 0 · freetext · `t_cal_0`
+
+Stem: `Answer:` — readout scores `No` [2360, 2822] as negative, `Yes` [7566, 9642] as positive.
+
+<details><summary>075884b85f1428be — {'offer': 90.0, 'offer_frac': 0.9, 'pie': 100.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Read the options below and decide.
+
+You have been given 100 tokens and must propose how to split them with a responder.
+You are considering offering the responder 90 tokens, keeping 10.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
+
+Do you make this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>121995156e89aadf — {'offer': 50.0, 'offer_frac': 0.5, 'pie': 100.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Read the options below and decide.
+
+You have been given 100 tokens and must propose how to split them with a responder.
+You are considering offering the responder 50 tokens, keeping 50.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
+
+Do you make this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `yes_no` · order 0 · freetext · `t_cal_1`
+
+Stem: `Answer:` — readout scores `No` [2360, 2822] as negative, `Yes` [7566, 9642] as positive.
+
+<details><summary>067954d06b718cad — {'offer': 500.0, 'offer_frac': 0.5, 'pie': 1000.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+A choice is described below.
+
+You have been given 1,000 tokens and must propose how to split them with a responder.
+You are considering offering the responder 500 tokens, keeping 500.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
+
+Do you make this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>28774e4a76c32f9f — {'offer': 900.0, 'offer_frac': 0.9, 'pie': 1000.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+A choice is described below.
+
+You have been given 1,000 tokens and must propose how to split them with a responder.
+You are considering offering the responder 900 tokens, keeping 100.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
+
+Do you make this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `yes_no` · order 0 · freetext · `t_disc_0`
+
+Stem: `Answer:` — readout scores `No` [2360, 2822] as negative, `Yes` [7566, 9642] as positive.
+
+<details><summary>091a7d0ab4fbc0f9 — {'offer': 1000.0, 'offer_frac': 1.0, 'pie': 1000.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+You are taking part in a study of decision making.
+
+You have been given 1,000 tokens and must propose how to split them with a responder.
+You are considering offering the responder 1,000 tokens, keeping 0.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
+
+Do you make this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>0a0f0536bc1b66ee — {'offer': 4.0, 'offer_frac': 0.2, 'pie': 20.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+You are taking part in a study of decision making.
+
+You have been given 20 tokens and must propose how to split them with a responder.
+You are considering offering the responder 4 tokens, keeping 16.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
+
+Do you make this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `yes_no` · order 0 · freetext · `t_disc_1`
+
+Stem: `Answer:` — readout scores `No` [2360, 2822] as negative, `Yes` [7566, 9642] as positive.
+
+<details><summary>0090d56e061d8a83 — {'offer': 16.0, 'offer_frac': 0.8, 'pie': 20.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Consider the following choice.
+
+You have been given 20 tokens and must propose how to split them with a responder.
+You are considering offering the responder 16 tokens, keeping 4.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
+
+Do you make this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>08be068e5e89b2d0 — {'offer': 0.0, 'offer_frac': 0.0, 'pie': 1000.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Consider the following choice.
+
+You have been given 1,000 tokens and must propose how to split them with a responder.
+You are considering offering the responder 0 tokens, keeping 1,000.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
+
+Do you make this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `yes_no` · order 0 · freetext · `t_sel_0`
+
+Stem: `Answer:` — readout scores `No` [2360, 2822] as negative, `Yes` [7566, 9642] as positive.
+
+<details><summary>3d6066608e07e1eb — {'offer': 50.0, 'offer_frac': 0.05, 'pie': 1000.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Please answer the following question.
+
+You have been given 1,000 tokens and must propose how to split them with a responder.
+You are considering offering the responder 50 tokens, keeping 950.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
+
+Do you make this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>61c354b13f191cc6 — {'offer': 25.0, 'offer_frac': 0.25, 'pie': 100.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Please answer the following question.
+
+You have been given 100 tokens and must propose how to split them with a responder.
+You are considering offering the responder 25 tokens, keeping 75.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
+
+Do you make this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `yes_no` · order 0 · freetext · `t_sel_1`
+
+Stem: `Answer:` — readout scores `No` [2360, 2822] as negative, `Yes` [7566, 9642] as positive.
+
+<details><summary>14045db5fe034562 — {'offer': 1.0, 'offer_frac': 0.05, 'pie': 20.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Here is a decision problem.
+
+You have been given 20 tokens and must propose how to split them with a responder.
+You are considering offering the responder 1 tokens, keeping 19.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
+
+Do you make this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>3bb6b8ff9408aa2c — {'offer': 650.0, 'offer_frac': 0.65, 'pie': 1000.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Here is a decision problem.
+
+You have been given 1,000 tokens and must propose how to split them with a responder.
+You are considering offering the responder 650 tokens, keeping 350.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
+
+Do you make this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `yes_no` · order 0 · mc · `t_cal_0`
+
+Stem: `Answer:` — readout scores `No` [2360, 2822] as negative, `Yes` [7566, 9642] as positive.
+
+<details><summary>1f9abc3e13db8255 — {'offer': 10.0, 'offer_frac': 0.5, 'pie': 20.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Read the options below and decide.
+
+You have been given 20 tokens and must propose how to split them with a responder.
+You are considering offering the responder 10 tokens, keeping 10.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
+
+Do you make this offer? Answer with exactly one of "No" or "Yes" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>50b243dabd01ab6f — {'offer': 900.0, 'offer_frac': 0.9, 'pie': 1000.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Read the options below and decide.
+
+You have been given 1,000 tokens and must propose how to split them with a responder.
+You are considering offering the responder 900 tokens, keeping 100.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
+
+Do you make this offer? Answer with exactly one of "No" or "Yes" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `yes_no` · order 0 · mc · `t_cal_1`
+
+Stem: `Answer:` — readout scores `No` [2360, 2822] as negative, `Yes` [7566, 9642] as positive.
+
+<details><summary>07293107dff6f221 — {'offer': 90.0, 'offer_frac': 0.9, 'pie': 100.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+A choice is described below.
+
+You have been given 100 tokens and must propose how to split them with a responder.
+You are considering offering the responder 90 tokens, keeping 10.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
+
+Do you make this offer? Answer with exactly one of "No" or "Yes" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>2f5745e132979e8d — {'offer': 10.0, 'offer_frac': 0.5, 'pie': 20.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+A choice is described below.
+
+You have been given 20 tokens and must propose how to split them with a responder.
+You are considering offering the responder 10 tokens, keeping 10.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
+
+Do you make this offer? Answer with exactly one of "No" or "Yes" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `yes_no` · order 0 · mc · `t_disc_0`
+
+Stem: `Answer:` — readout scores `No` [2360, 2822] as negative, `Yes` [7566, 9642] as positive.
+
+<details><summary>14cddf7a80ad11fb — {'offer': 40.0, 'offer_frac': 0.4, 'pie': 100.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+You are taking part in a study of decision making.
+
+You have been given 100 tokens and must propose how to split them with a responder.
+You are considering offering the responder 40 tokens, keeping 60.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
+
+Do you make this offer? Answer with exactly one of "No" or "Yes" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>229eb24d8f553165 — {'offer': 4.0, 'offer_frac': 0.2, 'pie': 20.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+You are taking part in a study of decision making.
+
+You have been given 20 tokens and must propose how to split them with a responder.
+You are considering offering the responder 4 tokens, keeping 16.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
+
+Do you make this offer? Answer with exactly one of "No" or "Yes" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `yes_no` · order 0 · mc · `t_disc_1`
+
+Stem: `Answer:` — readout scores `No` [2360, 2822] as negative, `Yes` [7566, 9642] as positive.
+
+<details><summary>032bb9f708bac637 — {'offer': 60.0, 'offer_frac': 0.6, 'pie': 100.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Consider the following choice.
+
+You have been given 100 tokens and must propose how to split them with a responder.
+You are considering offering the responder 60 tokens, keeping 40.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
+
+Do you make this offer? Answer with exactly one of "No" or "Yes" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>06020e233007689c — {'offer': 0.0, 'offer_frac': 0.0, 'pie': 100.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Consider the following choice.
+
+You have been given 100 tokens and must propose how to split them with a responder.
+You are considering offering the responder 0 tokens, keeping 100.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
+
+Do you make this offer? Answer with exactly one of "No" or "Yes" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `yes_no` · order 0 · mc · `t_sel_0`
+
+Stem: `Answer:` — readout scores `No` [2360, 2822] as negative, `Yes` [7566, 9642] as positive.
+
+<details><summary>1414e50b8b0a6200 — {'offer': 25.0, 'offer_frac': 0.25, 'pie': 100.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Please answer the following question.
+
+You have been given 100 tokens and must propose how to split them with a responder.
+You are considering offering the responder 25 tokens, keeping 75.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
+
+Do you make this offer? Answer with exactly one of "No" or "Yes" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>19c1b1fd4c23b234 — {'offer': 1.0, 'offer_frac': 0.05, 'pie': 20.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Please answer the following question.
+
+You have been given 20 tokens and must propose how to split them with a responder.
+You are considering offering the responder 1 tokens, keeping 19.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
+
+Do you make this offer? Answer with exactly one of "No" or "Yes" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `yes_no` · order 0 · mc · `t_sel_1`
+
+Stem: `Answer:` — readout scores `No` [2360, 2822] as negative, `Yes` [7566, 9642] as positive.
+
+<details><summary>146bc55212b0db89 — {'offer': 450.0, 'offer_frac': 0.45, 'pie': 1000.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Here is a decision problem.
+
+You have been given 1,000 tokens and must propose how to split them with a responder.
+You are considering offering the responder 450 tokens, keeping 550.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
+
+Do you make this offer? Answer with exactly one of "No" or "Yes" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>1b9f52dc107dfec6 — {'offer': 650.0, 'offer_frac': 0.65, 'pie': 1000.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Here is a decision problem.
+
+You have been given 1,000 tokens and must propose how to split them with a responder.
+You are considering offering the responder 650 tokens, keeping 350.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
+
+Do you make this offer? Answer with exactly one of "No" or "Yes" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `yes_no` · order 1 · freetext · `t_cal_0`
+
+Stem: `Answer:` — readout scores `No` [2360, 2822] as negative, `Yes` [7566, 9642] as positive.
+
+<details><summary>0f6891849d9fff75 — {'offer': 500.0, 'offer_frac': 0.5, 'pie': 1000.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Read the options below and decide.
+
+You have been given 1,000 tokens and must propose how to split them with a responder.
+You are considering offering the responder 500 tokens, keeping 500.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
+
+Do you make this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>31ba630dc960e750 — {'offer': 700.0, 'offer_frac': 0.7, 'pie': 1000.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Read the options below and decide.
+
+You have been given 1,000 tokens and must propose how to split them with a responder.
+You are considering offering the responder 700 tokens, keeping 300.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
+
+Do you make this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `yes_no` · order 1 · freetext · `t_cal_1`
+
+Stem: `Answer:` — readout scores `No` [2360, 2822] as negative, `Yes` [7566, 9642] as positive.
+
+<details><summary>0427b2de90b126a9 — {'offer': 10.0, 'offer_frac': 0.1, 'pie': 100.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+A choice is described below.
+
+You have been given 100 tokens and must propose how to split them with a responder.
+You are considering offering the responder 10 tokens, keeping 90.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
+
+Do you make this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>0b1808da58e369d3 — {'offer': 14.0, 'offer_frac': 0.7, 'pie': 20.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+A choice is described below.
+
+You have been given 20 tokens and must propose how to split them with a responder.
+You are considering offering the responder 14 tokens, keeping 6.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
+
+Do you make this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `yes_no` · order 1 · freetext · `t_disc_0`
+
+Stem: `Answer:` — readout scores `No` [2360, 2822] as negative, `Yes` [7566, 9642] as positive.
+
+<details><summary>00d8909e2dae2bc0 — {'offer': 0.0, 'offer_frac': 0.0, 'pie': 100.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+You are taking part in a study of decision making.
+
+You have been given 100 tokens and must propose how to split them with a responder.
+You are considering offering the responder 0 tokens, keeping 100.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
+
+Do you make this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>1570b7d1243d9c93 — {'offer': 8.0, 'offer_frac': 0.4, 'pie': 20.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+You are taking part in a study of decision making.
+
+You have been given 20 tokens and must propose how to split them with a responder.
+You are considering offering the responder 8 tokens, keeping 12.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
+
+Do you make this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `yes_no` · order 1 · freetext · `t_disc_1`
+
+Stem: `Answer:` — readout scores `No` [2360, 2822] as negative, `Yes` [7566, 9642] as positive.
+
+<details><summary>01bc9364b2cf06e6 — {'offer': 20.0, 'offer_frac': 1.0, 'pie': 20.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Consider the following choice.
+
+You have been given 20 tokens and must propose how to split them with a responder.
+You are considering offering the responder 20 tokens, keeping 0.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
+
+Do you make this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>11683b618cdb1c82 — {'offer': 200.0, 'offer_frac': 0.2, 'pie': 1000.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Consider the following choice.
+
+You have been given 1,000 tokens and must propose how to split them with a responder.
+You are considering offering the responder 200 tokens, keeping 800.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
+
+Do you make this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `yes_no` · order 1 · freetext · `t_sel_0`
+
+Stem: `Answer:` — readout scores `No` [2360, 2822] as negative, `Yes` [7566, 9642] as positive.
+
+<details><summary>0ff1d8653bfbb55a — {'offer': 65.0, 'offer_frac': 0.65, 'pie': 100.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Please answer the following question.
+
+You have been given 100 tokens and must propose how to split them with a responder.
+You are considering offering the responder 65 tokens, keeping 35.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
+
+Do you make this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>11b5829134a5deb1 — {'offer': 25.0, 'offer_frac': 0.25, 'pie': 100.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Please answer the following question.
+
+You have been given 100 tokens and must propose how to split them with a responder.
+You are considering offering the responder 25 tokens, keeping 75.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
+
+Do you make this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `yes_no` · order 1 · freetext · `t_sel_1`
+
+Stem: `Answer:` — readout scores `No` [2360, 2822] as negative, `Yes` [7566, 9642] as positive.
+
+<details><summary>091ef36a21425af4 — {'offer': 1.0, 'offer_frac': 0.05, 'pie': 20.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Here is a decision problem.
+
+You have been given 20 tokens and must propose how to split them with a responder.
+You are considering offering the responder 1 tokens, keeping 19.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
+
+Do you make this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>332ea796b037db83 — {'offer': 450.0, 'offer_frac': 0.45, 'pie': 1000.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Here is a decision problem.
+
+You have been given 1,000 tokens and must propose how to split them with a responder.
+You are considering offering the responder 450 tokens, keeping 550.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
+
+Do you make this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `yes_no` · order 1 · mc · `t_cal_0`
+
+Stem: `Answer:` — readout scores `No` [2360, 2822] as negative, `Yes` [7566, 9642] as positive.
+
+<details><summary>0acecb67ec7a1029 — {'offer': 30.0, 'offer_frac': 0.3, 'pie': 100.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Read the options below and decide.
+
+You have been given 100 tokens and must propose how to split them with a responder.
+You are considering offering the responder 30 tokens, keeping 70.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
+
+Do you make this offer? Answer with exactly one of "Yes" or "No" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>11eb32a8519f2ef9 — {'offer': 10.0, 'offer_frac': 0.1, 'pie': 100.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Read the options below and decide.
+
+You have been given 100 tokens and must propose how to split them with a responder.
+You are considering offering the responder 10 tokens, keeping 90.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
+
+Do you make this offer? Answer with exactly one of "Yes" or "No" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `yes_no` · order 1 · mc · `t_cal_1`
+
+Stem: `Answer:` — readout scores `No` [2360, 2822] as negative, `Yes` [7566, 9642] as positive.
+
+<details><summary>003ae4b093711eba — {'offer': 30.0, 'offer_frac': 0.3, 'pie': 100.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+A choice is described below.
+
+You have been given 100 tokens and must propose how to split them with a responder.
+You are considering offering the responder 30 tokens, keeping 70.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
+
+Do you make this offer? Answer with exactly one of "Yes" or "No" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>0dfc40ac3c9e8094 — {'offer': 10.0, 'offer_frac': 0.5, 'pie': 20.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+A choice is described below.
+
+You have been given 20 tokens and must propose how to split them with a responder.
+You are considering offering the responder 10 tokens, keeping 10.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
+
+Do you make this offer? Answer with exactly one of "Yes" or "No" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `yes_no` · order 1 · mc · `t_disc_0`
+
+Stem: `Answer:` — readout scores `No` [2360, 2822] as negative, `Yes` [7566, 9642] as positive.
+
+<details><summary>053d27e83c1dfcdb — {'offer': 100.0, 'offer_frac': 1.0, 'pie': 100.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+You are taking part in a study of decision making.
+
+You have been given 100 tokens and must propose how to split them with a responder.
+You are considering offering the responder 100 tokens, keeping 0.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
+
+Do you make this offer? Answer with exactly one of "Yes" or "No" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>05e567d497924e47 — {'offer': 16.0, 'offer_frac': 0.8, 'pie': 20.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+You are taking part in a study of decision making.
+
+You have been given 20 tokens and must propose how to split them with a responder.
+You are considering offering the responder 16 tokens, keeping 4.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
+
+Do you make this offer? Answer with exactly one of "Yes" or "No" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `yes_no` · order 1 · mc · `t_disc_1`
+
+Stem: `Answer:` — readout scores `No` [2360, 2822] as negative, `Yes` [7566, 9642] as positive.
+
+<details><summary>193538173ab3b08b — {'offer': 0.0, 'offer_frac': 0.0, 'pie': 20.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Consider the following choice.
+
+You have been given 20 tokens and must propose how to split them with a responder.
+You are considering offering the responder 0 tokens, keeping 20.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
+
+Do you make this offer? Answer with exactly one of "Yes" or "No" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>215736e454eca13a — {'offer': 200.0, 'offer_frac': 0.2, 'pie': 1000.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Consider the following choice.
+
+You have been given 1,000 tokens and must propose how to split them with a responder.
+You are considering offering the responder 200 tokens, keeping 800.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
+
+Do you make this offer? Answer with exactly one of "Yes" or "No" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `yes_no` · order 1 · mc · `t_sel_0`
+
+Stem: `Answer:` — readout scores `No` [2360, 2822] as negative, `Yes` [7566, 9642] as positive.
+
+<details><summary>0d4fca7f1ecce39a — {'offer': 5.0, 'offer_frac': 0.05, 'pie': 100.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Please answer the following question.
+
+You have been given 100 tokens and must propose how to split them with a responder.
+You are considering offering the responder 5 tokens, keeping 95.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
+
+Do you make this offer? Answer with exactly one of "Yes" or "No" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>36140d748da97711 — {'offer': 85.0, 'offer_frac': 0.85, 'pie': 100.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Please answer the following question.
+
+You have been given 100 tokens and must propose how to split them with a responder.
+You are considering offering the responder 85 tokens, keeping 15.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
+
+Do you make this offer? Answer with exactly one of "Yes" or "No" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `yes_no` · order 1 · mc · `t_sel_1`
+
+Stem: `Answer:` — readout scores `No` [2360, 2822] as negative, `Yes` [7566, 9642] as positive.
+
+<details><summary>2e4f13fde945efb8 — {'offer': 25.0, 'offer_frac': 0.25, 'pie': 100.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Here is a decision problem.
+
+You have been given 100 tokens and must propose how to split them with a responder.
+You are considering offering the responder 25 tokens, keeping 75.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
+
+Do you make this offer? Answer with exactly one of "Yes" or "No" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>5582c6a0856f9fb3 — {'offer': 450.0, 'offer_frac': 0.45, 'pie': 1000.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Here is a decision problem.
+
+You have been given 1,000 tokens and must propose how to split them with a responder.
+You are considering offering the responder 450 tokens, keeping 550.
+If the responder accepts, each of you keeps that amount.
+If the responder rejects, both of you get 0 tokens.
+
+Do you make this offer? Answer with exactly one of "Yes" or "No" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -20055,1110 +20238,6 @@ Answer:
 ---
 
 # Family: `dictator`
-
-### `accept_reject` · order 0 · freetext · `t_cal_0`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>0f0cfc022f2b2bf2 — {'give': 30.0, 'give_frac': 0.3, 'pie': 100.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Read the options below and decide.
-
-Reject: 70 tokens for sure
-Accept: 30 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>23f0f1462c628d4f — {'give': 90.0, 'give_frac': 0.9, 'pie': 100.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Read the options below and decide.
-
-Reject: 10 tokens for sure
-Accept: 90 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 0 · freetext · `t_cal_1`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>1141a357aa6a38e1 — {'give': 900.0, 'give_frac': 0.9, 'pie': 1000.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-A choice is described below.
-
-Reject: 100 tokens for sure
-Accept: 900 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>2de3d0d5910e6e8d — {'give': 500.0, 'give_frac': 0.5, 'pie': 1000.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-A choice is described below.
-
-Reject: 500 tokens for sure
-Accept: 500 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 0 · freetext · `t_disc_0`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>07fd6f331b605d5d — {'give': 400.0, 'give_frac': 0.4, 'pie': 1000.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-You are taking part in a study of decision making.
-
-Reject: 600 tokens for sure
-Accept: 400 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>154cf14a20e94635 — {'give': 600.0, 'give_frac': 0.6, 'pie': 1000.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-You are taking part in a study of decision making.
-
-Reject: 400 tokens for sure
-Accept: 600 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 0 · freetext · `t_disc_1`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>2dcc16f48b9bcbfe — {'give': 40.0, 'give_frac': 0.4, 'pie': 100.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Consider the following choice.
-
-Reject: 60 tokens for sure
-Accept: 40 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>40a27807f3a7a81f — {'give': 16.0, 'give_frac': 0.8, 'pie': 20.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Consider the following choice.
-
-Reject: 4 tokens for sure
-Accept: 16 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 0 · freetext · `t_sel_0`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>03d20d212e4b546a — {'give': 50.0, 'give_frac': 0.05, 'pie': 1000.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Please answer the following question.
-
-Reject: 950 tokens for sure
-Accept: 50 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>09f336a340688cf0 — {'give': 650.0, 'give_frac': 0.65, 'pie': 1000.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Please answer the following question.
-
-Reject: 350 tokens for sure
-Accept: 650 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 0 · freetext · `t_sel_1`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>07a8699329813fe1 — {'give': 9.0, 'give_frac': 0.45, 'pie': 20.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Here is a decision problem.
-
-Reject: 11 tokens for sure
-Accept: 9 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>2379bae0fc656acd — {'give': 450.0, 'give_frac': 0.45, 'pie': 1000.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Here is a decision problem.
-
-Reject: 550 tokens for sure
-Accept: 450 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 0 · mc · `t_cal_0`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>03ab2ad5c5004d89 — {'give': 900.0, 'give_frac': 0.9, 'pie': 1000.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Read the options below and decide.
-
-Reject: 100 tokens for sure
-Accept: 900 tokens for sure
-
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>04e2d5be98260987 — {'give': 30.0, 'give_frac': 0.3, 'pie': 100.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Read the options below and decide.
-
-Reject: 70 tokens for sure
-Accept: 30 tokens for sure
-
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 0 · mc · `t_cal_1`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>05d53fce3d00f0f8 — {'give': 2.0, 'give_frac': 0.1, 'pie': 20.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-A choice is described below.
-
-Reject: 18 tokens for sure
-Accept: 2 tokens for sure
-
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>0cf78c9068b61438 — {'give': 90.0, 'give_frac': 0.9, 'pie': 100.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-A choice is described below.
-
-Reject: 10 tokens for sure
-Accept: 90 tokens for sure
-
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 0 · mc · `t_disc_0`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>2f61f57708c46fdc — {'give': 100.0, 'give_frac': 1.0, 'pie': 100.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-You are taking part in a study of decision making.
-
-Reject: nothing
-Accept: 100 tokens for sure
-
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>346c28bcc86547ff — {'give': 20.0, 'give_frac': 1.0, 'pie': 20.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-You are taking part in a study of decision making.
-
-Reject: nothing
-Accept: 20 tokens for sure
-
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 0 · mc · `t_disc_1`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>15042a61917ac859 — {'give': 800.0, 'give_frac': 0.8, 'pie': 1000.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Consider the following choice.
-
-Reject: 200 tokens for sure
-Accept: 800 tokens for sure
-
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>1ed4efd4cc7406f9 — {'give': 0.0, 'give_frac': 0.0, 'pie': 100.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Consider the following choice.
-
-Reject: 100 tokens for sure
-Accept: nothing
-
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 0 · mc · `t_sel_0`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>03687b379e10cd72 — {'give': 13.0, 'give_frac': 0.65, 'pie': 20.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Please answer the following question.
-
-Reject: 7 tokens for sure
-Accept: 13 tokens for sure
-
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>16a9409621b76b1a — {'give': 65.0, 'give_frac': 0.65, 'pie': 100.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Please answer the following question.
-
-Reject: 35 tokens for sure
-Accept: 65 tokens for sure
-
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 0 · mc · `t_sel_1`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>08de986b797a3c44 — {'give': 5.0, 'give_frac': 0.05, 'pie': 100.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Here is a decision problem.
-
-Reject: 95 tokens for sure
-Accept: 5 tokens for sure
-
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>20fe5e2c41a0c595 — {'give': 850.0, 'give_frac': 0.85, 'pie': 1000.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Here is a decision problem.
-
-Reject: 150 tokens for sure
-Accept: 850 tokens for sure
-
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 1 · freetext · `t_cal_0`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>0903fe74ffc1dda0 — {'give': 70.0, 'give_frac': 0.7, 'pie': 100.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Read the options below and decide.
-
-Accept: 70 tokens for sure
-Reject: 30 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>394526788bd76ed8 — {'give': 300.0, 'give_frac': 0.3, 'pie': 1000.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Read the options below and decide.
-
-Accept: 300 tokens for sure
-Reject: 700 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 1 · freetext · `t_cal_1`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>27dd04eab737e1bc — {'give': 90.0, 'give_frac': 0.9, 'pie': 100.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-A choice is described below.
-
-Accept: 90 tokens for sure
-Reject: 10 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>290f0455721495d4 — {'give': 14.0, 'give_frac': 0.7, 'pie': 20.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-A choice is described below.
-
-Accept: 14 tokens for sure
-Reject: 6 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 1 · freetext · `t_disc_0`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>0279d4261ba6c07d — {'give': 100.0, 'give_frac': 1.0, 'pie': 100.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-You are taking part in a study of decision making.
-
-Accept: 100 tokens for sure
-Reject: nothing
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>14f11e9c9ab8f42d — {'give': 20.0, 'give_frac': 0.2, 'pie': 100.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-You are taking part in a study of decision making.
-
-Accept: 20 tokens for sure
-Reject: 80 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 1 · freetext · `t_disc_1`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>1c63363b0d04951b — {'give': 0.0, 'give_frac': 0.0, 'pie': 1000.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Consider the following choice.
-
-Accept: nothing
-Reject: 1,000 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>4b13070040916715 — {'give': 400.0, 'give_frac': 0.4, 'pie': 1000.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Consider the following choice.
-
-Accept: 400 tokens for sure
-Reject: 600 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 1 · freetext · `t_sel_0`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>1688b4823aa69f87 — {'give': 1.0, 'give_frac': 0.05, 'pie': 20.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Please answer the following question.
-
-Accept: 1 tokens for sure
-Reject: 19 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>263f85af078503d1 — {'give': 9.0, 'give_frac': 0.45, 'pie': 20.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Please answer the following question.
-
-Accept: 9 tokens for sure
-Reject: 11 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 1 · freetext · `t_sel_1`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>14d6949daac529bb — {'give': 250.0, 'give_frac': 0.25, 'pie': 1000.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Here is a decision problem.
-
-Accept: 250 tokens for sure
-Reject: 750 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>29fe78b84de87d34 — {'give': 9.0, 'give_frac': 0.45, 'pie': 20.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Here is a decision problem.
-
-Accept: 9 tokens for sure
-Reject: 11 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 1 · mc · `t_cal_0`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>1c43fb3e07a73afd — {'give': 90.0, 'give_frac': 0.9, 'pie': 100.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Read the options below and decide.
-
-Accept: 90 tokens for sure
-Reject: 10 tokens for sure
-
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>2c57ed31bed07fac — {'give': 100.0, 'give_frac': 0.1, 'pie': 1000.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Read the options below and decide.
-
-Accept: 100 tokens for sure
-Reject: 900 tokens for sure
-
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 1 · mc · `t_cal_1`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>129348beddd0ac92 — {'give': 70.0, 'give_frac': 0.7, 'pie': 100.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-A choice is described below.
-
-Accept: 70 tokens for sure
-Reject: 30 tokens for sure
-
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>15d0e1b65e00c7d1 — {'give': 90.0, 'give_frac': 0.9, 'pie': 100.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-A choice is described below.
-
-Accept: 90 tokens for sure
-Reject: 10 tokens for sure
-
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 1 · mc · `t_disc_0`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>07065d7e28b24bfc — {'give': 1000.0, 'give_frac': 1.0, 'pie': 1000.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-You are taking part in a study of decision making.
-
-Accept: 1,000 tokens for sure
-Reject: nothing
-
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>13ba144bdcce1349 — {'give': 200.0, 'give_frac': 0.2, 'pie': 1000.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-You are taking part in a study of decision making.
-
-Accept: 200 tokens for sure
-Reject: 800 tokens for sure
-
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 1 · mc · `t_disc_1`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>061b49271db11fb0 — {'give': 20.0, 'give_frac': 1.0, 'pie': 20.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Consider the following choice.
-
-Accept: 20 tokens for sure
-Reject: nothing
-
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>10fb43f9945cc0a1 — {'give': 0.0, 'give_frac': 0.0, 'pie': 100.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Consider the following choice.
-
-Accept: nothing
-Reject: 100 tokens for sure
-
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 1 · mc · `t_sel_0`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>0734702213099f5a — {'give': 250.0, 'give_frac': 0.25, 'pie': 1000.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Please answer the following question.
-
-Accept: 250 tokens for sure
-Reject: 750 tokens for sure
-
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>3542bc472b1136ea — {'give': 85.0, 'give_frac': 0.85, 'pie': 100.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Please answer the following question.
-
-Accept: 85 tokens for sure
-Reject: 15 tokens for sure
-
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 1 · mc · `t_sel_1`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>016b9fae049e103b — {'give': 5.0, 'give_frac': 0.25, 'pie': 20.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Here is a decision problem.
-
-Accept: 5 tokens for sure
-Reject: 15 tokens for sure
-
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>0558f1e422f8aab3 — {'give': 650.0, 'give_frac': 0.65, 'pie': 1000.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Here is a decision problem.
-
-Accept: 650 tokens for sure
-Reject: 350 tokens for sure
-
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
 
 ### `neutral` · order 0 · freetext · `t_cal_0`
 
@@ -21176,10 +20255,11 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-A: 14 tokens for sure
-B: 6 tokens for sure
+You have been given 20 tokens and may give any part of them to another person.
+You are considering giving 6 tokens, keeping 14.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you give this amount? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -21197,10 +20277,11 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-A: 70 tokens for sure
-B: 30 tokens for sure
+You have been given 100 tokens and may give any part of them to another person.
+You are considering giving 30 tokens, keeping 70.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you give this amount? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -21222,10 +20303,11 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-A: 900 tokens for sure
-B: 100 tokens for sure
+You have been given 1,000 tokens and may give any part of them to another person.
+You are considering giving 100 tokens, keeping 900.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you give this amount? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -21243,10 +20325,11 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-A: 10 tokens for sure
-B: 10 tokens for sure
+You have been given 20 tokens and may give any part of them to another person.
+You are considering giving 10 tokens, keeping 10.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you give this amount? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -21268,10 +20351,11 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-A: 16 tokens for sure
-B: 4 tokens for sure
+You have been given 20 tokens and may give any part of them to another person.
+You are considering giving 4 tokens, keeping 16.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you give this amount? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -21289,10 +20373,11 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-A: 20 tokens for sure
-B: 80 tokens for sure
+You have been given 100 tokens and may give any part of them to another person.
+You are considering giving 80 tokens, keeping 20.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you give this amount? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -21314,10 +20399,11 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-A: 20 tokens for sure
-B: nothing
+You have been given 20 tokens and may give any part of them to another person.
+You are considering giving 0 tokens, keeping 20.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you give this amount? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -21335,10 +20421,11 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-A: nothing
-B: 20 tokens for sure
+You have been given 20 tokens and may give any part of them to another person.
+You are considering giving 20 tokens, keeping 0.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you give this amount? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -21360,10 +20447,11 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-A: 150 tokens for sure
-B: 850 tokens for sure
+You have been given 1,000 tokens and may give any part of them to another person.
+You are considering giving 850 tokens, keeping 150.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you give this amount? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -21381,10 +20469,11 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-A: 35 tokens for sure
-B: 65 tokens for sure
+You have been given 100 tokens and may give any part of them to another person.
+You are considering giving 65 tokens, keeping 35.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you give this amount? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -21406,10 +20495,11 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-A: 11 tokens for sure
-B: 9 tokens for sure
+You have been given 20 tokens and may give any part of them to another person.
+You are considering giving 9 tokens, keeping 11.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you give this amount? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -21427,10 +20517,11 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-A: 55 tokens for sure
-B: 45 tokens for sure
+You have been given 100 tokens and may give any part of them to another person.
+You are considering giving 45 tokens, keeping 55.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you give this amount? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -21452,10 +20543,11 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-A: 70 tokens for sure
-B: 30 tokens for sure
+You have been given 100 tokens and may give any part of them to another person.
+You are considering giving 30 tokens, keeping 70.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
 
-Which do you choose? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you give this amount? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -21473,10 +20565,11 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-A: 500 tokens for sure
-B: 500 tokens for sure
+You have been given 1,000 tokens and may give any part of them to another person.
+You are considering giving 500 tokens, keeping 500.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
 
-Which do you choose? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you give this amount? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -21498,10 +20591,11 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-A: 6 tokens for sure
-B: 14 tokens for sure
+You have been given 20 tokens and may give any part of them to another person.
+You are considering giving 14 tokens, keeping 6.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
 
-Which do you choose? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you give this amount? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -21519,10 +20613,11 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-A: 14 tokens for sure
-B: 6 tokens for sure
+You have been given 20 tokens and may give any part of them to another person.
+You are considering giving 6 tokens, keeping 14.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
 
-Which do you choose? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you give this amount? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -21544,10 +20639,11 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-A: 400 tokens for sure
-B: 600 tokens for sure
+You have been given 1,000 tokens and may give any part of them to another person.
+You are considering giving 600 tokens, keeping 400.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
 
-Which do you choose? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you give this amount? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -21565,10 +20661,11 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-A: 40 tokens for sure
-B: 60 tokens for sure
+You have been given 100 tokens and may give any part of them to another person.
+You are considering giving 60 tokens, keeping 40.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
 
-Which do you choose? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you give this amount? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -21590,10 +20687,11 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-A: nothing
-B: 100 tokens for sure
+You have been given 100 tokens and may give any part of them to another person.
+You are considering giving 100 tokens, keeping 0.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
 
-Which do you choose? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you give this amount? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -21611,10 +20709,11 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-A: 20 tokens for sure
-B: 80 tokens for sure
+You have been given 100 tokens and may give any part of them to another person.
+You are considering giving 80 tokens, keeping 20.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
 
-Which do you choose? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you give this amount? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -21636,10 +20735,11 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-A: 15 tokens for sure
-B: 85 tokens for sure
+You have been given 100 tokens and may give any part of them to another person.
+You are considering giving 85 tokens, keeping 15.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
 
-Which do you choose? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you give this amount? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -21657,10 +20757,11 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-A: 750 tokens for sure
-B: 250 tokens for sure
+You have been given 1,000 tokens and may give any part of them to another person.
+You are considering giving 250 tokens, keeping 750.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
 
-Which do you choose? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you give this amount? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -21682,10 +20783,11 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-A: 11 tokens for sure
-B: 9 tokens for sure
+You have been given 20 tokens and may give any part of them to another person.
+You are considering giving 9 tokens, keeping 11.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
 
-Which do you choose? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you give this amount? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -21703,10 +20805,11 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-A: 75 tokens for sure
-B: 25 tokens for sure
+You have been given 100 tokens and may give any part of them to another person.
+You are considering giving 25 tokens, keeping 75.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
 
-Which do you choose? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you give this amount? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -21728,10 +20831,11 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-B: 10 tokens for sure
-A: 10 tokens for sure
+You have been given 20 tokens and may give any part of them to another person.
+You are considering giving 10 tokens, keeping 10.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you give this amount? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -21749,10 +20853,11 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-B: 700 tokens for sure
-A: 300 tokens for sure
+You have been given 1,000 tokens and may give any part of them to another person.
+You are considering giving 700 tokens, keeping 300.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you give this amount? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -21774,10 +20879,11 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-B: 18 tokens for sure
-A: 2 tokens for sure
+You have been given 20 tokens and may give any part of them to another person.
+You are considering giving 18 tokens, keeping 2.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you give this amount? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -21795,10 +20901,11 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-B: 50 tokens for sure
-A: 50 tokens for sure
+You have been given 100 tokens and may give any part of them to another person.
+You are considering giving 50 tokens, keeping 50.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you give this amount? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -21820,10 +20927,11 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-B: 800 tokens for sure
-A: 200 tokens for sure
+You have been given 1,000 tokens and may give any part of them to another person.
+You are considering giving 800 tokens, keeping 200.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you give this amount? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -21841,10 +20949,11 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-B: 1,000 tokens for sure
-A: nothing
+You have been given 1,000 tokens and may give any part of them to another person.
+You are considering giving 1,000 tokens, keeping 0.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you give this amount? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -21866,10 +20975,11 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-B: 4 tokens for sure
-A: 16 tokens for sure
+You have been given 20 tokens and may give any part of them to another person.
+You are considering giving 4 tokens, keeping 16.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you give this amount? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -21887,10 +20997,11 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-B: nothing
-A: 20 tokens for sure
+You have been given 20 tokens and may give any part of them to another person.
+You are considering giving 0 tokens, keeping 20.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you give this amount? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -21912,10 +21023,11 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-B: 85 tokens for sure
-A: 15 tokens for sure
+You have been given 100 tokens and may give any part of them to another person.
+You are considering giving 85 tokens, keeping 15.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you give this amount? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -21933,10 +21045,11 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-B: 13 tokens for sure
-A: 7 tokens for sure
+You have been given 20 tokens and may give any part of them to another person.
+You are considering giving 13 tokens, keeping 7.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you give this amount? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -21958,10 +21071,11 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-B: 450 tokens for sure
-A: 550 tokens for sure
+You have been given 1,000 tokens and may give any part of them to another person.
+You are considering giving 450 tokens, keeping 550.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you give this amount? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -21979,10 +21093,11 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-B: 45 tokens for sure
-A: 55 tokens for sure
+You have been given 100 tokens and may give any part of them to another person.
+You are considering giving 45 tokens, keeping 55.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you give this amount? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -22004,10 +21119,11 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-B: 2 tokens for sure
-A: 18 tokens for sure
+You have been given 20 tokens and may give any part of them to another person.
+You are considering giving 2 tokens, keeping 18.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
 
-Which do you choose? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you give this amount? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -22025,10 +21141,11 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-B: 70 tokens for sure
-A: 30 tokens for sure
+You have been given 100 tokens and may give any part of them to another person.
+You are considering giving 70 tokens, keeping 30.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
 
-Which do you choose? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you give this amount? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -22050,10 +21167,11 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-B: 50 tokens for sure
-A: 50 tokens for sure
+You have been given 100 tokens and may give any part of them to another person.
+You are considering giving 50 tokens, keeping 50.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
 
-Which do you choose? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you give this amount? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -22071,10 +21189,11 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-B: 2 tokens for sure
-A: 18 tokens for sure
+You have been given 20 tokens and may give any part of them to another person.
+You are considering giving 2 tokens, keeping 18.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
 
-Which do you choose? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you give this amount? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -22096,10 +21215,11 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-B: 600 tokens for sure
-A: 400 tokens for sure
+You have been given 1,000 tokens and may give any part of them to another person.
+You are considering giving 600 tokens, keeping 400.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
 
-Which do you choose? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you give this amount? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -22117,10 +21237,11 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-B: 80 tokens for sure
-A: 20 tokens for sure
+You have been given 100 tokens and may give any part of them to another person.
+You are considering giving 80 tokens, keeping 20.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
 
-Which do you choose? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you give this amount? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -22142,10 +21263,11 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-B: 4 tokens for sure
-A: 16 tokens for sure
+You have been given 20 tokens and may give any part of them to another person.
+You are considering giving 4 tokens, keeping 16.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
 
-Which do you choose? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you give this amount? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -22163,10 +21285,11 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-B: 60 tokens for sure
-A: 40 tokens for sure
+You have been given 100 tokens and may give any part of them to another person.
+You are considering giving 60 tokens, keeping 40.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
 
-Which do you choose? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you give this amount? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -22188,10 +21311,11 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-B: 13 tokens for sure
-A: 7 tokens for sure
+You have been given 20 tokens and may give any part of them to another person.
+You are considering giving 13 tokens, keeping 7.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
 
-Which do you choose? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you give this amount? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -22209,10 +21333,11 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-B: 25 tokens for sure
-A: 75 tokens for sure
+You have been given 100 tokens and may give any part of them to another person.
+You are considering giving 25 tokens, keeping 75.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
 
-Which do you choose? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you give this amount? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -22234,10 +21359,11 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-B: 50 tokens for sure
-A: 950 tokens for sure
+You have been given 1,000 tokens and may give any part of them to another person.
+You are considering giving 50 tokens, keeping 950.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
 
-Which do you choose? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you give this amount? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -22255,10 +21381,1163 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-B: 45 tokens for sure
-A: 55 tokens for sure
+You have been given 100 tokens and may give any part of them to another person.
+You are considering giving 45 tokens, keeping 55.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
 
-Which do you choose? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you give this amount? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `yes_no` · order 0 · freetext · `t_cal_0`
+
+Stem: `Answer:` — readout scores `No` [2360, 2822] as negative, `Yes` [7566, 9642] as positive.
+
+<details><summary>066b8509b9a9e22d — {'give': 10.0, 'give_frac': 0.5, 'pie': 20.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Read the options below and decide.
+
+You have been given 20 tokens and may give any part of them to another person.
+You are considering giving 10 tokens, keeping 10.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
+
+Do you give this amount? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>13619e8fa722cc88 — {'give': 50.0, 'give_frac': 0.5, 'pie': 100.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Read the options below and decide.
+
+You have been given 100 tokens and may give any part of them to another person.
+You are considering giving 50 tokens, keeping 50.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
+
+Do you give this amount? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `yes_no` · order 0 · freetext · `t_cal_1`
+
+Stem: `Answer:` — readout scores `No` [2360, 2822] as negative, `Yes` [7566, 9642] as positive.
+
+<details><summary>0ae3db35bcb874dc — {'give': 500.0, 'give_frac': 0.5, 'pie': 1000.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+A choice is described below.
+
+You have been given 1,000 tokens and may give any part of them to another person.
+You are considering giving 500 tokens, keeping 500.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
+
+Do you give this amount? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>2f049e41dfd80e05 — {'give': 300.0, 'give_frac': 0.3, 'pie': 1000.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+A choice is described below.
+
+You have been given 1,000 tokens and may give any part of them to another person.
+You are considering giving 300 tokens, keeping 700.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
+
+Do you give this amount? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `yes_no` · order 0 · freetext · `t_disc_0`
+
+Stem: `Answer:` — readout scores `No` [2360, 2822] as negative, `Yes` [7566, 9642] as positive.
+
+<details><summary>10585c465a0b5181 — {'give': 16.0, 'give_frac': 0.8, 'pie': 20.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+You are taking part in a study of decision making.
+
+You have been given 20 tokens and may give any part of them to another person.
+You are considering giving 16 tokens, keeping 4.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
+
+Do you give this amount? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>24dc1c3afd90a056 — {'give': 200.0, 'give_frac': 0.2, 'pie': 1000.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+You are taking part in a study of decision making.
+
+You have been given 1,000 tokens and may give any part of them to another person.
+You are considering giving 200 tokens, keeping 800.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
+
+Do you give this amount? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `yes_no` · order 0 · freetext · `t_disc_1`
+
+Stem: `Answer:` — readout scores `No` [2360, 2822] as negative, `Yes` [7566, 9642] as positive.
+
+<details><summary>13998f7e0229436f — {'give': 1000.0, 'give_frac': 1.0, 'pie': 1000.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Consider the following choice.
+
+You have been given 1,000 tokens and may give any part of them to another person.
+You are considering giving 1,000 tokens, keeping 0.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
+
+Do you give this amount? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>2e3c297ba927e77d — {'give': 20.0, 'give_frac': 1.0, 'pie': 20.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Consider the following choice.
+
+You have been given 20 tokens and may give any part of them to another person.
+You are considering giving 20 tokens, keeping 0.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
+
+Do you give this amount? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `yes_no` · order 0 · freetext · `t_sel_0`
+
+Stem: `Answer:` — readout scores `No` [2360, 2822] as negative, `Yes` [7566, 9642] as positive.
+
+<details><summary>0550c91272273963 — {'give': 65.0, 'give_frac': 0.65, 'pie': 100.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Please answer the following question.
+
+You have been given 100 tokens and may give any part of them to another person.
+You are considering giving 65 tokens, keeping 35.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
+
+Do you give this amount? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>06b7fd4ba09819b9 — {'give': 650.0, 'give_frac': 0.65, 'pie': 1000.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Please answer the following question.
+
+You have been given 1,000 tokens and may give any part of them to another person.
+You are considering giving 650 tokens, keeping 350.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
+
+Do you give this amount? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `yes_no` · order 0 · freetext · `t_sel_1`
+
+Stem: `Answer:` — readout scores `No` [2360, 2822] as negative, `Yes` [7566, 9642] as positive.
+
+<details><summary>00724d01f66faaf7 — {'give': 850.0, 'give_frac': 0.85, 'pie': 1000.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Here is a decision problem.
+
+You have been given 1,000 tokens and may give any part of them to another person.
+You are considering giving 850 tokens, keeping 150.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
+
+Do you give this amount? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>2943097fd2b2f56b — {'give': 5.0, 'give_frac': 0.25, 'pie': 20.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Here is a decision problem.
+
+You have been given 20 tokens and may give any part of them to another person.
+You are considering giving 5 tokens, keeping 15.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
+
+Do you give this amount? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `yes_no` · order 0 · mc · `t_cal_0`
+
+Stem: `Answer:` — readout scores `No` [2360, 2822] as negative, `Yes` [7566, 9642] as positive.
+
+<details><summary>07ea17bac7195c8a — {'give': 50.0, 'give_frac': 0.5, 'pie': 100.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Read the options below and decide.
+
+You have been given 100 tokens and may give any part of them to another person.
+You are considering giving 50 tokens, keeping 50.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
+
+Do you give this amount? Answer with exactly one of "No" or "Yes" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>0ae63d0fc6e6747f — {'give': 2.0, 'give_frac': 0.1, 'pie': 20.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Read the options below and decide.
+
+You have been given 20 tokens and may give any part of them to another person.
+You are considering giving 2 tokens, keeping 18.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
+
+Do you give this amount? Answer with exactly one of "No" or "Yes" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `yes_no` · order 0 · mc · `t_cal_1`
+
+Stem: `Answer:` — readout scores `No` [2360, 2822] as negative, `Yes` [7566, 9642] as positive.
+
+<details><summary>084aa03902f6604b — {'give': 50.0, 'give_frac': 0.5, 'pie': 100.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+A choice is described below.
+
+You have been given 100 tokens and may give any part of them to another person.
+You are considering giving 50 tokens, keeping 50.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
+
+Do you give this amount? Answer with exactly one of "No" or "Yes" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>0edfa1e154362214 — {'give': 70.0, 'give_frac': 0.7, 'pie': 100.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+A choice is described below.
+
+You have been given 100 tokens and may give any part of them to another person.
+You are considering giving 70 tokens, keeping 30.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
+
+Do you give this amount? Answer with exactly one of "No" or "Yes" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `yes_no` · order 0 · mc · `t_disc_0`
+
+Stem: `Answer:` — readout scores `No` [2360, 2822] as negative, `Yes` [7566, 9642] as positive.
+
+<details><summary>0d74fd4370bc6642 — {'give': 4.0, 'give_frac': 0.2, 'pie': 20.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+You are taking part in a study of decision making.
+
+You have been given 20 tokens and may give any part of them to another person.
+You are considering giving 4 tokens, keeping 16.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
+
+Do you give this amount? Answer with exactly one of "No" or "Yes" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>17a9a8fe65a0ec38 — {'give': 20.0, 'give_frac': 1.0, 'pie': 20.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+You are taking part in a study of decision making.
+
+You have been given 20 tokens and may give any part of them to another person.
+You are considering giving 20 tokens, keeping 0.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
+
+Do you give this amount? Answer with exactly one of "No" or "Yes" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `yes_no` · order 0 · mc · `t_disc_1`
+
+Stem: `Answer:` — readout scores `No` [2360, 2822] as negative, `Yes` [7566, 9642] as positive.
+
+<details><summary>0b6c72c9ce5a2654 — {'give': 800.0, 'give_frac': 0.8, 'pie': 1000.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Consider the following choice.
+
+You have been given 1,000 tokens and may give any part of them to another person.
+You are considering giving 800 tokens, keeping 200.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
+
+Do you give this amount? Answer with exactly one of "No" or "Yes" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>256a9e08f212d026 — {'give': 400.0, 'give_frac': 0.4, 'pie': 1000.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Consider the following choice.
+
+You have been given 1,000 tokens and may give any part of them to another person.
+You are considering giving 400 tokens, keeping 600.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
+
+Do you give this amount? Answer with exactly one of "No" or "Yes" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `yes_no` · order 0 · mc · `t_sel_0`
+
+Stem: `Answer:` — readout scores `No` [2360, 2822] as negative, `Yes` [7566, 9642] as positive.
+
+<details><summary>39aef79a6d0f6a42 — {'give': 85.0, 'give_frac': 0.85, 'pie': 100.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Please answer the following question.
+
+You have been given 100 tokens and may give any part of them to another person.
+You are considering giving 85 tokens, keeping 15.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
+
+Do you give this amount? Answer with exactly one of "No" or "Yes" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>5bdd76558da1770f — {'give': 25.0, 'give_frac': 0.25, 'pie': 100.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Please answer the following question.
+
+You have been given 100 tokens and may give any part of them to another person.
+You are considering giving 25 tokens, keeping 75.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
+
+Do you give this amount? Answer with exactly one of "No" or "Yes" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `yes_no` · order 0 · mc · `t_sel_1`
+
+Stem: `Answer:` — readout scores `No` [2360, 2822] as negative, `Yes` [7566, 9642] as positive.
+
+<details><summary>08ee5f61aaa6645c — {'give': 85.0, 'give_frac': 0.85, 'pie': 100.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Here is a decision problem.
+
+You have been given 100 tokens and may give any part of them to another person.
+You are considering giving 85 tokens, keeping 15.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
+
+Do you give this amount? Answer with exactly one of "No" or "Yes" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>257d305875d4ff2e — {'give': 25.0, 'give_frac': 0.25, 'pie': 100.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Here is a decision problem.
+
+You have been given 100 tokens and may give any part of them to another person.
+You are considering giving 25 tokens, keeping 75.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
+
+Do you give this amount? Answer with exactly one of "No" or "Yes" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `yes_no` · order 1 · freetext · `t_cal_0`
+
+Stem: `Answer:` — readout scores `No` [2360, 2822] as negative, `Yes` [7566, 9642] as positive.
+
+<details><summary>01b94a89d585a38e — {'give': 10.0, 'give_frac': 0.5, 'pie': 20.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Read the options below and decide.
+
+You have been given 20 tokens and may give any part of them to another person.
+You are considering giving 10 tokens, keeping 10.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
+
+Do you give this amount? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>052b9695d6c6cda4 — {'give': 2.0, 'give_frac': 0.1, 'pie': 20.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Read the options below and decide.
+
+You have been given 20 tokens and may give any part of them to another person.
+You are considering giving 2 tokens, keeping 18.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
+
+Do you give this amount? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `yes_no` · order 1 · freetext · `t_cal_1`
+
+Stem: `Answer:` — readout scores `No` [2360, 2822] as negative, `Yes` [7566, 9642] as positive.
+
+<details><summary>19dc7ef0cc539894 — {'give': 6.0, 'give_frac': 0.3, 'pie': 20.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+A choice is described below.
+
+You have been given 20 tokens and may give any part of them to another person.
+You are considering giving 6 tokens, keeping 14.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
+
+Do you give this amount? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>1fbeae7052b38a77 — {'give': 70.0, 'give_frac': 0.7, 'pie': 100.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+A choice is described below.
+
+You have been given 100 tokens and may give any part of them to another person.
+You are considering giving 70 tokens, keeping 30.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
+
+Do you give this amount? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `yes_no` · order 1 · freetext · `t_disc_0`
+
+Stem: `Answer:` — readout scores `No` [2360, 2822] as negative, `Yes` [7566, 9642] as positive.
+
+<details><summary>1f19d5079f61bd78 — {'give': 800.0, 'give_frac': 0.8, 'pie': 1000.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+You are taking part in a study of decision making.
+
+You have been given 1,000 tokens and may give any part of them to another person.
+You are considering giving 800 tokens, keeping 200.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
+
+Do you give this amount? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>3003c7016e0c521b — {'give': 40.0, 'give_frac': 0.4, 'pie': 100.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+You are taking part in a study of decision making.
+
+You have been given 100 tokens and may give any part of them to another person.
+You are considering giving 40 tokens, keeping 60.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
+
+Do you give this amount? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `yes_no` · order 1 · freetext · `t_disc_1`
+
+Stem: `Answer:` — readout scores `No` [2360, 2822] as negative, `Yes` [7566, 9642] as positive.
+
+<details><summary>0439cf71c5164cf1 — {'give': 200.0, 'give_frac': 0.2, 'pie': 1000.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Consider the following choice.
+
+You have been given 1,000 tokens and may give any part of them to another person.
+You are considering giving 200 tokens, keeping 800.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
+
+Do you give this amount? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>04a290a008300ef0 — {'give': 0.0, 'give_frac': 0.0, 'pie': 1000.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Consider the following choice.
+
+You have been given 1,000 tokens and may give any part of them to another person.
+You are considering giving 0 tokens, keeping 1,000.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
+
+Do you give this amount? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `yes_no` · order 1 · freetext · `t_sel_0`
+
+Stem: `Answer:` — readout scores `No` [2360, 2822] as negative, `Yes` [7566, 9642] as positive.
+
+<details><summary>0f5888517060a2d9 — {'give': 50.0, 'give_frac': 0.05, 'pie': 1000.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Please answer the following question.
+
+You have been given 1,000 tokens and may give any part of them to another person.
+You are considering giving 50 tokens, keeping 950.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
+
+Do you give this amount? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>23b813edc35f5adb — {'give': 25.0, 'give_frac': 0.25, 'pie': 100.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Please answer the following question.
+
+You have been given 100 tokens and may give any part of them to another person.
+You are considering giving 25 tokens, keeping 75.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
+
+Do you give this amount? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `yes_no` · order 1 · freetext · `t_sel_1`
+
+Stem: `Answer:` — readout scores `No` [2360, 2822] as negative, `Yes` [7566, 9642] as positive.
+
+<details><summary>0de3c7c49ab224d9 — {'give': 5.0, 'give_frac': 0.05, 'pie': 100.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Here is a decision problem.
+
+You have been given 100 tokens and may give any part of them to another person.
+You are considering giving 5 tokens, keeping 95.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
+
+Do you give this amount? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>1747d89a8356c8c8 — {'give': 25.0, 'give_frac': 0.25, 'pie': 100.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Here is a decision problem.
+
+You have been given 100 tokens and may give any part of them to another person.
+You are considering giving 25 tokens, keeping 75.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
+
+Do you give this amount? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `yes_no` · order 1 · mc · `t_cal_0`
+
+Stem: `Answer:` — readout scores `No` [2360, 2822] as negative, `Yes` [7566, 9642] as positive.
+
+<details><summary>1bd45dd8199690be — {'give': 300.0, 'give_frac': 0.3, 'pie': 1000.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Read the options below and decide.
+
+You have been given 1,000 tokens and may give any part of them to another person.
+You are considering giving 300 tokens, keeping 700.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
+
+Do you give this amount? Answer with exactly one of "Yes" or "No" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>226775a4762ce4c7 — {'give': 10.0, 'give_frac': 0.1, 'pie': 100.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Read the options below and decide.
+
+You have been given 100 tokens and may give any part of them to another person.
+You are considering giving 10 tokens, keeping 90.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
+
+Do you give this amount? Answer with exactly one of "Yes" or "No" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `yes_no` · order 1 · mc · `t_cal_1`
+
+Stem: `Answer:` — readout scores `No` [2360, 2822] as negative, `Yes` [7566, 9642] as positive.
+
+<details><summary>1747de9343970128 — {'give': 18.0, 'give_frac': 0.9, 'pie': 20.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+A choice is described below.
+
+You have been given 20 tokens and may give any part of them to another person.
+You are considering giving 18 tokens, keeping 2.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
+
+Do you give this amount? Answer with exactly one of "Yes" or "No" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>209ee20adae887f5 — {'give': 70.0, 'give_frac': 0.7, 'pie': 100.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+A choice is described below.
+
+You have been given 100 tokens and may give any part of them to another person.
+You are considering giving 70 tokens, keeping 30.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
+
+Do you give this amount? Answer with exactly one of "Yes" or "No" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `yes_no` · order 1 · mc · `t_disc_0`
+
+Stem: `Answer:` — readout scores `No` [2360, 2822] as negative, `Yes` [7566, 9642] as positive.
+
+<details><summary>1f6ad36e5ba7417a — {'give': 20.0, 'give_frac': 1.0, 'pie': 20.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+You are taking part in a study of decision making.
+
+You have been given 20 tokens and may give any part of them to another person.
+You are considering giving 20 tokens, keeping 0.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
+
+Do you give this amount? Answer with exactly one of "Yes" or "No" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>26c5f385c31a0737 — {'give': 20.0, 'give_frac': 0.2, 'pie': 100.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+You are taking part in a study of decision making.
+
+You have been given 100 tokens and may give any part of them to another person.
+You are considering giving 20 tokens, keeping 80.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
+
+Do you give this amount? Answer with exactly one of "Yes" or "No" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `yes_no` · order 1 · mc · `t_disc_1`
+
+Stem: `Answer:` — readout scores `No` [2360, 2822] as negative, `Yes` [7566, 9642] as positive.
+
+<details><summary>1b7d0a7c9ff06b13 — {'give': 800.0, 'give_frac': 0.8, 'pie': 1000.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Consider the following choice.
+
+You have been given 1,000 tokens and may give any part of them to another person.
+You are considering giving 800 tokens, keeping 200.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
+
+Do you give this amount? Answer with exactly one of "Yes" or "No" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>23d91fabe0050229 — {'give': 100.0, 'give_frac': 1.0, 'pie': 100.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Consider the following choice.
+
+You have been given 100 tokens and may give any part of them to another person.
+You are considering giving 100 tokens, keeping 0.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
+
+Do you give this amount? Answer with exactly one of "Yes" or "No" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `yes_no` · order 1 · mc · `t_sel_0`
+
+Stem: `Answer:` — readout scores `No` [2360, 2822] as negative, `Yes` [7566, 9642] as positive.
+
+<details><summary>02fe4f32a95fc104 — {'give': 450.0, 'give_frac': 0.45, 'pie': 1000.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Please answer the following question.
+
+You have been given 1,000 tokens and may give any part of them to another person.
+You are considering giving 450 tokens, keeping 550.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
+
+Do you give this amount? Answer with exactly one of "Yes" or "No" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>1c8e6fb956bf8077 — {'give': 250.0, 'give_frac': 0.25, 'pie': 1000.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Please answer the following question.
+
+You have been given 1,000 tokens and may give any part of them to another person.
+You are considering giving 250 tokens, keeping 750.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
+
+Do you give this amount? Answer with exactly one of "Yes" or "No" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `yes_no` · order 1 · mc · `t_sel_1`
+
+Stem: `Answer:` — readout scores `No` [2360, 2822] as negative, `Yes` [7566, 9642] as positive.
+
+<details><summary>1430149056902677 — {'give': 250.0, 'give_frac': 0.25, 'pie': 1000.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Here is a decision problem.
+
+You have been given 1,000 tokens and may give any part of them to another person.
+You are considering giving 250 tokens, keeping 750.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
+
+Do you give this amount? Answer with exactly one of "Yes" or "No" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>3fa9d22eae80feea — {'give': 85.0, 'give_frac': 0.85, 'pie': 100.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Here is a decision problem.
+
+You have been given 100 tokens and may give any part of them to another person.
+You are considering giving 85 tokens, keeping 15.
+The other person cannot refuse: whatever you decide simply happens, and both of you keep what you are left with.
+
+Do you give this amount? Answer with exactly one of "Yes" or "No" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -22285,10 +22564,12 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-Reject: nothing
-Accept: 2 tokens for sure
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 0, keeping 10, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -22306,10 +22587,12 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-Reject: nothing
-Accept: 2 tokens for sure
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 8, keeping 2, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -22331,10 +22614,12 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-Reject: nothing
-Accept: 2 tokens for sure
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 8, keeping 2, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -22352,10 +22637,12 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-Reject: nothing
-Accept: 2 tokens for sure
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 5, keeping 5, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -22377,10 +22664,12 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-Reject: nothing
-Accept: 2 tokens for sure
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer had no other offer available; this was the only split possible.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -22398,10 +22687,12 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-Reject: nothing
-Accept: 2 tokens for sure
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 8, keeping 2, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -22423,10 +22714,12 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-Reject: nothing
-Accept: 2 tokens for sure
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 0, keeping 10, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -22444,10 +22737,12 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-Reject: nothing
-Accept: 2 tokens for sure
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer had no other offer available; this was the only split possible.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -22469,10 +22764,12 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-Reject: nothing
-Accept: 2 tokens for sure
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer had no other offer available; this was the only split possible.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -22490,10 +22787,12 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-Reject: nothing
-Accept: 2 tokens for sure
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 0, keeping 10, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -22515,10 +22814,12 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-Reject: nothing
-Accept: 2 tokens for sure
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 5, keeping 5, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -22536,10 +22837,12 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-Reject: nothing
-Accept: 2 tokens for sure
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 0, keeping 10, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -22561,10 +22864,12 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-Reject: nothing
-Accept: 2 tokens for sure
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 5, keeping 5, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -22582,10 +22887,12 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-Reject: nothing
-Accept: 2 tokens for sure
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 8, keeping 2, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -22607,10 +22914,12 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-Reject: nothing
-Accept: 2 tokens for sure
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 0, keeping 10, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -22628,10 +22937,12 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-Reject: nothing
-Accept: 2 tokens for sure
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 8, keeping 2, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -22653,10 +22964,12 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-Reject: nothing
-Accept: 2 tokens for sure
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer had no other offer available; this was the only split possible.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -22674,10 +22987,12 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-Reject: nothing
-Accept: 2 tokens for sure
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 0, keeping 10, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -22699,10 +23014,12 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-Reject: nothing
-Accept: 2 tokens for sure
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer had no other offer available; this was the only split possible.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -22720,10 +23037,12 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-Reject: nothing
-Accept: 2 tokens for sure
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 8, keeping 2, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -22745,10 +23064,12 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-Reject: nothing
-Accept: 2 tokens for sure
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 8, keeping 2, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -22766,10 +23087,12 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-Reject: nothing
-Accept: 2 tokens for sure
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 0, keeping 10, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -22791,10 +23114,12 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-Reject: nothing
-Accept: 2 tokens for sure
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 0, keeping 10, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -22812,10 +23137,12 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-Reject: nothing
-Accept: 2 tokens for sure
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 5, keeping 5, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -22837,10 +23164,12 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-Accept: 2 tokens for sure
-Reject: nothing
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 5, keeping 5, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -22858,10 +23187,12 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-Accept: 2 tokens for sure
-Reject: nothing
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer had no other offer available; this was the only split possible.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -22883,10 +23214,12 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-Accept: 2 tokens for sure
-Reject: nothing
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer had no other offer available; this was the only split possible.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -22904,10 +23237,12 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-Accept: 2 tokens for sure
-Reject: nothing
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 5, keeping 5, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -22929,10 +23264,12 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-Accept: 2 tokens for sure
-Reject: nothing
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 8, keeping 2, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -22950,10 +23287,12 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-Accept: 2 tokens for sure
-Reject: nothing
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer had no other offer available; this was the only split possible.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -22975,10 +23314,12 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-Accept: 2 tokens for sure
-Reject: nothing
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 0, keeping 10, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -22996,10 +23337,12 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-Accept: 2 tokens for sure
-Reject: nothing
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 8, keeping 2, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -23021,10 +23364,12 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-Accept: 2 tokens for sure
-Reject: nothing
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer had no other offer available; this was the only split possible.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -23042,10 +23387,12 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-Accept: 2 tokens for sure
-Reject: nothing
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 8, keeping 2, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -23067,10 +23414,12 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-Accept: 2 tokens for sure
-Reject: nothing
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer had no other offer available; this was the only split possible.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -23088,10 +23437,12 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-Accept: 2 tokens for sure
-Reject: nothing
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 5, keeping 5, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -23113,10 +23464,12 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-Accept: 2 tokens for sure
-Reject: nothing
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 0, keeping 10, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -23134,10 +23487,12 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-Accept: 2 tokens for sure
-Reject: nothing
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer had no other offer available; this was the only split possible.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -23159,10 +23514,12 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-Accept: 2 tokens for sure
-Reject: nothing
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 8, keeping 2, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -23180,10 +23537,12 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-Accept: 2 tokens for sure
-Reject: nothing
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer had no other offer available; this was the only split possible.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -23205,10 +23564,12 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-Accept: 2 tokens for sure
-Reject: nothing
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer had no other offer available; this was the only split possible.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -23226,10 +23587,12 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-Accept: 2 tokens for sure
-Reject: nothing
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 8, keeping 2, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -23251,10 +23614,12 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-Accept: 2 tokens for sure
-Reject: nothing
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 8, keeping 2, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -23272,10 +23637,12 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-Accept: 2 tokens for sure
-Reject: nothing
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 5, keeping 5, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -23297,10 +23664,12 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-Accept: 2 tokens for sure
-Reject: nothing
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 5, keeping 5, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -23318,10 +23687,12 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-Accept: 2 tokens for sure
-Reject: nothing
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 0, keeping 10, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -23343,10 +23714,12 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-Accept: 2 tokens for sure
-Reject: nothing
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 5, keeping 5, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -23364,10 +23737,12 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-Accept: 2 tokens for sure
-Reject: nothing
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 0, keeping 10, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -23389,10 +23764,12 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-A: nothing
-B: 2 tokens for sure
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 0, keeping 10, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -23410,10 +23787,12 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-A: nothing
-B: 2 tokens for sure
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer had no other offer available; this was the only split possible.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -23435,10 +23814,12 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-A: nothing
-B: 2 tokens for sure
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 8, keeping 2, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -23456,10 +23837,12 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-A: nothing
-B: 2 tokens for sure
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer had no other offer available; this was the only split possible.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -23481,10 +23864,12 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-A: nothing
-B: 2 tokens for sure
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 0, keeping 10, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -23502,10 +23887,12 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-A: nothing
-B: 2 tokens for sure
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 5, keeping 5, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -23527,10 +23914,12 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-A: nothing
-B: 2 tokens for sure
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer had no other offer available; this was the only split possible.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -23548,10 +23937,12 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-A: nothing
-B: 2 tokens for sure
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 0, keeping 10, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -23573,10 +23964,12 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-A: nothing
-B: 2 tokens for sure
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer had no other offer available; this was the only split possible.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -23594,10 +23987,12 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-A: nothing
-B: 2 tokens for sure
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 8, keeping 2, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -23619,10 +24014,12 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-A: nothing
-B: 2 tokens for sure
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 0, keeping 10, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -23640,10 +24037,12 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-A: nothing
-B: 2 tokens for sure
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer had no other offer available; this was the only split possible.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -23665,10 +24064,12 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-A: nothing
-B: 2 tokens for sure
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 5, keeping 5, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -23686,10 +24087,12 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-A: nothing
-B: 2 tokens for sure
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer had no other offer available; this was the only split possible.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -23711,10 +24114,12 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-A: nothing
-B: 2 tokens for sure
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 8, keeping 2, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -23732,10 +24137,12 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-A: nothing
-B: 2 tokens for sure
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 0, keeping 10, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -23757,10 +24164,12 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-A: nothing
-B: 2 tokens for sure
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 8, keeping 2, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -23778,10 +24187,12 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-A: nothing
-B: 2 tokens for sure
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer had no other offer available; this was the only split possible.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -23803,10 +24214,12 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-A: nothing
-B: 2 tokens for sure
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 5, keeping 5, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -23824,10 +24237,12 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-A: nothing
-B: 2 tokens for sure
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 0, keeping 10, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -23849,10 +24264,12 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-A: nothing
-B: 2 tokens for sure
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer had no other offer available; this was the only split possible.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -23870,10 +24287,12 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-A: nothing
-B: 2 tokens for sure
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 5, keeping 5, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -23895,10 +24314,12 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-A: nothing
-B: 2 tokens for sure
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 0, keeping 10, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -23916,10 +24337,12 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-A: nothing
-B: 2 tokens for sure
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 5, keeping 5, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -23941,10 +24364,12 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-B: 2 tokens for sure
-A: nothing
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 0, keeping 10, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -23962,10 +24387,12 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-B: 2 tokens for sure
-A: nothing
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 8, keeping 2, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -23987,10 +24414,12 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-B: 2 tokens for sure
-A: nothing
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 8, keeping 2, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -24008,10 +24437,12 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-B: 2 tokens for sure
-A: nothing
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 0, keeping 10, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -24033,10 +24464,12 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-B: 2 tokens for sure
-A: nothing
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 0, keeping 10, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -24054,10 +24487,12 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-B: 2 tokens for sure
-A: nothing
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 8, keeping 2, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -24079,10 +24514,12 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-B: 2 tokens for sure
-A: nothing
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer had no other offer available; this was the only split possible.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -24100,10 +24537,12 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-B: 2 tokens for sure
-A: nothing
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 8, keeping 2, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -24125,10 +24564,12 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-B: 2 tokens for sure
-A: nothing
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer had no other offer available; this was the only split possible.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -24146,10 +24587,12 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-B: 2 tokens for sure
-A: nothing
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 8, keeping 2, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -24171,10 +24614,12 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-B: 2 tokens for sure
-A: nothing
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 0, keeping 10, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -24192,10 +24637,12 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-B: 2 tokens for sure
-A: nothing
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer had no other offer available; this was the only split possible.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -24217,10 +24664,12 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-B: 2 tokens for sure
-A: nothing
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 8, keeping 2, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -24238,10 +24687,12 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-B: 2 tokens for sure
-A: nothing
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 0, keeping 10, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -24263,10 +24714,12 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-B: 2 tokens for sure
-A: nothing
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 0, keeping 10, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -24284,10 +24737,12 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-B: 2 tokens for sure
-A: nothing
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 8, keeping 2, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -24309,10 +24764,12 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-B: 2 tokens for sure
-A: nothing
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 5, keeping 5, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -24330,10 +24787,12 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-B: 2 tokens for sure
-A: nothing
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer had no other offer available; this was the only split possible.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -24355,10 +24814,12 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-B: 2 tokens for sure
-A: nothing
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 0, keeping 10, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -24376,10 +24837,12 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-B: 2 tokens for sure
-A: nothing
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 5, keeping 5, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -24401,10 +24864,12 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-B: 2 tokens for sure
-A: nothing
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer had no other offer available; this was the only split possible.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -24422,10 +24887,12 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-B: 2 tokens for sure
-A: nothing
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 8, keeping 2, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -24447,10 +24914,12 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-B: 2 tokens for sure
-A: nothing
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer had no other offer available; this was the only split possible.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -24468,10 +24937,12 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-B: 2 tokens for sure
-A: nothing
+A proposer was given 10 tokens and has offered you 2, keeping 8.
+The proposer could instead have offered you 0, keeping 10, but did not.
+If you accept, you keep the proposed amount and the proposer keeps the rest.
+If you reject, both of you get 0 tokens.
 
-Which do you choose? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Do you accept or reject this offer? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -24482,32 +24953,11 @@ Answer:
 
 # Family: `accept_bias_control`
 
-### `accept_reject` · order 0 · freetext · `t_cal_0`
+### `neutral` · order 0 · freetext · `t_cal_0`
 
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
+Stem: `Answer:` — readout scores `A` [32, 362] as negative, `B` [33, 426] as positive.
 
-<details><summary>17644cf1e355c01d — {'index': 6.0, 'truth': 1.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Read the options below and decide.
-
-Reject: nothing
-Accept: 1 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>86f3c775006df524 — {'index': 10.0, 'truth': 1.0}</summary>
+<details><summary>8af8408b08becd44 — {'index': 2.0, 'truth': 1.0}</summary>
 
 ```
 <|begin_of_text|><|start_header_id|>system<|end_header_id|>
@@ -24519,250 +24969,16 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-Reject: nothing
-Accept: 1 tokens for sure
+Consider this statement:
+A triangle has three sides.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 0 · freetext · `t_cal_1`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>5641e0a9d32b8579 — {'index': 10.0, 'truth': 1.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-A choice is described below.
-
-Reject: nothing
-Accept: 1 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
 </details>
 
-<details><summary>bf013a59d2940d8d — {'index': 14.0, 'truth': 1.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-A choice is described below.
-
-Reject: nothing
-Accept: 1 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 0 · freetext · `t_disc_0`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>0ef2a392d6bc0eac — {'index': 8.0, 'truth': 1.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-You are taking part in a study of decision making.
-
-Reject: nothing
-Accept: 1 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>1d0f2d1710192b61 — {'index': 12.0, 'truth': 1.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-You are taking part in a study of decision making.
-
-Reject: nothing
-Accept: 1 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 0 · freetext · `t_disc_1`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>0064dacbde69cae1 — {'index': 0.0, 'truth': 1.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Consider the following choice.
-
-Reject: nothing
-Accept: 1 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>1f20fb7dc4926fcd — {'index': 4.0, 'truth': 1.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Consider the following choice.
-
-Reject: nothing
-Accept: 1 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 0 · freetext · `t_sel_0`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>549ab188efcbf7f8 — {'index': 5.0, 'truth': 0.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Please answer the following question.
-
-Reject: 1 tokens for sure
-Accept: nothing
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>695f49dbae037680 — {'index': 13.0, 'truth': 0.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Please answer the following question.
-
-Reject: 1 tokens for sure
-Accept: nothing
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 0 · freetext · `t_sel_1`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>24926e737153784d — {'index': 5.0, 'truth': 0.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Here is a decision problem.
-
-Reject: 1 tokens for sure
-Accept: nothing
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>3c4ccbee988de73e — {'index': 1.0, 'truth': 0.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Here is a decision problem.
-
-Reject: 1 tokens for sure
-Accept: nothing
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 0 · mc · `t_cal_0`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>1a94a4f50c78c176 — {'index': 14.0, 'truth': 1.0}</summary>
+<details><summary>8fc662e39d90cacb — {'index': 6.0, 'truth': 1.0}</summary>
 
 ```
 <|begin_of_text|><|start_header_id|>system<|end_header_id|>
@@ -24774,16 +24990,250 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-Reject: nothing
-Accept: 1 tokens for sure
+Consider this statement:
+Twelve is divisible by four.
 
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
 </details>
 
-<details><summary>776568435442b2f8 — {'index': 6.0, 'truth': 1.0}</summary>
+### `neutral` · order 0 · freetext · `t_cal_1`
+
+Stem: `Answer:` — readout scores `A` [32, 362] as negative, `B` [33, 426] as positive.
+
+<details><summary>3d870e34078fa6cc — {'index': 14.0, 'truth': 1.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+A choice is described below.
+
+Consider this statement:
+Ten is divisible by five.
+
+Is this statement true? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>466cf46cd6b94114 — {'index': 6.0, 'truth': 1.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+A choice is described below.
+
+Consider this statement:
+Twelve is divisible by four.
+
+Is this statement true? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `neutral` · order 0 · freetext · `t_disc_0`
+
+Stem: `Answer:` — readout scores `A` [32, 362] as negative, `B` [33, 426] as positive.
+
+<details><summary>2e8ceda8eeb2e09b — {'index': 12.0, 'truth': 1.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+You are taking part in a study of decision making.
+
+Consider this statement:
+January comes before March.
+
+Is this statement true? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>35324999932ccf2c — {'index': 8.0, 'truth': 1.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+You are taking part in a study of decision making.
+
+Consider this statement:
+A square has four sides.
+
+Is this statement true? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `neutral` · order 0 · freetext · `t_disc_1`
+
+Stem: `Answer:` — readout scores `A` [32, 362] as negative, `B` [33, 426] as positive.
+
+<details><summary>702343fb0fcb757e — {'index': 0.0, 'truth': 1.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Consider the following choice.
+
+Consider this statement:
+The number 7 is greater than the number 3.
+
+Is this statement true? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>7505519b43bba562 — {'index': 8.0, 'truth': 1.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Consider the following choice.
+
+Consider this statement:
+A square has four sides.
+
+Is this statement true? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `neutral` · order 0 · freetext · `t_sel_0`
+
+Stem: `Answer:` — readout scores `A` [32, 362] as negative, `B` [33, 426] as positive.
+
+<details><summary>4d920b2f0c56a57c — {'index': 5.0, 'truth': 0.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Please answer the following question.
+
+Consider this statement:
+The letter B comes before the letter A in the alphabet.
+
+Is this statement true? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>4eac61530ebbbffc — {'index': 1.0, 'truth': 0.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Please answer the following question.
+
+Consider this statement:
+The number 2 is greater than the number 9.
+
+Is this statement true? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `neutral` · order 0 · freetext · `t_sel_1`
+
+Stem: `Answer:` — readout scores `A` [32, 362] as negative, `B` [33, 426] as positive.
+
+<details><summary>507a7a8e0b3635dc — {'index': 1.0, 'truth': 0.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Here is a decision problem.
+
+Consider this statement:
+The number 2 is greater than the number 9.
+
+Is this statement true? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>65c72982f535e55c — {'index': 13.0, 'truth': 0.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Here is a decision problem.
+
+Consider this statement:
+The letter Z comes before the letter M in the alphabet.
+
+Is this statement true? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `neutral` · order 0 · mc · `t_cal_0`
+
+Stem: `Answer:` — readout scores `A` [32, 362] as negative, `B` [33, 426] as positive.
+
+<details><summary>203557cee0657d9a — {'index': 2.0, 'truth': 1.0}</summary>
 
 ```
 <|begin_of_text|><|start_header_id|>system<|end_header_id|>
@@ -24795,250 +25245,16 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-Reject: nothing
-Accept: 1 tokens for sure
+Consider this statement:
+A triangle has three sides.
 
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 0 · mc · `t_cal_1`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>2e4243b539f4e86a — {'index': 2.0, 'truth': 1.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-A choice is described below.
-
-Reject: nothing
-Accept: 1 tokens for sure
-
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
 </details>
 
-<details><summary>31471e8071ed4a9f — {'index': 6.0, 'truth': 1.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-A choice is described below.
-
-Reject: nothing
-Accept: 1 tokens for sure
-
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 0 · mc · `t_disc_0`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>5c04552b75bb92b6 — {'index': 4.0, 'truth': 1.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-You are taking part in a study of decision making.
-
-Reject: nothing
-Accept: 1 tokens for sure
-
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>8c9f8f7488cc28af — {'index': 0.0, 'truth': 1.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-You are taking part in a study of decision making.
-
-Reject: nothing
-Accept: 1 tokens for sure
-
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 0 · mc · `t_disc_1`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>15f001d0e5ea73b2 — {'index': 8.0, 'truth': 1.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Consider the following choice.
-
-Reject: nothing
-Accept: 1 tokens for sure
-
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>4e37930ba365fe2e — {'index': 0.0, 'truth': 1.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Consider the following choice.
-
-Reject: nothing
-Accept: 1 tokens for sure
-
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 0 · mc · `t_sel_0`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>5aa1c887062ae520 — {'index': 9.0, 'truth': 0.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Please answer the following question.
-
-Reject: 1 tokens for sure
-Accept: nothing
-
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>617938a705a808df — {'index': 5.0, 'truth': 0.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Please answer the following question.
-
-Reject: 1 tokens for sure
-Accept: nothing
-
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 0 · mc · `t_sel_1`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>2b7c7bb8aef414c6 — {'index': 5.0, 'truth': 0.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Here is a decision problem.
-
-Reject: 1 tokens for sure
-Accept: nothing
-
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>96c14937c07b9019 — {'index': 9.0, 'truth': 0.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Here is a decision problem.
-
-Reject: 1 tokens for sure
-Accept: nothing
-
-Which do you choose? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 1 · freetext · `t_cal_0`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>13e402a8fa74a796 — {'index': 6.0, 'truth': 1.0}</summary>
+<details><summary>7bf3eaab10fab902 — {'index': 6.0, 'truth': 1.0}</summary>
 
 ```
 <|begin_of_text|><|start_header_id|>system<|end_header_id|>
@@ -25050,16 +25266,250 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-Accept: 1 tokens for sure
-Reject: nothing
+Consider this statement:
+Twelve is divisible by four.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
 </details>
 
-<details><summary>73006c9780398834 — {'index': 2.0, 'truth': 1.0}</summary>
+### `neutral` · order 0 · mc · `t_cal_1`
+
+Stem: `Answer:` — readout scores `A` [32, 362] as negative, `B` [33, 426] as positive.
+
+<details><summary>1a80b79a57156a51 — {'index': 14.0, 'truth': 1.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+A choice is described below.
+
+Consider this statement:
+Ten is divisible by five.
+
+Is this statement true? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>5a6ba4d485c144f4 — {'index': 2.0, 'truth': 1.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+A choice is described below.
+
+Consider this statement:
+A triangle has three sides.
+
+Is this statement true? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `neutral` · order 0 · mc · `t_disc_0`
+
+Stem: `Answer:` — readout scores `A` [32, 362] as negative, `B` [33, 426] as positive.
+
+<details><summary>4f90a3a2d71c90ad — {'index': 8.0, 'truth': 1.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+You are taking part in a study of decision making.
+
+Consider this statement:
+A square has four sides.
+
+Is this statement true? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>502be26f3dd215e8 — {'index': 12.0, 'truth': 1.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+You are taking part in a study of decision making.
+
+Consider this statement:
+January comes before March.
+
+Is this statement true? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `neutral` · order 0 · mc · `t_disc_1`
+
+Stem: `Answer:` — readout scores `A` [32, 362] as negative, `B` [33, 426] as positive.
+
+<details><summary>1f5501ad0688e4c7 — {'index': 0.0, 'truth': 1.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Consider the following choice.
+
+Consider this statement:
+The number 7 is greater than the number 3.
+
+Is this statement true? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>c677051a0b174ea4 — {'index': 4.0, 'truth': 1.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Consider the following choice.
+
+Consider this statement:
+Water freezes at a lower temperature than it boils.
+
+Is this statement true? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `neutral` · order 0 · mc · `t_sel_0`
+
+Stem: `Answer:` — readout scores `A` [32, 362] as negative, `B` [33, 426] as positive.
+
+<details><summary>472f02004e360801 — {'index': 5.0, 'truth': 0.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Please answer the following question.
+
+Consider this statement:
+The letter B comes before the letter A in the alphabet.
+
+Is this statement true? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>557bcb062bc6f868 — {'index': 13.0, 'truth': 0.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Please answer the following question.
+
+Consider this statement:
+The letter Z comes before the letter M in the alphabet.
+
+Is this statement true? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `neutral` · order 0 · mc · `t_sel_1`
+
+Stem: `Answer:` — readout scores `A` [32, 362] as negative, `B` [33, 426] as positive.
+
+<details><summary>9e16336f4417aa71 — {'index': 5.0, 'truth': 0.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Here is a decision problem.
+
+Consider this statement:
+The letter B comes before the letter A in the alphabet.
+
+Is this statement true? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>c639f087eceb37b3 — {'index': 9.0, 'truth': 0.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Here is a decision problem.
+
+Consider this statement:
+A decade is shorter than a year.
+
+Is this statement true? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `neutral` · order 1 · freetext · `t_cal_0`
+
+Stem: `Answer:` — readout scores `A` [32, 362] as negative, `B` [33, 426] as positive.
+
+<details><summary>6ea3fb3c406a3d55 — {'index': 6.0, 'truth': 1.0}</summary>
 
 ```
 <|begin_of_text|><|start_header_id|>system<|end_header_id|>
@@ -25071,250 +25521,16 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-Accept: 1 tokens for sure
-Reject: nothing
+Consider this statement:
+Twelve is divisible by four.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 1 · freetext · `t_cal_1`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>05e92dba3953abf2 — {'index': 10.0, 'truth': 1.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-A choice is described below.
-
-Accept: 1 tokens for sure
-Reject: nothing
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
 </details>
 
-<details><summary>1d6f513b5af4bf8a — {'index': 2.0, 'truth': 1.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-A choice is described below.
-
-Accept: 1 tokens for sure
-Reject: nothing
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 1 · freetext · `t_disc_0`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>04338397f5521276 — {'index': 4.0, 'truth': 1.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-You are taking part in a study of decision making.
-
-Accept: 1 tokens for sure
-Reject: nothing
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>558ea0b5a4dcc82a — {'index': 12.0, 'truth': 1.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-You are taking part in a study of decision making.
-
-Accept: 1 tokens for sure
-Reject: nothing
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 1 · freetext · `t_disc_1`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>92779231b9eb4b9a — {'index': 4.0, 'truth': 1.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Consider the following choice.
-
-Accept: 1 tokens for sure
-Reject: nothing
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>be7e4759008d91bd — {'index': 0.0, 'truth': 1.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Consider the following choice.
-
-Accept: 1 tokens for sure
-Reject: nothing
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 1 · freetext · `t_sel_0`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>181a689b875e62cf — {'index': 5.0, 'truth': 0.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Please answer the following question.
-
-Accept: nothing
-Reject: 1 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>84ed09e943fe2898 — {'index': 9.0, 'truth': 0.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Please answer the following question.
-
-Accept: nothing
-Reject: 1 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 1 · freetext · `t_sel_1`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>0a306a08bb0a7fe0 — {'index': 13.0, 'truth': 0.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Here is a decision problem.
-
-Accept: nothing
-Reject: 1 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-<details><summary>0ee47a5a63f53f5a — {'index': 9.0, 'truth': 0.0}</summary>
-
-```
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-Cutting Knowledge Date: December 2023
-Today Date: 26 Jul 2024
-
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-Here is a decision problem.
-
-Accept: nothing
-Reject: 1 tokens for sure
-
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-Answer:
-```
-</details>
-
-### `accept_reject` · order 1 · mc · `t_cal_0`
-
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
-
-<details><summary>5d1e21387e9a5857 — {'index': 10.0, 'truth': 1.0}</summary>
+<details><summary>73464fd26255cac8 — {'index': 14.0, 'truth': 1.0}</summary>
 
 ```
 <|begin_of_text|><|start_header_id|>system<|end_header_id|>
@@ -25326,16 +25542,250 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-Accept: 1 tokens for sure
-Reject: nothing
+Consider this statement:
+Ten is divisible by five.
 
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
 </details>
 
-<details><summary>6b0fc6577228b45c — {'index': 14.0, 'truth': 1.0}</summary>
+### `neutral` · order 1 · freetext · `t_cal_1`
+
+Stem: `Answer:` — readout scores `A` [32, 362] as negative, `B` [33, 426] as positive.
+
+<details><summary>0dcdbb46a5ff242b — {'index': 2.0, 'truth': 1.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+A choice is described below.
+
+Consider this statement:
+A triangle has three sides.
+
+Is this statement true? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>76f3060149537e3b — {'index': 14.0, 'truth': 1.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+A choice is described below.
+
+Consider this statement:
+Ten is divisible by five.
+
+Is this statement true? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `neutral` · order 1 · freetext · `t_disc_0`
+
+Stem: `Answer:` — readout scores `A` [32, 362] as negative, `B` [33, 426] as positive.
+
+<details><summary>0dc8c0f5c8e1d7cf — {'index': 12.0, 'truth': 1.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+You are taking part in a study of decision making.
+
+Consider this statement:
+January comes before March.
+
+Is this statement true? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>12b8ecacce5f5bdc — {'index': 8.0, 'truth': 1.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+You are taking part in a study of decision making.
+
+Consider this statement:
+A square has four sides.
+
+Is this statement true? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `neutral` · order 1 · freetext · `t_disc_1`
+
+Stem: `Answer:` — readout scores `A` [32, 362] as negative, `B` [33, 426] as positive.
+
+<details><summary>8e8ed1373a6b5a05 — {'index': 0.0, 'truth': 1.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Consider the following choice.
+
+Consider this statement:
+The number 7 is greater than the number 3.
+
+Is this statement true? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>c29d120eb194d5ec — {'index': 8.0, 'truth': 1.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Consider the following choice.
+
+Consider this statement:
+A square has four sides.
+
+Is this statement true? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `neutral` · order 1 · freetext · `t_sel_0`
+
+Stem: `Answer:` — readout scores `A` [32, 362] as negative, `B` [33, 426] as positive.
+
+<details><summary>8e61c66cf1f76218 — {'index': 9.0, 'truth': 0.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Please answer the following question.
+
+Consider this statement:
+A decade is shorter than a year.
+
+Is this statement true? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>94e99b584ae9eced — {'index': 13.0, 'truth': 0.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Please answer the following question.
+
+Consider this statement:
+The letter Z comes before the letter M in the alphabet.
+
+Is this statement true? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `neutral` · order 1 · freetext · `t_sel_1`
+
+Stem: `Answer:` — readout scores `A` [32, 362] as negative, `B` [33, 426] as positive.
+
+<details><summary>8b5ca6b8c904a117 — {'index': 5.0, 'truth': 0.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Here is a decision problem.
+
+Consider this statement:
+The letter B comes before the letter A in the alphabet.
+
+Is this statement true? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+<details><summary>adf55defdf0eac19 — {'index': 1.0, 'truth': 0.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Here is a decision problem.
+
+Consider this statement:
+The number 2 is greater than the number 9.
+
+Is this statement true? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `neutral` · order 1 · mc · `t_cal_0`
+
+Stem: `Answer:` — readout scores `A` [32, 362] as negative, `B` [33, 426] as positive.
+
+<details><summary>0285048323755821 — {'index': 2.0, 'truth': 1.0}</summary>
 
 ```
 <|begin_of_text|><|start_header_id|>system<|end_header_id|>
@@ -25347,20 +25797,41 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-Accept: 1 tokens for sure
-Reject: nothing
+Consider this statement:
+A triangle has three sides.
 
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
 </details>
 
-### `accept_reject` · order 1 · mc · `t_cal_1`
+<details><summary>3899470e28bfa728 — {'index': 6.0, 'truth': 1.0}</summary>
 
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
 
-<details><summary>3c2222f48fcf2159 — {'index': 6.0, 'truth': 1.0}</summary>
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Read the options below and decide.
+
+Consider this statement:
+Twelve is divisible by four.
+
+Is this statement true? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `neutral` · order 1 · mc · `t_cal_1`
+
+Stem: `Answer:` — readout scores `A` [32, 362] as negative, `B` [33, 426] as positive.
+
+<details><summary>1484cf7df9111c78 — {'index': 14.0, 'truth': 1.0}</summary>
 
 ```
 <|begin_of_text|><|start_header_id|>system<|end_header_id|>
@@ -25372,16 +25843,16 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-Accept: 1 tokens for sure
-Reject: nothing
+Consider this statement:
+Ten is divisible by five.
 
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
 </details>
 
-<details><summary>5b5c098fa98b17a9 — {'index': 10.0, 'truth': 1.0}</summary>
+<details><summary>35f4dadfc2ace86a — {'index': 2.0, 'truth': 1.0}</summary>
 
 ```
 <|begin_of_text|><|start_header_id|>system<|end_header_id|>
@@ -25393,20 +25864,20 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-Accept: 1 tokens for sure
-Reject: nothing
+Consider this statement:
+A triangle has three sides.
 
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
 </details>
 
-### `accept_reject` · order 1 · mc · `t_disc_0`
+### `neutral` · order 1 · mc · `t_disc_0`
 
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
+Stem: `Answer:` — readout scores `A` [32, 362] as negative, `B` [33, 426] as positive.
 
-<details><summary>1f144eb43eaf0b42 — {'index': 0.0, 'truth': 1.0}</summary>
+<details><summary>33bb6caa60df46d5 — {'index': 8.0, 'truth': 1.0}</summary>
 
 ```
 <|begin_of_text|><|start_header_id|>system<|end_header_id|>
@@ -25418,16 +25889,16 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-Accept: 1 tokens for sure
-Reject: nothing
+Consider this statement:
+A square has four sides.
 
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
 </details>
 
-<details><summary>4e79a37693e16f1c — {'index': 12.0, 'truth': 1.0}</summary>
+<details><summary>4e4464a7e7146bc6 — {'index': 12.0, 'truth': 1.0}</summary>
 
 ```
 <|begin_of_text|><|start_header_id|>system<|end_header_id|>
@@ -25439,20 +25910,20 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-Accept: 1 tokens for sure
-Reject: nothing
+Consider this statement:
+January comes before March.
 
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
 </details>
 
-### `accept_reject` · order 1 · mc · `t_disc_1`
+### `neutral` · order 1 · mc · `t_disc_1`
 
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
+Stem: `Answer:` — readout scores `A` [32, 362] as negative, `B` [33, 426] as positive.
 
-<details><summary>096da7395b862447 — {'index': 0.0, 'truth': 1.0}</summary>
+<details><summary>3f5d6342e5cdc30b — {'index': 12.0, 'truth': 1.0}</summary>
 
 ```
 <|begin_of_text|><|start_header_id|>system<|end_header_id|>
@@ -25464,16 +25935,16 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-Accept: 1 tokens for sure
-Reject: nothing
+Consider this statement:
+January comes before March.
 
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
 </details>
 
-<details><summary>9ef645e8c1ebf988 — {'index': 4.0, 'truth': 1.0}</summary>
+<details><summary>c2eed6c7c37181b3 — {'index': 4.0, 'truth': 1.0}</summary>
 
 ```
 <|begin_of_text|><|start_header_id|>system<|end_header_id|>
@@ -25485,20 +25956,20 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-Accept: 1 tokens for sure
-Reject: nothing
+Consider this statement:
+Water freezes at a lower temperature than it boils.
 
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
 </details>
 
-### `accept_reject` · order 1 · mc · `t_sel_0`
+### `neutral` · order 1 · mc · `t_sel_0`
 
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
+Stem: `Answer:` — readout scores `A` [32, 362] as negative, `B` [33, 426] as positive.
 
-<details><summary>55795762ea04c1a4 — {'index': 13.0, 'truth': 0.0}</summary>
+<details><summary>27025f3da91f8999 — {'index': 5.0, 'truth': 0.0}</summary>
 
 ```
 <|begin_of_text|><|start_header_id|>system<|end_header_id|>
@@ -25510,16 +25981,16 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-Accept: nothing
-Reject: 1 tokens for sure
+Consider this statement:
+The letter B comes before the letter A in the alphabet.
 
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
 </details>
 
-<details><summary>8e4156b0361c4700 — {'index': 5.0, 'truth': 0.0}</summary>
+<details><summary>33c4a08b132cc8e9 — {'index': 1.0, 'truth': 0.0}</summary>
 
 ```
 <|begin_of_text|><|start_header_id|>system<|end_header_id|>
@@ -25531,20 +26002,20 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-Accept: nothing
-Reject: 1 tokens for sure
+Consider this statement:
+The number 2 is greater than the number 9.
 
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
 </details>
 
-### `accept_reject` · order 1 · mc · `t_sel_1`
+### `neutral` · order 1 · mc · `t_sel_1`
 
-Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
+Stem: `Answer:` — readout scores `A` [32, 362] as negative, `B` [33, 426] as positive.
 
-<details><summary>261ec309d7550409 — {'index': 13.0, 'truth': 0.0}</summary>
+<details><summary>6b572d3b6e78553d — {'index': 1.0, 'truth': 0.0}</summary>
 
 ```
 <|begin_of_text|><|start_header_id|>system<|end_header_id|>
@@ -25556,16 +26027,16 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-Accept: nothing
-Reject: 1 tokens for sure
+Consider this statement:
+The number 2 is greater than the number 9.
 
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
 </details>
 
-<details><summary>362520271a24dba9 — {'index': 5.0, 'truth': 0.0}</summary>
+<details><summary>9f9005f6beacb7a0 — {'index': 5.0, 'truth': 0.0}</summary>
 
 ```
 <|begin_of_text|><|start_header_id|>system<|end_header_id|>
@@ -25577,10 +26048,10 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-Accept: nothing
-Reject: 1 tokens for sure
+Consider this statement:
+The letter B comes before the letter A in the alphabet.
 
-Which do you choose? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -25602,10 +26073,10 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-No: nothing
-Yes: 1 tokens for sure
+Consider this statement:
+The number 100 is greater than the number 10.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -25623,10 +26094,10 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-No: nothing
-Yes: 1 tokens for sure
+Consider this statement:
+A triangle has three sides.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -25648,10 +26119,10 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-No: nothing
-Yes: 1 tokens for sure
+Consider this statement:
+The number 100 is greater than the number 10.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -25669,10 +26140,10 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-No: nothing
-Yes: 1 tokens for sure
+Consider this statement:
+Twelve is divisible by four.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -25694,10 +26165,10 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-No: nothing
-Yes: 1 tokens for sure
+Consider this statement:
+Water freezes at a lower temperature than it boils.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -25715,10 +26186,10 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-No: nothing
-Yes: 1 tokens for sure
+Consider this statement:
+A square has four sides.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -25740,10 +26211,10 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-No: nothing
-Yes: 1 tokens for sure
+Consider this statement:
+Water freezes at a lower temperature than it boils.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -25761,10 +26232,10 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-No: nothing
-Yes: 1 tokens for sure
+Consider this statement:
+January comes before March.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -25786,10 +26257,10 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-No: 1 tokens for sure
-Yes: nothing
+Consider this statement:
+The letter B comes before the letter A in the alphabet.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -25807,10 +26278,10 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-No: 1 tokens for sure
-Yes: nothing
+Consider this statement:
+A decade is shorter than a year.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -25832,10 +26303,10 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-No: 1 tokens for sure
-Yes: nothing
+Consider this statement:
+The letter Z comes before the letter M in the alphabet.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -25853,10 +26324,10 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-No: 1 tokens for sure
-Yes: nothing
+Consider this statement:
+A decade is shorter than a year.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -25878,10 +26349,10 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-No: nothing
-Yes: 1 tokens for sure
+Consider this statement:
+A triangle has three sides.
 
-Which do you choose? Answer with exactly one of "No" or "Yes" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer with exactly one of "No" or "Yes" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -25899,10 +26370,10 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-No: nothing
-Yes: 1 tokens for sure
+Consider this statement:
+Ten is divisible by five.
 
-Which do you choose? Answer with exactly one of "No" or "Yes" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer with exactly one of "No" or "Yes" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -25924,10 +26395,10 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-No: nothing
-Yes: 1 tokens for sure
+Consider this statement:
+The number 100 is greater than the number 10.
 
-Which do you choose? Answer with exactly one of "No" or "Yes" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer with exactly one of "No" or "Yes" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -25945,10 +26416,10 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-No: nothing
-Yes: 1 tokens for sure
+Consider this statement:
+Twelve is divisible by four.
 
-Which do you choose? Answer with exactly one of "No" or "Yes" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer with exactly one of "No" or "Yes" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -25970,10 +26441,10 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-No: nothing
-Yes: 1 tokens for sure
+Consider this statement:
+January comes before March.
 
-Which do you choose? Answer with exactly one of "No" or "Yes" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer with exactly one of "No" or "Yes" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -25991,10 +26462,10 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-No: nothing
-Yes: 1 tokens for sure
+Consider this statement:
+The number 7 is greater than the number 3.
 
-Which do you choose? Answer with exactly one of "No" or "Yes" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer with exactly one of "No" or "Yes" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -26016,10 +26487,10 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-No: nothing
-Yes: 1 tokens for sure
+Consider this statement:
+A square has four sides.
 
-Which do you choose? Answer with exactly one of "No" or "Yes" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer with exactly one of "No" or "Yes" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -26037,10 +26508,10 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-No: nothing
-Yes: 1 tokens for sure
+Consider this statement:
+The number 7 is greater than the number 3.
 
-Which do you choose? Answer with exactly one of "No" or "Yes" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer with exactly one of "No" or "Yes" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -26062,10 +26533,10 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-No: 1 tokens for sure
-Yes: nothing
+Consider this statement:
+A decade is shorter than a year.
 
-Which do you choose? Answer with exactly one of "No" or "Yes" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer with exactly one of "No" or "Yes" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -26083,10 +26554,10 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-No: 1 tokens for sure
-Yes: nothing
+Consider this statement:
+The letter B comes before the letter A in the alphabet.
 
-Which do you choose? Answer with exactly one of "No" or "Yes" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer with exactly one of "No" or "Yes" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -26108,10 +26579,10 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-No: 1 tokens for sure
-Yes: nothing
+Consider this statement:
+The letter Z comes before the letter M in the alphabet.
 
-Which do you choose? Answer with exactly one of "No" or "Yes" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer with exactly one of "No" or "Yes" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -26129,10 +26600,10 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-No: 1 tokens for sure
-Yes: nothing
+Consider this statement:
+The letter B comes before the letter A in the alphabet.
 
-Which do you choose? Answer with exactly one of "No" or "Yes" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer with exactly one of "No" or "Yes" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -26154,10 +26625,10 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-Yes: 1 tokens for sure
-No: nothing
+Consider this statement:
+A triangle has three sides.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -26175,10 +26646,10 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-Yes: 1 tokens for sure
-No: nothing
+Consider this statement:
+Ten is divisible by five.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -26200,10 +26671,10 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-Yes: 1 tokens for sure
-No: nothing
+Consider this statement:
+Ten is divisible by five.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -26221,10 +26692,10 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-Yes: 1 tokens for sure
-No: nothing
+Consider this statement:
+A triangle has three sides.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -26246,10 +26717,10 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-Yes: 1 tokens for sure
-No: nothing
+Consider this statement:
+Water freezes at a lower temperature than it boils.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -26267,10 +26738,10 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-Yes: 1 tokens for sure
-No: nothing
+Consider this statement:
+The number 7 is greater than the number 3.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -26292,10 +26763,10 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-Yes: 1 tokens for sure
-No: nothing
+Consider this statement:
+The number 7 is greater than the number 3.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -26313,10 +26784,10 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-Yes: 1 tokens for sure
-No: nothing
+Consider this statement:
+January comes before March.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -26338,10 +26809,10 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-Yes: nothing
-No: 1 tokens for sure
+Consider this statement:
+The number 2 is greater than the number 9.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -26359,10 +26830,10 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-Yes: nothing
-No: 1 tokens for sure
+Consider this statement:
+The letter Z comes before the letter M in the alphabet.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -26384,10 +26855,10 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-Yes: nothing
-No: 1 tokens for sure
+Consider this statement:
+The letter Z comes before the letter M in the alphabet.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -26405,10 +26876,10 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-Yes: nothing
-No: 1 tokens for sure
+Consider this statement:
+The letter B comes before the letter A in the alphabet.
 
-Which do you choose, and why? Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -26430,10 +26901,10 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-Yes: 1 tokens for sure
-No: nothing
+Consider this statement:
+The number 100 is greater than the number 10.
 
-Which do you choose? Answer with exactly one of "Yes" or "No" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer with exactly one of "Yes" or "No" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -26451,10 +26922,10 @@ Today Date: 26 Jul 2024
 
 Read the options below and decide.
 
-Yes: 1 tokens for sure
-No: nothing
+Consider this statement:
+A triangle has three sides.
 
-Which do you choose? Answer with exactly one of "Yes" or "No" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer with exactly one of "Yes" or "No" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -26476,10 +26947,10 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-Yes: 1 tokens for sure
-No: nothing
+Consider this statement:
+Twelve is divisible by four.
 
-Which do you choose? Answer with exactly one of "Yes" or "No" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer with exactly one of "Yes" or "No" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -26497,10 +26968,10 @@ Today Date: 26 Jul 2024
 
 A choice is described below.
 
-Yes: 1 tokens for sure
-No: nothing
+Consider this statement:
+A triangle has three sides.
 
-Which do you choose? Answer with exactly one of "Yes" or "No" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer with exactly one of "Yes" or "No" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -26522,10 +26993,10 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-Yes: 1 tokens for sure
-No: nothing
+Consider this statement:
+January comes before March.
 
-Which do you choose? Answer with exactly one of "Yes" or "No" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer with exactly one of "Yes" or "No" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -26543,10 +27014,10 @@ Today Date: 26 Jul 2024
 
 You are taking part in a study of decision making.
 
-Yes: 1 tokens for sure
-No: nothing
+Consider this statement:
+The number 7 is greater than the number 3.
 
-Which do you choose? Answer with exactly one of "Yes" or "No" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer with exactly one of "Yes" or "No" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -26568,10 +27039,10 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-Yes: 1 tokens for sure
-No: nothing
+Consider this statement:
+Water freezes at a lower temperature than it boils.
 
-Which do you choose? Answer with exactly one of "Yes" or "No" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer with exactly one of "Yes" or "No" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -26589,10 +27060,10 @@ Today Date: 26 Jul 2024
 
 Consider the following choice.
 
-Yes: 1 tokens for sure
-No: nothing
+Consider this statement:
+A square has four sides.
 
-Which do you choose? Answer with exactly one of "Yes" or "No" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer with exactly one of "Yes" or "No" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -26614,10 +27085,10 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-Yes: nothing
-No: 1 tokens for sure
+Consider this statement:
+The letter Z comes before the letter M in the alphabet.
 
-Which do you choose? Answer with exactly one of "Yes" or "No" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer with exactly one of "Yes" or "No" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -26635,10 +27106,10 @@ Today Date: 26 Jul 2024
 
 Please answer the following question.
 
-Yes: nothing
-No: 1 tokens for sure
+Consider this statement:
+The number 2 is greater than the number 9.
 
-Which do you choose? Answer with exactly one of "Yes" or "No" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer with exactly one of "Yes" or "No" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -26660,10 +27131,10 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-Yes: nothing
-No: 1 tokens for sure
+Consider this statement:
+The letter B comes before the letter A in the alphabet.
 
-Which do you choose? Answer with exactly one of "Yes" or "No" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer with exactly one of "Yes" or "No" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -26681,10 +27152,10 @@ Today Date: 26 Jul 2024
 
 Here is a decision problem.
 
-Yes: nothing
-No: 1 tokens for sure
+Consider this statement:
+The letter Z comes before the letter M in the alphabet.
 
-Which do you choose? Answer with exactly one of "Yes" or "No" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+Is this statement true? Answer with exactly one of "Yes" or "No" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```
@@ -28908,6 +29379,1211 @@ B: a 50% chance of 36 tokens and a 50% chance of 24 tokens
 A: a 50% chance of 28 tokens and a 50% chance of 28 tokens
 
 Which do you choose? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+
+---
+
+# Family: `offer_bias_control`
+
+### `accept_reject` · order 0 · freetext · `t_cal_0`
+
+Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
+
+<details><summary>f14e5bf2d0f9de18 — {'index': 18.0, 'truth': 1.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Read the options below and decide.
+
+You are offered the following.
+You are offered 100 tokens in exchange for nothing at all.
+
+Do you accept this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `accept_reject` · order 0 · freetext · `t_cal_1`
+
+Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
+
+<details><summary>f6cbff90c3915409 — {'index': 18.0, 'truth': 1.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+A choice is described below.
+
+You are offered the following.
+You are offered 100 tokens in exchange for nothing at all.
+
+Do you accept this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `accept_reject` · order 0 · freetext · `t_disc_0`
+
+Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
+
+<details><summary>8560466b88816c43 — {'index': 16.0, 'truth': 1.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+You are taking part in a study of decision making.
+
+You are offered the following.
+You are offered 10 tokens for free. There is no cost and no catch.
+
+Do you accept this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `accept_reject` · order 0 · freetext · `t_disc_1`
+
+Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
+
+<details><summary>ac40acb11d322eb8 — {'index': 16.0, 'truth': 1.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Consider the following choice.
+
+You are offered the following.
+You are offered 10 tokens for free. There is no cost and no catch.
+
+Do you accept this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `accept_reject` · order 0 · freetext · `t_sel_0`
+
+Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
+
+<details><summary>7ae54572de41b61e — {'index': 17.0, 'truth': 0.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Please answer the following question.
+
+You are offered the following.
+You are offered a deal in which you pay 10 tokens and receive nothing.
+
+Do you accept this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `accept_reject` · order 0 · freetext · `t_sel_1`
+
+Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
+
+<details><summary>003a5f507c433dc9 — {'index': 17.0, 'truth': 0.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Here is a decision problem.
+
+You are offered the following.
+You are offered a deal in which you pay 10 tokens and receive nothing.
+
+Do you accept this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `accept_reject` · order 0 · mc · `t_cal_0`
+
+Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
+
+<details><summary>52549afb1c1f173a — {'index': 18.0, 'truth': 1.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Read the options below and decide.
+
+You are offered the following.
+You are offered 100 tokens in exchange for nothing at all.
+
+Do you accept this offer? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `accept_reject` · order 0 · mc · `t_cal_1`
+
+Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
+
+<details><summary>446e73eb4e98f80c — {'index': 18.0, 'truth': 1.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+A choice is described below.
+
+You are offered the following.
+You are offered 100 tokens in exchange for nothing at all.
+
+Do you accept this offer? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `accept_reject` · order 0 · mc · `t_disc_0`
+
+Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
+
+<details><summary>f9300a8363ab6366 — {'index': 16.0, 'truth': 1.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+You are taking part in a study of decision making.
+
+You are offered the following.
+You are offered 10 tokens for free. There is no cost and no catch.
+
+Do you accept this offer? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `accept_reject` · order 0 · mc · `t_disc_1`
+
+Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
+
+<details><summary>6d7ad0af536f860f — {'index': 16.0, 'truth': 1.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Consider the following choice.
+
+You are offered the following.
+You are offered 10 tokens for free. There is no cost and no catch.
+
+Do you accept this offer? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `accept_reject` · order 0 · mc · `t_sel_0`
+
+Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
+
+<details><summary>978b78d38da0152b — {'index': 17.0, 'truth': 0.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Please answer the following question.
+
+You are offered the following.
+You are offered a deal in which you pay 10 tokens and receive nothing.
+
+Do you accept this offer? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `accept_reject` · order 0 · mc · `t_sel_1`
+
+Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
+
+<details><summary>438338e521762f6c — {'index': 17.0, 'truth': 0.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Here is a decision problem.
+
+You are offered the following.
+You are offered a deal in which you pay 10 tokens and receive nothing.
+
+Do you accept this offer? Answer with exactly one of "Reject" or "Accept" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `accept_reject` · order 1 · freetext · `t_cal_0`
+
+Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
+
+<details><summary>742aa41bacf14fa2 — {'index': 18.0, 'truth': 1.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Read the options below and decide.
+
+You are offered the following.
+You are offered 100 tokens in exchange for nothing at all.
+
+Do you accept this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `accept_reject` · order 1 · freetext · `t_cal_1`
+
+Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
+
+<details><summary>28296627a271daf3 — {'index': 18.0, 'truth': 1.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+A choice is described below.
+
+You are offered the following.
+You are offered 100 tokens in exchange for nothing at all.
+
+Do you accept this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `accept_reject` · order 1 · freetext · `t_disc_0`
+
+Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
+
+<details><summary>fdd12a2c4773d670 — {'index': 16.0, 'truth': 1.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+You are taking part in a study of decision making.
+
+You are offered the following.
+You are offered 10 tokens for free. There is no cost and no catch.
+
+Do you accept this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `accept_reject` · order 1 · freetext · `t_disc_1`
+
+Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
+
+<details><summary>23a5364960940515 — {'index': 16.0, 'truth': 1.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Consider the following choice.
+
+You are offered the following.
+You are offered 10 tokens for free. There is no cost and no catch.
+
+Do you accept this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `accept_reject` · order 1 · freetext · `t_sel_0`
+
+Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
+
+<details><summary>33f990a655d952b8 — {'index': 17.0, 'truth': 0.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Please answer the following question.
+
+You are offered the following.
+You are offered a deal in which you pay 10 tokens and receive nothing.
+
+Do you accept this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `accept_reject` · order 1 · freetext · `t_sel_1`
+
+Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
+
+<details><summary>3a386bdbef629927 — {'index': 17.0, 'truth': 0.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Here is a decision problem.
+
+You are offered the following.
+You are offered a deal in which you pay 10 tokens and receive nothing.
+
+Do you accept this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `accept_reject` · order 1 · mc · `t_cal_0`
+
+Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
+
+<details><summary>4cd664caca5254e0 — {'index': 18.0, 'truth': 1.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Read the options below and decide.
+
+You are offered the following.
+You are offered 100 tokens in exchange for nothing at all.
+
+Do you accept this offer? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `accept_reject` · order 1 · mc · `t_cal_1`
+
+Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
+
+<details><summary>4c70b9902f5da280 — {'index': 18.0, 'truth': 1.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+A choice is described below.
+
+You are offered the following.
+You are offered 100 tokens in exchange for nothing at all.
+
+Do you accept this offer? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `accept_reject` · order 1 · mc · `t_disc_0`
+
+Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
+
+<details><summary>b58506e94e959520 — {'index': 16.0, 'truth': 1.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+You are taking part in a study of decision making.
+
+You are offered the following.
+You are offered 10 tokens for free. There is no cost and no catch.
+
+Do you accept this offer? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `accept_reject` · order 1 · mc · `t_disc_1`
+
+Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
+
+<details><summary>e560b4bf51cc2d71 — {'index': 16.0, 'truth': 1.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Consider the following choice.
+
+You are offered the following.
+You are offered 10 tokens for free. There is no cost and no catch.
+
+Do you accept this offer? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `accept_reject` · order 1 · mc · `t_sel_0`
+
+Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
+
+<details><summary>3a8bc8b01c03565d — {'index': 17.0, 'truth': 0.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Please answer the following question.
+
+You are offered the following.
+You are offered a deal in which you pay 10 tokens and receive nothing.
+
+Do you accept this offer? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `accept_reject` · order 1 · mc · `t_sel_1`
+
+Stem: `Answer:` — readout scores `Reject` [79513, 88393] as negative, `Accept` [17059, 21496] as positive.
+
+<details><summary>686e87eff54469d2 — {'index': 17.0, 'truth': 0.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Here is a decision problem.
+
+You are offered the following.
+You are offered a deal in which you pay 10 tokens and receive nothing.
+
+Do you accept this offer? Answer with exactly one of "Accept" or "Reject" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `neutral` · order 0 · freetext · `t_cal_0`
+
+Stem: `Answer:` — readout scores `A` [32, 362] as negative, `B` [33, 426] as positive.
+
+<details><summary>566c8ff9ff56c5ce — {'index': 18.0, 'truth': 1.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Read the options below and decide.
+
+You are offered the following.
+You are offered 100 tokens in exchange for nothing at all.
+
+Do you accept this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `neutral` · order 0 · freetext · `t_cal_1`
+
+Stem: `Answer:` — readout scores `A` [32, 362] as negative, `B` [33, 426] as positive.
+
+<details><summary>b288681f55dc2eb8 — {'index': 18.0, 'truth': 1.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+A choice is described below.
+
+You are offered the following.
+You are offered 100 tokens in exchange for nothing at all.
+
+Do you accept this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `neutral` · order 0 · freetext · `t_disc_0`
+
+Stem: `Answer:` — readout scores `A` [32, 362] as negative, `B` [33, 426] as positive.
+
+<details><summary>6d5570f179b6c738 — {'index': 16.0, 'truth': 1.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+You are taking part in a study of decision making.
+
+You are offered the following.
+You are offered 10 tokens for free. There is no cost and no catch.
+
+Do you accept this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `neutral` · order 0 · freetext · `t_disc_1`
+
+Stem: `Answer:` — readout scores `A` [32, 362] as negative, `B` [33, 426] as positive.
+
+<details><summary>b229fd69acebefe2 — {'index': 16.0, 'truth': 1.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Consider the following choice.
+
+You are offered the following.
+You are offered 10 tokens for free. There is no cost and no catch.
+
+Do you accept this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `neutral` · order 0 · freetext · `t_sel_0`
+
+Stem: `Answer:` — readout scores `A` [32, 362] as negative, `B` [33, 426] as positive.
+
+<details><summary>736d47581bdef273 — {'index': 17.0, 'truth': 0.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Please answer the following question.
+
+You are offered the following.
+You are offered a deal in which you pay 10 tokens and receive nothing.
+
+Do you accept this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `neutral` · order 0 · freetext · `t_sel_1`
+
+Stem: `Answer:` — readout scores `A` [32, 362] as negative, `B` [33, 426] as positive.
+
+<details><summary>c2c8d6f63e09c736 — {'index': 17.0, 'truth': 0.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Here is a decision problem.
+
+You are offered the following.
+You are offered a deal in which you pay 10 tokens and receive nothing.
+
+Do you accept this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `neutral` · order 0 · mc · `t_cal_0`
+
+Stem: `Answer:` — readout scores `A` [32, 362] as negative, `B` [33, 426] as positive.
+
+<details><summary>f262cee92b58327b — {'index': 18.0, 'truth': 1.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Read the options below and decide.
+
+You are offered the following.
+You are offered 100 tokens in exchange for nothing at all.
+
+Do you accept this offer? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `neutral` · order 0 · mc · `t_cal_1`
+
+Stem: `Answer:` — readout scores `A` [32, 362] as negative, `B` [33, 426] as positive.
+
+<details><summary>f17e4db0a3c2eb5a — {'index': 18.0, 'truth': 1.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+A choice is described below.
+
+You are offered the following.
+You are offered 100 tokens in exchange for nothing at all.
+
+Do you accept this offer? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `neutral` · order 0 · mc · `t_disc_0`
+
+Stem: `Answer:` — readout scores `A` [32, 362] as negative, `B` [33, 426] as positive.
+
+<details><summary>ee890972a88cbba9 — {'index': 16.0, 'truth': 1.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+You are taking part in a study of decision making.
+
+You are offered the following.
+You are offered 10 tokens for free. There is no cost and no catch.
+
+Do you accept this offer? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `neutral` · order 0 · mc · `t_disc_1`
+
+Stem: `Answer:` — readout scores `A` [32, 362] as negative, `B` [33, 426] as positive.
+
+<details><summary>c903d9fafbe8fb5e — {'index': 16.0, 'truth': 1.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Consider the following choice.
+
+You are offered the following.
+You are offered 10 tokens for free. There is no cost and no catch.
+
+Do you accept this offer? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `neutral` · order 0 · mc · `t_sel_0`
+
+Stem: `Answer:` — readout scores `A` [32, 362] as negative, `B` [33, 426] as positive.
+
+<details><summary>c7315d05770b44e6 — {'index': 17.0, 'truth': 0.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Please answer the following question.
+
+You are offered the following.
+You are offered a deal in which you pay 10 tokens and receive nothing.
+
+Do you accept this offer? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `neutral` · order 0 · mc · `t_sel_1`
+
+Stem: `Answer:` — readout scores `A` [32, 362] as negative, `B` [33, 426] as positive.
+
+<details><summary>eadab18e40a9388d — {'index': 17.0, 'truth': 0.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Here is a decision problem.
+
+You are offered the following.
+You are offered a deal in which you pay 10 tokens and receive nothing.
+
+Do you accept this offer? Answer with exactly one of "A" or "B" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `neutral` · order 1 · freetext · `t_cal_0`
+
+Stem: `Answer:` — readout scores `A` [32, 362] as negative, `B` [33, 426] as positive.
+
+<details><summary>eba9093dc8258a64 — {'index': 18.0, 'truth': 1.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Read the options below and decide.
+
+You are offered the following.
+You are offered 100 tokens in exchange for nothing at all.
+
+Do you accept this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `neutral` · order 1 · freetext · `t_cal_1`
+
+Stem: `Answer:` — readout scores `A` [32, 362] as negative, `B` [33, 426] as positive.
+
+<details><summary>5b6e4e36562b6034 — {'index': 18.0, 'truth': 1.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+A choice is described below.
+
+You are offered the following.
+You are offered 100 tokens in exchange for nothing at all.
+
+Do you accept this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `neutral` · order 1 · freetext · `t_disc_0`
+
+Stem: `Answer:` — readout scores `A` [32, 362] as negative, `B` [33, 426] as positive.
+
+<details><summary>621ff53710fa5efb — {'index': 16.0, 'truth': 1.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+You are taking part in a study of decision making.
+
+You are offered the following.
+You are offered 10 tokens for free. There is no cost and no catch.
+
+Do you accept this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `neutral` · order 1 · freetext · `t_disc_1`
+
+Stem: `Answer:` — readout scores `A` [32, 362] as negative, `B` [33, 426] as positive.
+
+<details><summary>a522034858d7f539 — {'index': 16.0, 'truth': 1.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Consider the following choice.
+
+You are offered the following.
+You are offered 10 tokens for free. There is no cost and no catch.
+
+Do you accept this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `neutral` · order 1 · freetext · `t_sel_0`
+
+Stem: `Answer:` — readout scores `A` [32, 362] as negative, `B` [33, 426] as positive.
+
+<details><summary>c52c47d1f264cd8e — {'index': 17.0, 'truth': 0.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Please answer the following question.
+
+You are offered the following.
+You are offered a deal in which you pay 10 tokens and receive nothing.
+
+Do you accept this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `neutral` · order 1 · freetext · `t_sel_1`
+
+Stem: `Answer:` — readout scores `A` [32, 362] as negative, `B` [33, 426] as positive.
+
+<details><summary>0af0b861ee994337 — {'index': 17.0, 'truth': 0.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Here is a decision problem.
+
+You are offered the following.
+You are offered a deal in which you pay 10 tokens and receive nothing.
+
+Do you accept this offer? Answer, and say why. Begin your reply with your choice.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `neutral` · order 1 · mc · `t_cal_0`
+
+Stem: `Answer:` — readout scores `A` [32, 362] as negative, `B` [33, 426] as positive.
+
+<details><summary>a28dc4093768686a — {'index': 18.0, 'truth': 1.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Read the options below and decide.
+
+You are offered the following.
+You are offered 100 tokens in exchange for nothing at all.
+
+Do you accept this offer? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `neutral` · order 1 · mc · `t_cal_1`
+
+Stem: `Answer:` — readout scores `A` [32, 362] as negative, `B` [33, 426] as positive.
+
+<details><summary>3d1be3fe9a03fce2 — {'index': 18.0, 'truth': 1.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+A choice is described below.
+
+You are offered the following.
+You are offered 100 tokens in exchange for nothing at all.
+
+Do you accept this offer? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `neutral` · order 1 · mc · `t_disc_0`
+
+Stem: `Answer:` — readout scores `A` [32, 362] as negative, `B` [33, 426] as positive.
+
+<details><summary>da9b24ea729c1738 — {'index': 16.0, 'truth': 1.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+You are taking part in a study of decision making.
+
+You are offered the following.
+You are offered 10 tokens for free. There is no cost and no catch.
+
+Do you accept this offer? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `neutral` · order 1 · mc · `t_disc_1`
+
+Stem: `Answer:` — readout scores `A` [32, 362] as negative, `B` [33, 426] as positive.
+
+<details><summary>4b5a9f1acde794f2 — {'index': 16.0, 'truth': 1.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Consider the following choice.
+
+You are offered the following.
+You are offered 10 tokens for free. There is no cost and no catch.
+
+Do you accept this offer? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `neutral` · order 1 · mc · `t_sel_0`
+
+Stem: `Answer:` — readout scores `A` [32, 362] as negative, `B` [33, 426] as positive.
+
+<details><summary>c80dc194e19e4b05 — {'index': 17.0, 'truth': 0.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Please answer the following question.
+
+You are offered the following.
+You are offered a deal in which you pay 10 tokens and receive nothing.
+
+Do you accept this offer? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Answer:
+```
+</details>
+
+### `neutral` · order 1 · mc · `t_sel_1`
+
+Stem: `Answer:` — readout scores `A` [32, 362] as negative, `B` [33, 426] as positive.
+
+<details><summary>86dee0a2f616c254 — {'index': 17.0, 'truth': 0.0}</summary>
+
+```
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Here is a decision problem.
+
+You are offered the following.
+You are offered a deal in which you pay 10 tokens and receive nothing.
+
+Do you accept this offer? Answer with exactly one of "B" or "A" and nothing else.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 Answer:
 ```

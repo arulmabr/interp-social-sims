@@ -490,3 +490,46 @@ is taken as **chat64, crossing n = 110**, and the substitution is flagged rather
 `reports/G2_legacy_format.md` labels chat64 a departure because it raises `max_new_tokens` from 12, but
 it is the only arm whose curve is supported by data at every level. The 12-token budget, not the chat
 template, is what truncates the answers.
+
+**BD35. Autonomy amendment, 22 Sept — in force before and after the cutoff.** Recorded because it
+changes how every later entry in this log comes to exist.
+- Open choices in the plan are **decided here, not escalated**: take the option that keeps every
+  pre-registered threshold and lock intact and is cheapest to reverse, record it with the alternatives
+  considered, and proceed. A later overrule is a rerun, not a reason to wait now.
+- Prompt rebuilds no longer wait for "audit ok". They proceed when three automatic checks pass:
+  (a) the rendered-text tests; (b) the legacy cell's user turn equals `Probes/tasks/prompts.py`
+  character for character; (c) every social prompt contains the proposer, the pie, the offer and the
+  consequence of rejecting, checked as strings. `reports/B_PROMPT_AUDIT.md` is still regenerated.
+- Gates B2 and B3 stay automatic after the cutoff. Budget rises to 1,000 GPU-hours through 5 Nov, with
+  the running total in `STATUS.md`.
+- Test split: once `PREREG.md` is committed and tagged `prereg-v1`, `logs/UNLOCK_REQUEST.md` records
+  the tag SHA and time and the runner unlocks 24 hours later **unless `logs/VETO` exists**. Nothing
+  else about the lock changes; it is still refused until that file appears.
+- Only four things still need an author: changing a pre-registered threshold or metric; changing an
+  anchor's training objective **after its dry run passed**; exceeding the budget; and a spec conflict,
+  which is reported and then worked around on every branch it does not block.
+
+**BD36. The three checks forced two prompt changes I had been holding open, and both are now done.**
+Check (b) required the legacy cell to be the paper's text, and check (c) required the social games to
+state themselves. Neither was a judgement call any more, so both were implemented rather than asked
+about.
+- **The legacy cell now renders `Probes/tasks/prompts.py::lottery_prompt` verbatim** — the numbered
+  `SAFE VS. RISKY CHOICE GAME` list, "Guaranteed 50 tokens", "Respond with either 'Safe' or 'Risky'".
+  Only the canonical bridging cell does this (sure-gain, p=0.5, s=50, legacy labels, canonical order,
+  multiple choice); everything else keeps the generator's wording, because everything else is a new
+  instrument by design. **This also settles the open grid question by construction**: the paper text
+  is the probe stack's, so the bridging cell is the probe stack's 20..240, and the SAE stack's 10..180
+  is a different bridge that would need its own cell. Alternatives considered: make the whole risk
+  domain paper-faithful (rejected — it would delete the p and s variation the plan requires), or keep
+  my wording and compare curves loosely (rejected — check (b) forbids it, and it is the weaker claim).
+- **The social families now state the game.** `responder`, `proposer`, `dictator` and
+  `mini_ultimatum` each carry a scenario naming the proposer, the pie, the offer and that rejection
+  gives both parties zero. The option lines are suppressed where a scenario exists, because the
+  payoffs are already in it and "Accept: nothing" at an offer of zero is absurd; the paper's ultimatum
+  states the game and asks the question, and so does this.
+- Two consequences that fell out of writing it: the generic question was wrong for three families —
+  a proposer is not asked to "accept" and a true/false claim is not accepted — so each family now has
+  its own question and its own label vocabulary; and the accept-bias control **split into two
+  families**, `accept_bias_control` (true/false statements, yes/no) and `offer_bias_control`
+  (accept/reject offers), which is what B1 asks for when it says "unrelated accept/reject **and**
+  yes/no items" rather than one kind wearing the other's clothing.
