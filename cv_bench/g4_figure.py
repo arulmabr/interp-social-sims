@@ -50,7 +50,7 @@ def panel_a(ax):
                 label=f"layer {layer}")
     ax.set_xscale("log")
     ax.axhline(104.1, color=MUTED, lw=0.9, ls=":")
-    ax.text(0.34, 0.88, "dotted line: unsteered, 104.1", transform=ax.transAxes,
+    ax.text(0.02, 0.72, "dotted: unsteered, 104.1", transform=ax.transAxes,
             ha="left", color=MUTED, fontsize=7)
     ax.set_xlabel("dose  (units of the median residual-stream norm)", color=INK2, fontsize=8)
     ax.set_ylabel("switching point (tokens)", color=INK2, fontsize=8)
@@ -98,13 +98,19 @@ def panel_c(ax):
     x = [p[0] for p in pts]
     y = [p[1] for p in pts]
     ax.plot(x, y, color=NAVY, marker="o", ms=5, lw=1.9)
+    style = {12: ((12, -2), "left", "center"),
+             64: ((0, -16), "center", "top"),
+             256: ((-12, -2), "right", "center")}
     for cx, cy, n in pts:
-        ax.annotate(f"{cy:.3f}\nn={n}", xy=(cx, cy), xytext=(0, -26 if cy > 0.8 else 12),
-                    textcoords="offset points", ha="center", color=INK2, fontsize=7)
+        off, ha, va = style[cx]
+        ax.annotate(f"{cy:.3f}  n={n}", xy=(cx, cy), xytext=off,
+                    textcoords="offset points", ha=ha, va=va,
+                    color=INK2, fontsize=7)
     ax.set_xscale("log")
     ax.set_xticks([12, 64, 256])
     ax.set_xticklabels(["12", "64", "256"])
-    ax.set_ylim(0.4, 1.12)
+    ax.set_ylim(0.45, 1.13)
+    ax.set_xlim(9, 340)
     ax.set_xlabel("max new tokens", color=INK2, fontsize=8)
     ax.set_ylabel("legacy vs strict agreement", color=INK2, fontsize=8)
     ax.set_title("C  coding disagreement is a cap artefact", color=INK, fontsize=9, loc="left")
@@ -124,8 +130,8 @@ def panel_d(ax):
     ax.bar(xs - 0.19, rd, width=0.36, color=PURPLE, label="logit readout")
     ax.bar(xs + 0.19, fr, width=0.36, color=GOLD, label="free generation")
     for i, (a, b) in enumerate(zip(rd, fr)):
-        ax.text(i, max(a, b) + 6, f"{abs(a-b)/5:.0f} steps",
-                ha="center", color=INK2, fontsize=7)
+        ax.text(i, 262, f"{abs(a-b)/5:.0f} steps", ha="center",
+                color=INK2, fontsize=7, clip_on=True)
     ax.set_xticks(xs)
     ax.set_xticklabels(labels, fontsize=7.5)
     ax.set_ylabel("crossing (tokens)", color=INK2, fontsize=8)
@@ -133,15 +139,15 @@ def panel_d(ax):
                  color=INK, fontsize=9, loc="left")
     ax.set_ylim(0, 300)
     ax.legend(frameon=False, fontsize=7, loc="upper center", ncol=2,
-              bbox_to_anchor=(0.5, 1.0))
+              bbox_to_anchor=(0.5, 0.99), borderaxespad=0.2)
 
 
 def panel_e(ax):
     """Cosine of the choice probe with each direction, in multiples of the null."""
     geo = rows("g4b_geometry.csv")
     want = [("reward", "reward probe"), ("gradient", "readout gradient"),
-            ("diffmean", "diff-of-means (CAA)"),
-            ("pca1", "first PCA (RepE)"), ("ridge_logn", "ridge, log n"),
+            ("diffmean", "diff-of-means"),
+            ("pca1", "first PCA"), ("ridge_logn", "ridge, log n"),
             ("rand0", "random direction")]
     labels, vals = [], []
     for key, lab in want:
@@ -160,6 +166,7 @@ def panel_e(ax):
     ax.barh(ys, vals, color=cols, height=0.62)
     for i, v in enumerate(vals):
         ax.text(v + 0.4, i, f"{v:.1f}x", va="center", color=INK, fontsize=7.5)
+    ax.set_xlim(0, max(vals) * 1.22)
     ax.axvline(1.0, color=MUTED, lw=0.9, ls=":")
     ax.set_yticks(ys)
     ax.set_yticklabels(labels, fontsize=7)
@@ -174,8 +181,8 @@ def build():
     import matplotlib.pyplot as plt
     from matplotlib.gridspec import GridSpec
 
-    fig = plt.figure(figsize=(11.6, 7.4))
-    gs = GridSpec(2, 3, figure=fig, hspace=0.48, wspace=0.34)
+    fig = plt.figure(figsize=(12.4, 7.6))
+    gs = GridSpec(2, 3, figure=fig, hspace=0.50, wspace=0.42)
     axes = [fig.add_subplot(gs[0, 0]), fig.add_subplot(gs[0, 1]),
             fig.add_subplot(gs[0, 2]), fig.add_subplot(gs[1, 0]),
             fig.add_subplot(gs[1, 1])]
@@ -191,7 +198,7 @@ def build():
     note = fig.add_subplot(gs[1, 2]); note.axis("off")
     note.text(0.0, 1.0, "What the panels establish", color=INK, fontsize=9,
               va="top", weight="bold")
-    note.text(0.0, 0.90,
+    note.text(0.0, 0.91,
               "A  Across a 60-fold dose range layer 48 moves the switching\n"
               "    point under one grid step. Layer 50 moves ~10 steps and\n"
               "    reverses at the top dose.\n\n"
@@ -203,10 +210,7 @@ def build():
               "D  Readout and free-generation crossings sit 25-34 grid steps\n"
               "    apart (r = 0.16-0.31), so sampled generation is primary.\n\n"
               "E  The probe is nearly orthogonal to the readout gradient and\n"
-              "    closest to difference-of-means.\n\n"
-              "Sources: g4_curves.csv, g4_agreement.csv, g4b_geometry.csv,\n"
-              "instr_agreement.csv. Llama-3.3-70B-Instruct, lottery, probe\n"
-              "direction, phrase coding unless stated.",
+              "    closest to difference-of-means.",
               color=INK2, fontsize=7, va="top", linespacing=1.45)
 
     fig.suptitle("G4: the probe rebuild, both variants and both layers",
