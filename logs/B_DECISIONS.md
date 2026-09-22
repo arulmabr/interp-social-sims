@@ -788,11 +788,26 @@ alone would have been the single most misleading number available in this run, a
 Track B into B4 on a measurement that cannot tell the effect from nothing.
 
 *Route.* `ICLR_PLAN.md:186` sends a failing preference anchor to "fix cloning or the estimator". B3.3
-and B4 are not started. Levers and their costs are in `reports/B_B3.md` section 4; increasing n is
-recorded there as **not viable** (a 20x burial needs n ~ 1e5 against the present 240) so that it is not
-retried. The two workable levers -- correlating the adapters' residuals by training the preference
-adapter from the reference weights, and anchoring at a multiple of the MDC -- each change a
-pre-registered quantity, so both are AUTHOR DECISION.
+and B4 are not started. Levers and their costs are in `reports/B_B3.md` section 4. Two of them --
+correlating the adapters' residuals by training the preference adapter from the reference weights, and
+anchoring at a multiple of the MDC -- each change a pre-registered quantity, so both are AUTHOR
+DECISION.
+
+*Correction, same day.* BD47 as first written called increasing n **not viable**, on the claim that a
+20x burial needs n ~ 1e5. **That arithmetic was wrong**: it squared the burial ratio and scaled the
+current n, instead of applying the gate's own criterion to the CI half-width `1.96*floor/sqrt(n)`. The
+real requirement is **n >= 1,543** to exclude zero and **n >= 4,539** for a half-width within 1 MDC,
+against the 240 used -- and `cloning_trials()` already yields **1,016** rows at mc/legacy (the run took
+the first 240) and 8,128 across all 32 formats. More clone rows is therefore the **cheapest** lever and
+the only one that changes no pre-registered quantity.
+
+*What must be checked before trusting it.* Those rows span only **254 distinct content items**. If the
+cloning residual is content-driven rather than format-driven, the effective n saturates near 254 and
+the lever fails for a subtler reason. The deciding quantity is the residual's intraclass correlation
+within content, and it cannot be recovered from what the run saved: `ckpt_read_*.npz` holds model-side
+reads only, and reconstructing the agent side from `cloning_trials()` gave corr = -0.081 against the
+recorded 0.9909 (misaligned). `lora.py` should persist per-row residual and content id; the ICC then
+costs no GPU time.
 
 **BD48. `b0_numerics` completed, and bf16's bias cancels in a contrast but not in absolute z.**
 22 Sept, job 23462886, 4x A100-80GB, 196 calibration prompts, layer 50, unbatched, no CPU offload.
