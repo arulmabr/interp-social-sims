@@ -797,9 +797,13 @@ DECISION.
 20x burial needs n ~ 1e5. **That arithmetic was wrong**: it squared the burial ratio and scaled the
 current n, instead of applying the gate's own criterion to the CI half-width `1.96*floor/sqrt(n)`. The
 real requirement is **n >= 1,543** to exclude zero and **n >= 4,539** for a half-width within 1 MDC,
-against the 240 used -- and `cloning_trials()` already yields **1,016** rows at mc/legacy (the run took
-the first 240) and 8,128 across all 32 formats. More clone rows is therefore the **cheapest** lever and
-the only one that changes no pre-registered quantity.
+against the 240 used. `cloning_trials()` yields **1,016** rows and the run took the first 240, so a
+4.2x increase is free and changes no pre-registered quantity -- the cheapest lever available.
+**Correction to that correction:** the 8,128 rows across all 32 formats are *not* in the legitimate
+pool. `training_trials()` is `mc`/`legacy` only, so the other formats would measure generalisation
+across formats rather than cloning. The real ceiling without a protocol change is 1,016, which takes
+the CI half-width from 4.35 MDC to **2.11 MDC** -- enough to clear zero at the present estimate, short
+of the gate's <= 1 MDC. More rows alone therefore does not pass Gate B3.
 
 *What must be checked before trusting it.* Those rows span only **254 distinct content items**. If the
 cloning residual is content-driven rather than format-driven, the effective n saturates near 254 and

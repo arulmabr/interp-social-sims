@@ -367,11 +367,14 @@ instructed 4 with the capacity evidence recorded.
           n, instead of applying the gate's own criterion to the CI half-width
           1.96*floor/sqrt(n). The real requirement is n >= 1,543 to exclude zero
           and n >= 4,539 for a half-width within 1 MDC, against 240 used. And
-          the rows already exist: cloning_trials() yields 1,016 at mc/legacy
-          (the run took the first 240) and 8,128 across all 32 formats of the
-          254 selection-split content items. No new trials, no test-split
-          access. THIS IS THE CHEAPEST LEVER and the ONLY one that changes no
-          pre-registered quantity -- it needs no author decision.
+          cloning_trials() yields 1,016 rows and the run took the first 240,
+          so a 4.2x increase is free, needs no author decision and touches no
+          pre-registered quantity. CORRECTION: the 8,128 rows across all 32
+          formats are NOT legitimate here -- training_trials() is mc/legacy
+          only, so other formats would measure format generalisation, not
+          cloning. At the real ceiling of n=1,016 the CI half-width goes from
+          4.35 MDC to 2.11 MDC: enough to clear zero at the present estimate,
+          SHORT of the gate's <= 1 MDC. More rows alone does not pass Gate B3.
           CAVEAT THAT DECIDES IT: those rows span only 254 distinct content
           items. If the cloning residual is content-driven rather than
           format-driven, the effective n saturates near 254 and the lever fails

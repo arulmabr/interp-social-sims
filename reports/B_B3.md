@@ -222,9 +222,14 @@ large signal and the adapters clone. Three levers, cheapest first:
    applying the gate's own criterion. The gate reads the CI half-width, `1.96 * floor / sqrt(n)`:
      - to make the CI **exclude zero** (half-width < the 0.0302 signal): **n >= 1,543**
      - to make the half-width **<= 1 MDC** (0.0176): **n >= 4,539**
-   against n = 240 today. And the rows already exist: `cloning_trials()` yields **1,016** rows at
-   mc/legacy alone -- the run used only the first 240 of them -- and 8,128 across all 32 formats of the
-   254 selection-split content items. No new trials, no test-split access, ~19x more reads.
+   against n = 240 today. **The legitimate pool is smaller than it first appears.** `cloning_trials()`
+   yields 1,016 rows and the run used only the first 240, so a 4.2x increase is free. The 8,128 rows
+   available across all 32 formats are **not** usable for this: `training_trials()` is `mc`/`legacy`
+   only, so probing other formats would measure format generalisation, not cloning.
+   At n = 1,016 the CI half-width falls from 4.35 MDC to **2.11 MDC** (0.0372). That is very likely
+   enough to push the interval clear of zero -- the estimate is 0.0474 -- but **still short of the
+   gate's half-width <= 1 MDC**, which needs n >= 4,539. So this lever improves the result markedly
+   and does not on its own clear Gate B3.
 
    **The caveat that decides whether it actually works.** Those 8,128 rows come from only **254 distinct
    content items**. If the cloning residual is driven by content rather than by format, the effective n

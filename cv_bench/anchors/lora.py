@@ -59,6 +59,15 @@ STEM = "Answer:"
 #: scale match, not a fit, and is overridden by --tau once B2-cal lands.
 PROVISIONAL_TAU = 0.0873
 
+def _sha256(p: Path) -> str:
+    import hashlib
+    h = hashlib.sha256()
+    with open(p, "rb") as fh:
+        for blk in iter(lambda: fh.read(1 << 20), b""):
+            h.update(blk)
+    return h.hexdigest()
+
+
 ADAPTERS = ("reference", "preference", "bias")
 
 
@@ -348,6 +357,10 @@ def main(argv=None) -> int:
                     help="run a cloning probe every N steps, to see the slope trajectory")
     ap.add_argument("--clone-probe", type=int, default=60,
                     help="how many selection-split prompts the mid-training probe uses")
+    ap.add_argument("--adapters-from", type=Path, default=None,
+                    help="load adapter_<name>.pt from this run instead of training. "
+                         "Used to re-probe cloning on more rows without retraining "
+                         "(BD47: n=240 was the binding constraint, not the adapters).")
     ap.add_argument("--four-bit", action="store_true",
                     help="fallback if bf16 does not fit; recorded as a deviation")
     ap.add_argument("--out", type=Path, default=DEFAULT_OUT)
@@ -388,18 +401,34 @@ def main(argv=None) -> int:
         results["adapters"][n] = {"params": agents[n].as_dict(),
                                   "target_mean_p_risky": float(targets[n].mean())}
 
-    for name in ADAPTERS:
-        print(f"--- training {name} ---", flush=True)
-        info = train_adapter(peft_model, tok, ro, name, train, targets[name],
-                             args.steps, args.lr, args.seed, args.accum, args.out,
-                             clone_every=args.clone_every,
-                             clone_trials=clone[:args.clone_probe],
-                             clone_agent=agents[name],
-                             train_probe=train[:args.clone_probe])
-        results["adapters"][name].update(info)
-        from peft import get_peft_model_state_dict
-        torch.save(get_peft_model_state_dict(peft_model, adapter_name=name),
-                   args.out / f"adapter_{name}.pt")
+    if args.adapters_from is not None:
+        # Re-probe an existing run's adapters. Nothing is trained, so the
+        # adapters are bit-identical to the ones that produced the first result
+        # and only the number of clone rows changes.
+        from peft import set_peft_model_state_dict
+        results["adapters_from"] = str(args.adapters_from)
+        for name in ADAPTERS:
+            src = args.adapters_from / f"adapter_{name}.pt"
+            sd = torch.load(src, map_location="cpu")
+            peft_model.set_adapter(name)
+            set_peft_model_state_dict(peft_model, sd, adapter_name=name)
+            results["adapters"][name]["loaded_from"] = src.name
+            results["adapters"][name]["sha256"] = _sha256(src)
+            print(f"loaded adapter {name} from {src.name} "
+                  f"({len(sd)} tensors)", flush=True)
+    else:
+        for name in ADAPTERS:
+            print(f"--- training {name} ---", flush=True)
+            info = train_adapter(peft_model, tok, ro, name, train, targets[name],
+                                 args.steps, args.lr, args.seed, args.accum, args.out,
+                                 clone_every=args.clone_every,
+                                 clone_trials=clone[:args.clone_probe],
+                                 clone_agent=agents[name],
+                                 train_probe=train[:args.clone_probe])
+            results["adapters"][name].update(info)
+            from peft import get_peft_model_state_dict
+            torch.save(get_peft_model_state_dict(peft_model, adapter_name=name),
+                       args.out / f"adapter_{name}.pt")
 
     z_clone_agent = {n: latent_z_packed(pack(clone), agents[n]) for n in ADAPTERS}
     z_clone_model = {}
@@ -407,6 +436,20 @@ def main(argv=None) -> int:
         z_clone_model[name] = read_adapter(peft_model, ro, name, clone, args.out)
         chk = cloning_check(z_clone_model[name], z_clone_agent[name])
         results["cloning"][name] = chk
+        # BD47: the effective n depends on how much of the cloning residual is
+        # shared within a content item, which cannot be recovered from the
+        # model-side reads alone. Persist both sides, the residual and the
+        # content id so the intraclass correlation is computable afterwards.
+        _zm, _za = z_clone_model[name], z_clone_agent[name]
+        _ok = np.isfinite(_zm) & np.isfinite(_za)
+        _res = np.full_like(_zm, np.nan, dtype=float)
+        if _ok.sum() >= 2:
+            _b, _c = np.polyfit(_za[_ok], _zm[_ok], 1)
+            _res[_ok] = _zm[_ok] - (_b * _za[_ok] + _c)
+        np.savez(args.out / f"residuals_{name}.npz",
+                 z_model=_zm, z_agent=_za, residual=_res,
+                 content_id=np.array([str(t.content_id) for t in clone]),
+                 trial_id=np.array([str(t.trial_id) for t in clone]))
         print(f"cloning {name}: r={chk['correlation']:.4f} "
               f"slope={chk['slope']:.4f} {'PASS' if chk['PASS'] else 'FAIL'}", flush=True)
 
