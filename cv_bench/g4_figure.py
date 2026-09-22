@@ -196,22 +196,39 @@ def build():
     panel_d(axes[3]); panel_e(axes[4])
 
     note = fig.add_subplot(gs[1, 2]); note.axis("off")
-    note.text(0.0, 1.0, "What the panels establish", color=INK, fontsize=9,
+    note.text(0.0, 1.0, "What each panel answers", color=INK, fontsize=10,
               va="top", weight="bold")
-    note.text(0.0, 0.91,
-              "A  Across a 60-fold dose range layer 48 moves the switching\n"
-              "    point under one grid step. Layer 50 moves ~10 steps and\n"
-              "    reverses at the top dose.\n\n"
-              "B  Unsteered, run as committed the pipeline codes 1-2% of\n"
-              "    trials; the rebuild codes 98%.\n\n"
-              "C  Legacy and strict codings agree at 12 and 256 tokens and\n"
-              "    disagree at 64, where the model restates the options\n"
-              "    without concluding.\n\n"
-              "D  Readout and free-generation crossings sit 25-34 grid steps\n"
-              "    apart (r = 0.16-0.31), so sampled generation is primary.\n\n"
-              "E  The probe is nearly orthogonal to the readout gradient and\n"
-              "    closest to difference-of-means.",
-              color=INK2, fontsize=7, va="top", linespacing=1.45)
+
+    # Each entry is the question the panel settles and the answer, not a
+    # restatement of the numbers already visible in it.
+    items = [
+        ("A", "Does steering the probe change the choice?",
+         "Not at layer 48, the layer the paper's figures use.\n"
+         "At layer 50 it does, but reverses at high dose."),
+        ("B", "Can the released code produce a curve at all?",
+         "No. Run as committed it almost never gets an\n"
+         "answer out of the model. The rebuilt pipeline does."),
+        ("C", "Is the coding disagreement real ambiguity?",
+         "No — an artefact of the token budget. Given room\n"
+         "to finish, the rules agree on what was chosen."),
+        ("D", "Can the logit readout stand in for text?",
+         "No. It disagrees with free generation about where\n"
+         "the model switches, so sampled text stays primary."),
+        ("E", "Is the probe the model's answer direction?",
+         "No. It sits far closer to a contrastive direction\n"
+         "than to the gradient of the answer itself."),
+    ]
+    # Lay the block out by accumulating real line heights rather than guessing
+    # a single step: the entries have different numbers of answer lines, and a
+    # fixed step ran the answers into the next question.
+    Q_H, A_H, GAP = 0.052, 0.044, 0.032
+    y = 0.90
+    for tag, question, answer in items:
+        note.text(0.0, y, f"{tag}  {question}", color=INK, fontsize=8,
+                  va="top", weight="bold")
+        note.text(0.030, y - Q_H, answer, color=INK2, fontsize=7.6,
+                  va="top", linespacing=1.45)
+        y -= Q_H + A_H * (answer.count("\n") + 1) + GAP
 
     fig.suptitle("G4: the probe rebuild, both variants and both layers",
                  color=INK, fontsize=12)
