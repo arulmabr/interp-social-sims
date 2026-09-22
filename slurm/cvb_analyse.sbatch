@@ -3,9 +3,9 @@
 #SBATCH --partition=mit_normal
 #SBATCH --account=mit_general
 #SBATCH --qos=normal
-#SBATCH --cpus-per-task=2
+#SBATCH --cpus-per-task=4
 #SBATCH --mem=16G
-#SBATCH --time=02:00:00
+#SBATCH --time=04:00:00
 #SBATCH --exclude=node2119
 #SBATCH --requeue
 #SBATCH --open-mode=append
@@ -21,6 +21,7 @@ echo "$(date -u +%FT%TZ) analyse start job=$SLURM_JOB_ID step=${STEP:-instr}"
 case "${STEP:-instr}" in
   instr)   python3 -u -m cv_bench.instr_analyse ;;
   g2)      python3 -u -m cv_bench.g2_summary ;;
+  g4report) python3 -u -m cv_bench.g4_report ;;
   *)       echo "unknown STEP=${STEP}"; exit 2 ;;
 esac
 rc=$?
