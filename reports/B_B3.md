@@ -216,8 +216,24 @@ large signal and the adapters clone. Three levers, cheapest first:
 2. **A larger true signal.** 0.0302 is the mean dz from shifting alpha by its MDC. Anchoring at a
    multiple of the MDC would lift the signal without touching the estimator, at the cost of no longer
    testing the detection limit.
-3. **More clone rows.** The floor scales as 1/sqrt(n); n=240 now. Resolving a 20x burial needs
-   n ~ 10^5, which is not affordable. **This lever does not work** and is recorded so it is not retried.
+3. **More clone rows -- CORRECTED, and now the cheapest lever, not the impossible one.** An earlier
+   version of this section said a 20x burial needs n ~ 10^5 and that the lever "does not work". **That
+   was wrong arithmetic** -- it squared the burial ratio and multiplied by the current n, instead of
+   applying the gate's own criterion. The gate reads the CI half-width, `1.96 * floor / sqrt(n)`:
+     - to make the CI **exclude zero** (half-width < the 0.0302 signal): **n >= 1,543**
+     - to make the half-width **<= 1 MDC** (0.0176): **n >= 4,539**
+   against n = 240 today. And the rows already exist: `cloning_trials()` yields **1,016** rows at
+   mc/legacy alone -- the run used only the first 240 of them -- and 8,128 across all 32 formats of the
+   254 selection-split content items. No new trials, no test-split access, ~19x more reads.
+
+   **The caveat that decides whether it actually works.** Those 8,128 rows come from only **254 distinct
+   content items**. If the cloning residual is driven by content rather than by format, the effective n
+   saturates near 254 and this lever fails for a subtler reason than the one first given. That is a
+   measurable quantity -- the intraclass correlation of the residual within content -- but it cannot be
+   recovered from what the run saved: `ckpt_read_*.npz` holds the model-side reads only, and an attempt
+   to reconstruct the agent-side z from `cloning_trials()` came back at corr = -0.081 against the
+   recorded 0.9909, i.e. misaligned. **`lora.py` should persist the per-row residual and content id**;
+   then the ICC settles this at zero GPU cost.
 
 **AUTHOR DECISION.** Levers 1 and 2 both change a pre-registered quantity -- the anchor's training
 protocol and the anchor's dose respectively. Track B stops here.
