@@ -205,11 +205,11 @@ def build():
         ("A", "Does steering the probe change the choice?",
          "Not at layer 48, the layer the paper's figures use.\n"
          "At layer 50 it does, but reverses at high dose."),
-        ("B", "Can the released code produce a curve at all?",
-         "No. Run as committed it almost never gets an\n"
-         "answer out of the model. The rebuilt pipeline does."),
+        ("B", "Can the paper's own recipe produce a curve?",
+         "No. Run with its published settings it almost never\n"
+         "gets an answer out of the model. The rebuild does."),
         ("C", "Is the coding disagreement real ambiguity?",
-         "No — an artefact of the token budget. Given room\n"
+         "No, an artefact of the token budget. Given room\n"
          "to finish, the rules agree on what was chosen."),
         ("D", "Can the logit readout stand in for text?",
          "No. It disagrees with free generation about where\n"
@@ -231,7 +231,15 @@ def build():
         y -= Q_H + A_H * (answer.count("\n") + 1) + GAP
 
     fig.suptitle("G4: the probe rebuild, both variants and both layers",
-                 color=INK, fontsize=12)
+                 color=INK, fontsize=12, y=0.995)
+    # Two lines: a single long line makes bbox_inches="tight" stretch the whole
+    # figure to the width of the text.
+    fig.text(0.5, 0.955,
+             "\"As-written\" reproduces the paper's published settings: raw prompt, no chat "
+             "template, 12 new tokens, the legacy parser and position policy,\n"
+             "with prompt strings verified character-identical to Probes/tasks/prompts.py. "
+             "G2 imports those modules and runs them directly.",
+             ha="center", va="top", color=INK2, fontsize=7.5, linespacing=1.5)
     save(fig, "g4_summary")
 
 
