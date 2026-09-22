@@ -332,17 +332,33 @@ The result. Logistic switching points, local vLLM stack, cluster bootstrap 95%.
      before answering."
 
   Caveats that must survive any edit.
-    1. Stack. These ran on local vLLM (bf16, tensor-parallel 2, temperature 0.7,
-       top-p 1.0), not the hosted Goodfire stack behind Figures 3 and 5. The
-       unsteered lottery switching points differ: 132.9 hosted against 106.8
-       vLLM. The figure plots Stack A's baseline as a labelled reference line
-       only and differences nothing across stacks. Any sentence must name the
-       stack.
+    1. Stack, and what publishing this exposes. These ran on local vLLM (bf16,
+       tensor-parallel 2, temperature 0.7, top-p 1.0), not the hosted Goodfire
+       stack behind Figures 3 and 5. The unsteered lottery switching points
+       differ: 132.9 hosted against 106.8 vLLM, a 26-token gap. The figure plots
+       Stack A's baseline as a labelled reference line only and differences
+       nothing across stacks, but printing the panel puts that gap in front of a
+       reviewer. It is PAPER_AUDIT section 2.2, which states that until the gap
+       is settled no comparison between the probe results and the prompting or
+       SAE results is safe. This patch does not create the problem; it makes it
+       visible. Decide that deliberately rather than by accident.
+    1b. The phrase "prompting dose-response" in Section 3.1 presupposes a
+       response. The lottery has none. If the panel goes in, the phrase should
+       become "prompting dose series" or similar.
     2. Two estimators. MANIFEST registers the logistic fit. Legacy linear
        interpolation gives 140.0 for cot where the logistic gives 175.7, because
        the curve is shallow and non-monotone there. Report one and name it.
     3. The rho = 0 lottery cell never crosses 0.5, so that panel has four usable
        points, not five.
+    4. The exemplar sets are not symmetric, and rho is not the only thing that
+       changes along the sweep. Registered in the MANIFEST notes: the lottery
+       dose100 prompt contains 1 of 6 demonstrations of a dominated choice, and
+       the ultimatum dose000 prompt contains 3 of 6 demonstrations of a
+       catch-trial rejection. Moving along rho therefore changes both which
+       action the examples take and how many irrational examples the model sees.
+       This does not affect the flat lottery result, but it is a plausible
+       partial explanation for the ultimatum drop at rho = 1.0, which is the
+       endpoint with no catch-trial demonstrations at all.
 
 --------------------------------------------------------------------------------
 W10. AN EFFECT SIZE AND AN INTERVAL FOR THE PERSONA RESULT  figures/s1_8_persona
@@ -351,8 +367,28 @@ W10. AN EFFECT SIZE AND AN INTERVAL FOR THE PERSONA RESULT  figures/s1_8_persona
 Why. Section 4.2.1 reports the persona result as bare numbers: baseline shifts
 "around 125", prompted agents "pivot when the reward is only 20"; ultimatum
 baseline "exceeds 30" against prompted "only 10 tokens". No interval, no n, no
-test. The logs support all three, and the measured values corroborate the
-published ones.
+test.
+
+This patch is a CORRECTION, not a corroboration, and an earlier draft of this
+section said otherwise. Three of the four published values fall outside the
+fitted intervals:
+
+      published           measured               inside?
+      around 125          132.9 [131.3, 134.5]   no, though "around" is hedged
+      only 20 tokens       20.0 [19.8, 20.2]     yes, exact
+      exceeds 30           37.9 [36.9, 38.9]     no
+      only 10 tokens       12.8 [11.5, 13.9]     no
+
+The direction and rough magnitude of both persona effects hold. The stated
+values mostly do not. The ultimatum baseline of 37.9 agrees with Fig. 3B (~38)
+and not with the text, which settles PAPER_AUDIT section 2.2's text-versus-
+figure disagreement in the figure's favour. That, rather than confirmation, is
+this patch's real contribution.
+
+Redundancy, stated plainly. The hosted rows measure the same experiment Figure 3
+already shows. What is new is the intervals, the permutation test, the four
+corrected values and the two unreported arms below. As a figure it duplicates
+Figure 3 and should not be added as one; the numbers belong in the text.
 
     HOSTED STACK, logistic fits, primary CI holds levels fixed and resamples
     responses within level; sensitivity resamples levels too. 2,000 draws.

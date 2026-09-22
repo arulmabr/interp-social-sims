@@ -1125,3 +1125,42 @@ columns in the new section (the four over-length lines at 95, 157, 161 and 222 p
 and are left alone).
 
 Recoverable: the four files are in git history at 8717d38.
+
+## D84 — W10 recharacterised: it corrects published values, it does not corroborate them (22 Sept)
+
+The authors asked whether s1_7 and s1_8 really neither contradict nor duplicate the
+submission. Checking rather than asserting, the answer for s1_8 is no, and D82's "corroborated"
+verdict was wrong.
+
+Against the four values in Section 4.2.1:
+
+      published        measured               inside the interval
+      around 125       132.9 [131.3, 134.5]   no, though "around" is hedged
+      only 20 tokens    20.0 [19.8, 20.2]     yes, exact
+      exceeds 30        37.9 [36.9, 38.9]     no
+      only 10 tokens    12.8 [11.5, 13.9]     no
+
+One of four. The direction and rough magnitude of both persona effects hold; three of the four
+stated numbers do not. What the patch actually does is settle PAPER_AUDIT section 2.2's
+text-versus-figure disagreement on the ultimatum baseline: 37.9 agrees with Fig. 3B (~38) and
+not with the text's 30.
+
+It is also redundant as a figure. The hosted rows measure the experiment Figure 3 already
+shows; the new content is the intervals, the test, the corrected values and the two unreported
+arms. W10 now says so and recommends the numbers go in the text rather than as a panel.
+
+W9 survives the same check, with one caveat added rather than removed: its baseline is 106.8
+against the hosted 132.9, so printing the panel puts PAPER_AUDIT section 2.2's 26-token
+cross-stack gap in front of a reviewer. The patch does not create that problem but it does make
+it visible, and the authors should decide that deliberately. A second, smaller point added:
+"prompting dose-response" in Section 3.1 presupposes a response the lottery does not show.
+
+Also added to W9, from a question in session and previously unlogged: the exemplar sets are
+asymmetric. The lottery dose100 prompt carries 1 of 6 dominated-choice demonstrations and the
+ultimatum dose000 prompt carries 3 of 6 catch-trial demonstrations
+(S1.7.exemplars.*.fraction_positive notes). Moving along rho changes both which action the
+examples take and how many irrational examples appear, which is a plausible partial explanation
+for the ultimatum drop at rho = 1.0.
+
+Changed: friday_session.txt section 7 (W10 "Why" block, W9 caveats 1, 1b and 4);
+paper_patches/CLAIMS.csv rows GAP-persona-ci and GAP-ladder. No figure or data changed.
