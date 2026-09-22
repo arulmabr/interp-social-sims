@@ -572,3 +572,35 @@ against a pooled log p of +5.12. Two of 40 cells have a negative slope, both in 
 So the withdrawal of "undermines the contextual-utility assumption" stands on the corrected prompts
 too. CPT's residual RMSE is **3.87** against a z SD of 3.96 — the parametric model explains almost
 none of the variance, which is the same story gamma railing tells.
+
+**BD39. theta0 on corrected prompts, refitted under bounds that do not bind: alpha 0.701, gamma 1.685,
+tau 0.119.** With gamma capped at 1.60 the fit returned exactly 1.600; widened to 4.0 it settles at
+**1.6849** and **no parameter is on a bound**, so this is an estimate rather than a description of my
+optimiser. The earlier 1.600 is superseded.
+
+Set against plan v4's theta0 = (alpha 0.88, gamma 0.61, lambda 2.25):
+
+| parameter | plan v4 | fitted on this model |
+|---|---|---|
+| alpha | 0.88 | **0.701** — more curvature |
+| gamma | 0.61 (inverse-S) | **1.685 (S-shaped)** — the opposite direction |
+| tau | — | 0.1186 |
+
+**Gamma's sign is reversed relative to the plan's assumption.** Plan v4 assumes inverse-S weighting,
+which overweights small probabilities — the standard human finding. This model's weighting is
+S-shaped: it *under*weights small probabilities. That is consistent with everything else measured
+here — the CPT residuals are most negative at p = 0.1 (about -4.5 across every stake in the first run),
+and the model is far more averse to low-probability gambles than an inverse-S agent would be.
+
+**But the parametric model fits badly regardless.** CPT's residual RMSE is **3.869** against an
+observed z SD of **3.957**: the fitted model explains essentially none of the variance in z. So gamma
+1.685 is the best CPT can do on this data, not evidence that this model is a CPT agent with S-shaped
+weighting. Both facts are reported together; quoting the parameter without the residual would be
+misleading. The B3.2 adapters are trained to a *specified* agent rather than to this fit, so the poor
+fit does not contaminate the anchors — it constrains what a comparison against the unmodified model
+can claim.
+
+The within-cell slope on corrected prompts is again positive: mean **+2.74**, all four p = 0.5 stakes
+positive (2.77, 5.97, 2.91, 2.35), joint within-cell log x **+3.00** against a pooled log p of +5.12.
+Two of 40 cells run negative, both in the saturated floor. The withdrawal of "undermines the
+contextual-utility assumption" therefore stands on the corrected prompts as well.

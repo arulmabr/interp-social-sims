@@ -210,6 +210,8 @@ def cpt_residuals(trials, z, par: AgentParams) -> Dict[str, object]:
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--in-dir", type=Path, default=DEFAULT_IN)
+    ap.add_argument("--refit", action="store_true",
+                    help="refit theta0 from the saved reads under current bounds")
     args = ap.parse_args(argv)
 
     trials, z, mass = load_reads(args.in_dir)
@@ -219,6 +221,33 @@ def main(argv=None) -> int:
     cal = json.loads((args.in_dir / "b2_cal.json").read_text())
     fitted = AgentParams(alpha=cal["fitted"]["alpha"], gamma=cal["fitted"]["gamma"],
                          lam=LAMBDA0, tau=cal["fitted"]["tau"])
+
+    # Refit from the saved reads under the current bounds. The stored fit was
+    # produced with gamma capped at 1.60 and landed exactly on it, so it
+    # describes the cap rather than the model; this says where the optimiser
+    # actually wants to sit, and whether it rails again.
+    refit = None
+    if args.refit:
+        ok = np.isfinite(z) & (mass > 0.5)
+        use = [t for t, k in zip(trials, ok) if k]
+        sigma = max(float(cal["numerical_noise"]["sd_mean"]), 1e-3)
+        par, _, ll = FIT.fit(use, z[ok], ("alpha", "gamma", "tau"),
+                             AgentParams(), free_templates=True,
+                             observe="logit", sigma=sigma, seed=0, restarts=6)
+        b = FIT.BOUNDS
+        railed = {n: bool(abs(getattr(par, {"gamma": "gamma", "alpha": "alpha",
+                                            "tau": "tau"}[n]) - b[n][1]) < 1e-3
+                          or abs(getattr(par, n) - b[n][0]) < 1e-3)
+                  for n in ("alpha", "gamma", "tau")}
+        refit = {"alpha": par.alpha, "gamma": par.gamma, "tau": par.tau,
+                 "loglik": ll, "bounds": {k: list(v) for k, v in b.items()
+                                          if k in ("alpha", "gamma", "tau")},
+                 "railed": railed,
+                 "note": ("a parameter sitting on its bound is not an estimate; "
+                          "it is reported as unidentified rather than quoted")}
+        print(f"refit under wider bounds: alpha={par.alpha:.4f} "
+              f"gamma={par.gamma:.4f} tau={par.tau:.4f}  railed={railed}", flush=True)
+        fitted = par
 
     within = slope_within_cells(trials, z)
     half = slope_at_half(trials, z)
@@ -238,7 +267,7 @@ def main(argv=None) -> int:
     out = {"utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
            "provenance": prov, "within_cell": within, "at_p_half": half,
            "joint_regression": joint, "cpt_residual": resid,
-           "fitted_used": fitted.as_dict(),
+           "fitted_used": fitted.as_dict(), "refit": refit,
            "gamma_note": ("gamma 1.50 under the Tversky-Kahneman form is S-shaped "
                           "weighting, which UNDERweights small probabilities; plan "
                           "v4's 0.61 is the inverse-S that overweights them. "
