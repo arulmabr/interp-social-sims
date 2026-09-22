@@ -581,3 +581,27 @@ the rule and defeat its purpose.
 
 **Numbering.** Neither checkout has rules 13–15; this file holds 1–12. The authors' number 16 is kept
 as given so their reference resolves, rather than renumbered to 13.
+
+**D63. A framing selection was written from zero free-generation levels; it is quarantined, not used.**
+Taken under rule 16 and recorded with the alternatives.
+
+`cvb_neutral2` was cancelled during a queue reshuffle and never ran, so `neutral/free_llama.jsonl`
+does not exist. `cvb_choose` ran anyway on its `afterany` dependency, found no free generations, and
+wrote `framing_choice.json` reporting `{"framing": "counterbalanced", "passed": false}` with
+`n_free_levels = 0` in every cell. G3 reads that file and would have used the framing as though a
+selection had been made.
+
+**Chosen:** rename the file to `framing_choice_EMPTY_n0.json`, resubmit `cvb_neutral2`, and re-chain
+G3 on **`afterok`** rather than `afterany`, so a cancelled or failed neutral pass no longer releases
+the job that depends on its output.
+
+**Alternatives not taken.** (a) Delete the file — rejected: it is evidence of how the gap arose, and
+deleting is not reversible. (b) Leave it and let G3 record "default, no selection" — rejected: the
+file *claims* a selection, and `chosen_framing()` reports a selection as made when the file parses.
+(c) Make `choose_framing` refuse to write when `n_free_levels == 0` — worth doing and additive rather
+than corrective, but it does not address the file already on disk, so it follows rather than replaces
+this step.
+
+**The dependency lesson generalises.** `afterany` was the right choice for a step that should run
+whatever the upstream outcome; it is the wrong choice for a step that consumes the upstream's output.
+Every chain of the second kind is now `afterok`.

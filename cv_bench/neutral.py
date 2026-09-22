@@ -328,6 +328,10 @@ def choose_framing(model_key: str) -> Optional[dict]:
                   0.8 <= r["per_game"][g]["slope"] <= 1.2 for g in r["per_game"])]
     pick = (min(ok, key=lambda r: r["worst_slope_gap"]) if ok else
             max(rows, key=lambda r: r["min_valid_mass"]))
+    if not any(r["per_game"][g]["n_free_levels"] for r in rows for g in r["per_game"]):
+        print("[neutral] refusing to write a selection: no free generations on disk. "
+              "Run --phase free first.", flush=True)
+        return None
     doc = dict(framing=pick["framing"], passed=bool(ok),
                rule=("valid mass >= 0.98 in both games, then the slope of free "
                      "generation on the readout inside 0.8-1.2; ties by the "

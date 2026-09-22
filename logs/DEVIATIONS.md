@@ -305,3 +305,30 @@ flat range.
 **Rule 4.** The rerun is for a technical reason — the prompts could not exhibit the quantity being
 measured. No seed, dose, threshold, metric or label set was changed, and the first pass is retained
 and reported.
+
+---
+
+## 2026-09-21 22:30 UTC — cvb_neutral resubmitted automatically (attempt 2 of 2)
+
+**Cause:** state=CANCELLED by 234238 exit=0:0 outputs_incomplete. **Technical change:** none — the job is resubmitted unchanged and resumes from its own checkpoint. Seeds, prompts, doses, thresholds and metrics are untouched (CLAUDE.md rule 4).
+**New job id:** 23426859
+
+---
+
+## 2026-09-21 22:40 UTC — cvb_g4_as_wr_L50 resubmitted automatically (attempt 1 of 2)
+
+**Cause:** state=COMPLETED exit=0:0 outputs_incomplete. **Technical change:** none — the job is resubmitted unchanged and resumes from its own checkpoint. Seeds, prompts, doses, thresholds and metrics are untouched (CLAUDE.md rule 4).
+**New job id:** 23427686
+
+---
+
+## 2026-09-21 23:11 UTC — cvb_neutral stopped after 2 retries
+
+Cause on the last attempt: **state=CANCELLED by 234238 exit=0:0 outputs_incomplete**. No further automatic resubmission; the authors are told. No seed, prompt, dose, threshold or metric was changed on any retry.
+
+---
+
+## 2026-09-21 23:11 UTC — cvb_g4_as_wr_L50 resubmitted automatically (attempt 2 of 2)
+
+**Cause:** state=CANCELLED by 234238 exit=0:0 outputs_incomplete. **Technical change:** none — the job is resubmitted unchanged and resumes from its own checkpoint. Seeds, prompts, doses, thresholds and metrics are untouched (CLAUDE.md rule 4).
+**New job id:** 23431145
