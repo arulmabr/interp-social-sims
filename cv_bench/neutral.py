@@ -258,6 +258,52 @@ def phase_free(model_key: str, agents: int = 8, n_levels: int = 10,
     sink.close()
 
 
+def phase_mass_at_free(model_key: str, loaded=None) -> None:
+    """Score the readout at exactly the levels free generation used.
+
+    `phase_mass` scores the calibration values; `phase_free` scores levels that
+    straddle each framing's switching point (D-2026-09-21-10). Those two sets
+    barely intersect -- 37 keys of 344 -- so the slope of free-generation
+    frequency on readout probability was being computed from accidental
+    overlaps. This pass closes the join: one forward pass per (framing, game,
+    value, flip) that free generation actually visited.
+    """
+    from cv_bench.readout import Readout, TrialSpec
+    model, tok = loaded or load(model_key, "bf16")
+    rd = Readout(model, tok)
+    want = []
+    seen = set()
+    for line in open(OUT / f"free_{model_key}.jsonl"):
+        try:
+            r = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        k = (r["framing"], r["game"], r["value"], r["flip"])
+        if k not in seen:
+            seen.add(k)
+            want.append(k)
+    print(f"[neutral] scoring the readout at {len(want)} free-generation levels",
+          flush=True)
+    sink = JsonlSink(OUT / f"mass_at_free_{model_key}.jsonl",
+                     key=lambda r: f"{r['framing']}|{r['game']}|{r['value']}|{r['flip']}")
+
+    def work(u):
+        f, g, v, fl = u
+        prompt, labels = build(f, g, int(v), fl)
+        spec = TrialSpec(prompt=prompt, labels=labels, stem=STEM_OF[f],
+                         use_chat_template=True)
+        res = rd.score(spec)
+        return dict(model=model_key, framing=f, game=g, value=int(v), flip=bool(fl),
+                    labels=list(labels), stem=STEM_OF[f],
+                    p_positive=res.prob[labels[1]], logit_diff=res.logit_diff,
+                    valid_mass=res.valid_mass, source="mass_at_free")
+
+    install_stop_handler()
+    run_units(want, sink, lambda u: f"{u[0]}|{u[1]}|{u[2]}|{u[3]}", work,
+              "mass-at-free", 25)
+    sink.close()
+
+
 def choose_framing(model_key: str) -> Optional[dict]:
     """Pick the neutral framing, on valid mass first and agreement second.
 
@@ -268,7 +314,11 @@ def choose_framing(model_key: str) -> Optional[dict]:
     non-circular comparison item 2 asks for -- both columns here come from the
     same prompts but only one of them is forced.
     """
-    mass_p = OUT / f"mass_{model_key}.jsonl"
+    matched = OUT / f"mass_at_free_{model_key}.jsonl"
+    mass_p = matched if matched.exists() else OUT / f"mass_{model_key}.jsonl"
+    if mass_p is matched:
+        print(f"[neutral] readout read from {matched.name}: scored at the same "
+              f"levels free generation used", flush=True)
     free_p = OUT / f"free_{model_key}.jsonl"
     if not mass_p.exists():
         return None
@@ -351,7 +401,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default="llama", choices=list(MODELS))
     ap.add_argument("--phase", default="all",
-                    choices=["mass", "free", "all", "choose"])
+                    choices=["mass", "free", "massfree", "all", "choose"])
     ap.add_argument("--agents", type=int, default=8)
     ap.add_argument("--levels", type=int, default=10)
     a = ap.parse_args()
@@ -361,6 +411,10 @@ def main() -> int:
         choose_framing(a.model)
         return 0
     loaded = load(a.model, "bf16") if a.phase == "all" else None
+    if a.phase == "massfree":
+        phase_mass_at_free(a.model)
+        choose_framing(a.model)
+        return 0
     if a.phase in ("mass", "all"):
         phase_mass(a.model, loaded)
     if a.phase in ("free", "all"):

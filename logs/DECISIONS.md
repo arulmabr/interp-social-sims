@@ -827,3 +827,36 @@ does not load the 70B for backward work and is unaffected.
 **Rule of thumb, recorded so the next such job is submitted correctly the first time:** a 70B forward
 pass fits in 2 x 80 GiB; a 70B *backward* pass does not. Anything calling `.backward()` on this model
 asks for `h200:2` or `a100:4`.
+
+**D74. The readout and the generation were scoring different prompts, so the selection joined on almost nothing.**
+`cvb_neutral2` completed and `cvb_g3` ran behind it, so the chain worked mechanically. The selection
+it produced does not.
+
+When D-2026-09-21-10 changed `phase_free` to span each framing's switching point, `phase_mass` was
+left scoring the calibration values. The two sets barely intersect: **37 shared keys out of 344**.
+`choose_framing` joins the readout probability to the sampled frequency on
+`(framing, game, value, flip)`, so its slope was computed from accidental overlaps --
+`n_free_levels` of 0, 2, 3, 10 and 20 where every cell should have 10.
+
+    mass levels (content/lottery):  22, 23, 27, 28, 32, 33 ...
+    free levels (content/lottery):  22, 33, 48, 62, 77, 88 ...
+
+**Chosen:** a new `--phase massfree` scores the readout at exactly the levels free generation
+visited -- 80 forward passes, about a minute -- and `choose_framing` prefers that file when it
+exists. `framing_choice.json` is renamed to `framing_choice_PARTIAL_JOIN.json`, not deleted, and G3
+is requeued behind the corrected selection.
+
+*Alternatives not taken:* record the readout probability inside each free-generation record, which is
+the cleanest design but needs the 640-sample pass regenerating (~35 min against ~1 min); or widen
+`phase_mass` to cover both sets, which scores hundreds of prompts nobody needs.
+
+**G3's completed run is not wasted but is not final.** Its 384 rows used
+`framing = counterbalanced`, chosen from the partial join, and its log says "selected by
+cv_bench/neutral.py" -- which was true of the file and false of the evidence. The legacy-label half
+of that run (128 rows) is unaffected by the framing and stands; the neutral half is superseded by
+the rerun.
+
+**Third instance of one shape.** D63 was a selection written from zero rows; this is a selection
+written from a join of almost none. Both parsed cleanly and both were consumed downstream as though
+they meant something. `choose_framing` now refuses an empty input (D63) -- it should also report the
+join size, which it now does through `n_free_levels` being visible in the file it writes.
