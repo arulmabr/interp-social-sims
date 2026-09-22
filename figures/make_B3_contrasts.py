@@ -1,4 +1,4 @@
-"""figures/B3_contrasts.{png,pdf} — the B3.2 anchor contrasts on Llama-3.3-70B.
+"""figures/B3_contrasts.{png,pdf} - the B3.2 anchor contrasts on Llama-3.3-70B.
 
 A table, but the interval column is drawn rather than written, because the whole
 point of the result is that one interval crosses zero and the other does not --
@@ -56,7 +56,7 @@ def main(argv=None) -> int:
     def to_x(v: float) -> float:
         return BAND_L + (v - vmin) / (vmax - vmin) * (BAND_R - BAND_L)
 
-    fig = plt.figure(figsize=(11.8, 4.0), dpi=200)
+    fig = plt.figure(figsize=(11.8, 3.5), dpi=200)
     fig.patch.set_facecolor(SURFACE)
     ax = fig.add_axes([0, 0, 1, 1])
     ax.set_xlim(0, 1); ax.set_ylim(0, 1); ax.axis("off")
@@ -64,7 +64,7 @@ def main(argv=None) -> int:
 
     T = dict(transform=ax.transAxes)
 
-    ax.text(X_LABEL, 0.935, "The anchor is the contrast — and only one of them resolves",
+    ax.text(X_LABEL, 0.925, "The anchor is the contrast, and only one of them resolves",
             fontsize=14, color=INK, va="bottom", **T)
 
     # column headers + rule
@@ -79,7 +79,7 @@ def main(argv=None) -> int:
     ax.plot([X_LABEL, 0.985], [0.802, 0.802], color=AXIS, lw=1.0, **T)
 
     # zero reference, behind the marks
-    ax.plot([to_x(0.0)] * 2, [0.235, 0.775], color=AXIS, lw=1.2, zorder=1, **T)
+    ax.plot([to_x(0.0)] * 2, [0.175, 0.775], color=AXIS, lw=1.2, zorder=1, **T)
 
     for i, (key, label) in enumerate(ROWS):
         c = C[key]
@@ -117,32 +117,24 @@ def main(argv=None) -> int:
         ax.text(X_VERDICT, y - 0.048, detail, fontsize=8.3, color=MUTED, va="center", **T)
 
     # value axis under the band
-    ax.plot([to_x(vmin + 0.02), to_x(vmax - 0.02)], [0.235, 0.235],
+    ax.plot([to_x(vmin + 0.02), to_x(vmax - 0.02)], [0.175, 0.175],
             color=AXIS, lw=1.0, **T)
     for t in TICKS:
-        ax.plot([to_x(t)] * 2, [0.235, 0.216], color=AXIS, lw=1.0, **T)
-        ax.text(to_x(t), 0.205, f"{t:g}", fontsize=8.5, color=MUTED,
+        ax.plot([to_x(t)] * 2, [0.175, 0.156], color=AXIS, lw=1.0, **T)
+        ax.text(to_x(t), 0.145, f"{t:g}", fontsize=8.5, color=MUTED,
                 ha="center", va="top", **T)
     ax.text(to_x(0.0), 0.790, "0", fontsize=8.5, color=MUTED,
             ha="center", va="bottom", **T)
 
     # legend for the two marks, beside the axis
     mid = (BAND_L + BAND_R) / 2
-    ax.plot([mid - 0.072], [0.128], marker="D", ms=7, color=SURFACE,
+    ax.plot([mid - 0.072], [0.072], marker="D", ms=7, color=SURFACE,
             markeredgecolor=INK, markeredgewidth=1.5, **T)
-    ax.text(mid - 0.058, 0.128, "planted", fontsize=8.5, color=MUTED, va="center", **T)
-    ax.plot([mid + 0.012], [0.128], "o", ms=8, color=MUTED,
+    ax.text(mid - 0.058, 0.072, "planted", fontsize=8.5, color=MUTED, va="center", **T)
+    ax.plot([mid + 0.012], [0.072], "o", ms=8, color=MUTED,
             markeredgecolor=SURFACE, markeredgewidth=1.5, **T)
-    ax.text(mid + 0.026, 0.128, "measured", fontsize=8.5, color=MUTED, va="center", **T)
+    ax.text(mid + 0.026, 0.072, "measured", fontsize=8.5, color=MUTED, va="center", **T)
 
-    floor = C["preference"]["noise_floor_sd"]
-    rs = ", ".join(f"{g['cloning'][k]['r']:.4f}" for k in ("reference", "preference", "bias"))
-    ax.text(X_LABEL, 0.015,
-            f"Llama-3.3-70B-Instruct, B3.2 LoRA anchors, n={g['n_clone']} selection-split "
-            f"prompts.  All three adapters clone (r = {rs}), yet each one's cloning "
-            f"residual has SD 0.38–0.47;\ntwo independent adapters give a contrast "
-            f"noise floor of {floor:.3f} — {C['preference']['buried_x']:.0f} times the planted preference shift.",
-            fontsize=8.3, color=MUTED, va="bottom", linespacing=1.55, **T)
 
     a.out.parent.mkdir(parents=True, exist_ok=True)
     for ext in ("png", "pdf"):
