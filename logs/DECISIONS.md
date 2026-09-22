@@ -1290,3 +1290,39 @@ They are not read from a file and are not in `MANIFEST.csv`, which is a rule 1 v
 not: the figure says 0.982 on n=27,120 while `llama_chat_lottery.jsonl` gives 1.0000 on n=576
 both-coded, so the figure's value comes from some larger aggregation not yet identified. Offered
 to the authors: recompute all three from files and register them. Not done yet.
+
+## D89 — the coding-agreement panel removed from g4_summary (22 Sept)
+
+Removed at the authors' instruction, and it should have been withdrawn on the evidence anyway.
+`g4_summary` is now two panels and the notes block: the readout against free generation (A) and
+direction geometry at layer 50 (B). Suptitle "G4: instrument and direction geometry".
+
+Why it could not stay, recorded because this is a retraction of my own claim and not a style
+change:
+
+  1. The three points are not a controlled comparison. They come from three different runs with
+     n = 27,120, 1,800 and 920, not from one prompt set swept across three budgets, while the
+     x axis is labelled "max new tokens" as though the budget were the only thing varying. The
+     12-token point's source was never located.
+  2. The points were hard-typed in `panel_c` and absent from `MANIFEST.csv`, which is a rule 1
+     violation. Only the 64-token value was ever reconciled against a file (0.5906 on n=1,800,
+     from `g2_lambda0/llama_chat64_lottery.jsonl`).
+  3. Two different mechanisms were asserted for it in the notes block, in D88 and before it,
+     and neither was measured on the panel's own data. The first (responses cut mid-sentence)
+     is contradicted by the 12-token arm, where truncation is higher and agreement is perfect.
+     The second (the reply lists both options before stopping) was stated without a check; a
+     later look at a 256-token slice showed a similar both-mention rate with very different
+     agreement, though that slice was itself mismatched and so settles nothing either way.
+
+What survives and is not in doubt: on `g2_lambda0/llama_chat64_lottery.jsonl`, 737 of 1,800
+trials are coded differently by the last-match and first-match rules, an agreement of 0.5906.
+That measurement is sound and stays available; what could not be supported was the curve built
+around it and the causal reading attached to it.
+
+To rebuild it properly: one fixed prompt set and format, generate at 12 / 64 / 128 / 256 varying
+nothing else, then compute agreement and a first-versus-last breakdown on identical trials.
+`instr_cap.csv` already has that design at 64/128/256 with n=140 and needs the 12-token arm and
+a larger n. Offered; not run.
+
+`panel_c` is deleted from `cv_bench/g4_figure.py` and recoverable at f2eafec. No report,
+patch or section of `friday_session.txt` referenced the panel, so nothing else needed changing.

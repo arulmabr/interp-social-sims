@@ -1,10 +1,9 @@
 """One figure carrying G4's results. figures/g4_summary.{pdf,png}
 
-Three panels, one per measurement property:
+Two panels, one per measurement property:
 
-  A  coding agreement against the token cap, with its denominators
-  B  the readout against free generation, the instrument check
-  C  direction geometry at layer 50, cosines as multiples of the 1/sqrt(d) null
+  A  the readout against free generation, the instrument check
+  B  direction geometry at layer 50, cosines as multiples of the 1/sqrt(d) null
 
 Every number is read from results/S/s1/*.csv. Nothing here is typed by hand.
 Palette and conventions from cv_bench/s1_figures.py.
@@ -27,31 +26,6 @@ def rows(name: str) -> List[dict]:
     return list(csv.DictReader(open(DATA / name, newline="")))
 
 
-def panel_c(ax):
-    """Legacy-vs-strict agreement against the token cap, denominators shown."""
-    # measured in this session; each point carries the trials both codings coded
-    pts = [(12, 0.982, "27,120"), (64, 0.591, "1,800"), (256, 0.999, "920")]
-    x = [p[0] for p in pts]
-    y = [p[1] for p in pts]
-    ax.plot(x, y, color=NAVY, marker="o", ms=5, lw=1.9)
-    style = {12: ((12, -2), "left", "center"),
-             64: ((0, -16), "center", "top"),
-             256: ((-12, -2), "right", "center")}
-    for cx, cy, n in pts:
-        off, ha, va = style[cx]
-        ax.annotate(f"{cy:.3f}  n={n}", xy=(cx, cy), xytext=off,
-                    textcoords="offset points", ha=ha, va=va,
-                    color=INK2, fontsize=7)
-    ax.set_xscale("log")
-    ax.set_xticks([12, 64, 256])
-    ax.set_xticklabels(["12", "64", "256"])
-    ax.set_ylim(0.45, 1.13)
-    ax.set_xlim(9, 340)
-    ax.set_xlabel("max new tokens", color=INK2, fontsize=8)
-    ax.set_ylabel("legacy vs strict agreement", color=INK2, fontsize=8)
-    ax.set_title("A  coding disagreement is a cap artefact", color=INK, fontsize=9, loc="left")
-
-
 def panel_d(ax):
     """Readout crossing against free-generation crossing."""
     ia = [r for r in rows("instr_agreement.csv")
@@ -71,7 +45,7 @@ def panel_d(ax):
     ax.set_xticks(xs)
     ax.set_xticklabels(labels, fontsize=7.5)
     ax.set_ylabel("crossing (tokens)", color=INK2, fontsize=8)
-    ax.set_title("B  the readout does not track free generation",
+    ax.set_title("A  the readout does not track free generation",
                  color=INK, fontsize=9, loc="left")
     ax.set_ylim(0, 300)
     ax.legend(frameon=False, fontsize=7, loc="upper center", ncol=2,
@@ -108,7 +82,7 @@ def panel_e(ax):
     ax.set_yticklabels(labels, fontsize=7)
     ax.set_xlabel("cosine with the choice probe  (multiples of the null)",
                   color=INK2, fontsize=8)
-    ax.set_title("C  the probe is not the readout direction", color=INK, fontsize=9, loc="left")
+    ax.set_title("B  the probe is not the readout direction", color=INK, fontsize=9, loc="left")
 
 
 def build():
@@ -117,46 +91,35 @@ def build():
     import matplotlib.pyplot as plt
     from matplotlib.gridspec import GridSpec
 
-    # 2x2: three panels and the notes block. A 1x4 row squeezed the bar labels.
-    fig = plt.figure(figsize=(9.8, 7.2))
-    gs = GridSpec(2, 2, figure=fig, hspace=0.42, wspace=0.34)
-    axes = [fig.add_subplot(gs[0, 0]), fig.add_subplot(gs[0, 1]),
-            fig.add_subplot(gs[1, 0])]
+    # one row: two panels and the notes block
+    fig = plt.figure(figsize=(12.6, 4.4))
+    gs = GridSpec(1, 3, figure=fig, wspace=0.34)
+    axes = [fig.add_subplot(gs[0, 0]), fig.add_subplot(gs[0, 1])]
     for ax in axes:
         ax.set_facecolor(SURFACE)
         ax.grid(False)
         ax.tick_params(labelsize=7.5, colors=INK2)
         for s_ in ax.spines.values():
             s_.set_color(GRID)
-    panel_c(axes[0]); panel_d(axes[1]); panel_e(axes[2])
+    panel_d(axes[0]); panel_e(axes[1])
 
-    note = fig.add_subplot(gs[1, 1]); note.axis("off")
+    note = fig.add_subplot(gs[0, 2]); note.axis("off")
     note.text(0.0, 1.0, "What each panel establishes", color=INK, fontsize=10,
               va="top", weight="bold")
 
-    # Each entry leads with the claim the panel supports and follows with the
-    # evidence for it. Statements rather than questions, to match the heading;
-    # findings rather than verdicts, since a column of answers all beginning
-    # "No" reads as a rebuttal, which is not what these measurements are.
+    # Claim first, evidence under it. Findings, not verdicts.
     items = [
-        ("A", "Legacy-strict disagreement is a budget artefact",
-         "A mid-range budget lets the reply list both options\n"
-         "before it stops, so first and last mention diverge.\n"
-         "Shorter and longer budgets each leave one answer."),
-        ("B", "Sampled generation stays the primary measure",
+        ("A", "Sampled generation stays the primary measure",
          "The readout and free generation locate the switch\n"
          "in different places, so the readout is a check on\n"
          "text rather than a substitute for it."),
-        ("C", "The choice probe is a contrastive direction",
+        ("B", "The choice probe is a contrastive direction",
          "It sits nearest difference-of-means and far from\n"
          "the gradient of the answer logit, which is a\n"
          "different object."),
     ]
-    # Lay the block out by accumulating real line heights rather than guessing
-    # a single step: the entries have different numbers of answer lines, and a
-    # fixed step ran the answers into the next question.
-    Q_H, A_H, GAP = 0.058, 0.048, 0.050
-    y = 0.90
+    Q_H, A_H, GAP = 0.075, 0.062, 0.070
+    y = 0.88
     for tag, question, answer in items:
         note.text(0.0, y, f"{tag}  {question}", color=INK, fontsize=8.0,
                   va="top", weight="bold")
@@ -164,8 +127,8 @@ def build():
                   va="top", linespacing=1.45)
         y -= Q_H + A_H * (answer.count("\n") + 1) + GAP
 
-    fig.suptitle("G4: coding, instrument and direction geometry",
-                 color=INK, fontsize=12, y=0.975)
+    fig.suptitle("G4: instrument and direction geometry",
+                 color=INK, fontsize=12, y=0.985)
     save(fig, "g4_summary")
 
 
