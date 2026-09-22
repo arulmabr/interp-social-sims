@@ -21,7 +21,7 @@ echo "$(date -u +%FT%TZ) node=$SLURMD_NODENAME job=$SLURM_JOB_ID restarts=${SLUR
 export HF_HOME=/orcd/data/gabrieli/001/guna23/hf_cache
 export HF_HUB_OFFLINE=1
 cd /home/guna23/shrey/risk
-srun python3 -u -m cv_bench.neutral --model llama --phase free --agents 8 --levels 10
-srun python3 -u -m cv_bench.neutral --model llama --phase choose
+srun python3 -u -m cv_bench.neutral --model llama --phase free --agents 8 --levels 10 || exit $?
+srun python3 -u -m cv_bench.neutral --model llama --phase choose || exit $?
 rc=$?
 exit "$rc"

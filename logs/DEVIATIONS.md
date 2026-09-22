@@ -332,3 +332,10 @@ Cause on the last attempt: **state=CANCELLED by 234238 exit=0:0 outputs_incomple
 
 **Cause:** state=CANCELLED by 234238 exit=0:0 outputs_incomplete. **Technical change:** none — the job is resubmitted unchanged and resumes from its own checkpoint. Seeds, prompts, doses, thresholds and metrics are untouched (CLAUDE.md rule 4).
 **New job id:** 23431145
+
+---
+
+## 2026-09-22 00:29 UTC — cvb_neutral2 resubmitted automatically (attempt 1 of 2)
+
+**Cause:** state=COMPLETED exit=0:0 log=traceback outputs_incomplete. **Technical change:** none — the job is resubmitted unchanged and resumes from its own checkpoint. Seeds, prompts, doses, thresholds and metrics are untouched (CLAUDE.md rule 4).
+**New job id:** 23437294

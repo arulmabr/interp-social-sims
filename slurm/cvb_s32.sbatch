@@ -21,7 +21,7 @@ export HF_HUB_OFFLINE=1
 cd /home/guna23/shrey/risk
 for P in legacy_ramp all_prompt last; do
   srun python3 -u -m cv_bench.g4 --model llama --variant reconstruction --layer 48 \
-       --phase sweep --positions "$P" --tag "s32_$P" --dose-ids 0,10 --directions probe
+       --phase sweep --positions "$P" --tag "s32_$P" --dose-ids 0,10 --directions probe || exit $?
 done
 rc=$?
 exit "$rc"

@@ -671,3 +671,20 @@ transient lasting seconds should not cost a queue cycle and a model reload.
 **Three failures, three distinct causes, one job.** `cvb_g5` failed on a request too small for the
 model (D64), on a script that reported the crash as success (D64), and now on a probe that could not
 tolerate a busy device. Each was hidden by the one before it.
+
+**D66. Only the last `srun` was propagating; now every one does.**
+D64 made each script capture `rc` after its final command. `cvb_neutral2` runs two phases and
+`cvb_g4b` and `cvb_s32` run theirs in a loop, so a failure in any but the last was still invisible:
+neutral2's `free` phase crashed on the busy-device transient, its `choose` phase then correctly
+refused to write a selection from no data (D63), and the job reported **COMPLETED in 24 seconds**.
+Two guards worked and the job still looked successful.
+
+Every `srun` now carries `|| exit $?`, including the indented ones inside `for` loops. Verified by
+counting: 13 scripts, every `srun` line propagating, all syntax-checked.
+
+**The pattern across D63-D66 is worth naming.** Four separate mechanisms each turned a failure into a
+silence: a dependency that fired on cancellation, a selection written from zero rows, an `echo` that
+overwrote a crash's exit status, and a loop that discarded all but its final iteration's. None was a
+wrong *result*; each was a missing *signal*. The guards that caught them — the placement assertion,
+the empty-selection refusal, the completion markers — all worked. What failed was the reporting path
+between the guard and me.

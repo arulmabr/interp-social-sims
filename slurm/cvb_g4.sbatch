@@ -24,7 +24,7 @@ nvidia-smi --query-gpu=index,name,memory.total --format=csv,noheader
 export HF_HOME=/orcd/data/gabrieli/001/guna23/hf_cache
 export HF_HUB_OFFLINE=1
 cd /home/guna23/shrey/risk
-srun python3 -u -m cv_bench.g4 --model llama --variant "$V" --layer "$L" --phase sweep
+srun python3 -u -m cv_bench.g4 --model llama --variant "$V" --layer "$L" --phase sweep || exit $?
 rc=$?
 echo "$(date -u +%FT%TZ) exit=$rc"
 exit $rc

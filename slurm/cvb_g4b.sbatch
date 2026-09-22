@@ -20,7 +20,7 @@ export HF_HOME=/orcd/data/gabrieli/001/guna23/hf_cache
 export HF_HUB_OFFLINE=1
 cd /home/guna23/shrey/risk
 for L in 48 50; do
-  srun python3 -u -m cv_bench.g4b --fallback --layer $L --game both
+  srun python3 -u -m cv_bench.g4b --fallback --layer $L --game both || exit $?
 done
 rc=$?
 exit "$rc"
