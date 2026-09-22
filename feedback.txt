@@ -1,0 +1,453 @@
+HIGH LEVEL SUMMARY
+Summary
+This paper investigates opening the 'black box' of large language model (LLM) generative agents in computational social science simulations by applying mechanistic interpretability and representation intervention techniques. The authors focus on two foundational behavioral primitives: preferences (risk attitudes in a safe-vs-risky lottery choice game and social decision-making in an ultimatum game responder setting) and capabilities (divergent creativity in an Alternative Uses Task for a brick and product innovation for a stapler improvement task). Using Llama-3.3-70B-Instruct as the primary backbone, the paper compares three steering paradigms: prompt-based manipulation, Sparse Autoencoder (SAE) latent feature nudging (utilizing an open-source 65k SAE at layer 50), and linear classifier probe steering (using an L2-regularized logistic regression direction at layer 48). The authors demonstrate that SAE latents provide human-readable interpretations of task-relevant representations, while linear probes enable continuous, dose-dependent calibration of agent decision thresholds. In addition, the paper explores capability steering evaluated across five frontier LLM judges under a length-controlled Torrance rubric, and replicates key probe findings on Qwen-2-7B-Instruct.
+
+Strengths
+The paper presents a timely conceptual bridge between mechanistic interpretability and computational social science, addressing the critical methodological challenge of black-box opacity and prompt brittleness in LLM-based generative agents.
+Targeting higher-order cognitive capabilities—specifically divergent creativity and product innovation—alongside canonical economic preferences represents an innovative domain expansion of representation steering beyond standard safety, refusal, and truthfulness benchmarks.
+The evaluation protocol for open-ended creative capabilities demonstrates commendable rigor by utilizing five diverse, independent frontier LLM judges under a randomized, length-controlled Torrance rubric, supported by high inter-rater reliability (mean pairwise Spearman correlation of 0.77).
+The empirical dose-response calibration of linear probes successfully illustrates parametric, dial-like control over continuous behavioral thresholds (such as risk switching points and offer acceptance thresholds), avoiding the abrupt, discrete transitions frequently observed in persona prompting.
+The authors demonstrate cross-model architectural portability by replicating the linear probe extraction and steering pipeline on a smaller architecture (Qwen-2-7B-Instruct, layer 17), confirming that linear accessibility of preference and capability traits is not idiosyncratic to a single model family.
+Weaknesses
+While Section 3.1 formally establishes an extensive multi-tier prompting ladder (including Chain-of-Thought, human-normed few-shot exemplars from the Ocsai corpus, combined few-shot CoT, and an exemplar dose-response parameter) and the Abstract claims that internal steering advantages narrow against these advanced prompts, the empirical results in Section 4 and Figures 3–5 omit performance curves and quantitative metrics for these advanced prompting conditions, leaving the comparative claims partially unsubstantiated.
+The manuscript benchmarks probe steering exclusively against basic persona prompting and SAE nudging, omitting standard representation steering baselines from the mechanistic interpretability literature such as Contrastive Activation Addition (CAA), Representation Engineering (RepE / LAT), and Inference-Time Intervention (ITI), which would help clarify whether supervised logistic hyperplane steering provides measurable advantages over canonical contrastive difference-of-means vectors (Reference Paper: Steering Llama 2 via Contrastive Activation Addition, 2024), (Reference Paper: Representation Engineering: A Top-Down Approach to AI Transparency, 2024), and (Reference Paper: Inference-Time Intervention: Eliciting Truthful Answers from a Language Model, 2023).
+The paper would benefit from contextualizing its contributions against recent studies that have specifically investigated neural activation steering for economic preferences in lotteries and bargaining games, which makes the core finding of continuous preference modulation an empirical consolidation within agent simulations rather than an entirely novel mechanistic discovery (Reference Paper: Steering Risk Preferences in Large Language Models by Aligning Behavioral and Neural Representations, 2025) and (Reference Paper: Understanding the Mechanism of Altruism in Large Language Models, 2026).
+The evaluation of creative capabilities relies entirely on prompt-based LLM judges across four physical objects without validating against objective, judge-independent semantic distance benchmarks (such as SemDis or human-normed Alternative Uses Task distributions) or administering standardized psychometric personality batteries to monitor for unintended collateral distortions across unsteered traits (Reference Paper: Beyond Semantic Distance: Automated Scoring of Divergent Thinking Greatly Improves with Large Language Models, 2023).
+The interpretability analysis in Section 4.1 attributes internal mechanisms (such as agents considering ethics during lotteries or drawing on writing instrument semantics during stapler innovation) based purely on observational co-occurrence of top-activating SAE latents, without establishing causal necessity and sufficiency through feature ablation, knockout, or activation patching experiments.
+There is a conceptual conflation in operationalizing the Ultimatum Game responder role as a measure of 'altruism': in standard game theory and behavioral economics, a self-interested payoff-maximizing responder accepts any positive offer, whereas human rejections of low offers reflect costly fairness enforcement or inequity aversion; labeling an agent's increased willingness to accept low offers as 'altruistic and selfless' inverts standard economic definitions.
+Several empirical discrepancies exist between the narrative text and the figures: Section 4.2.1 states that positive lambda increases risk-seeking behavior, whereas Figure 10(a) and Appendix B.7 show positive lambda increasing the switching point (greater risk aversion); Section 4.2.1 states that SAE-steered agents pivot to risky choices at 50 tokens, yet Figure 3(A) shows the steering curve remaining flat at 0% until 100 tokens; and Section 4.2.2 states that achieved capability scores consistently fall below the diagonal in Figure 6, whereas scores at lower targets visibly overshoot the diagonal due to sub-unity regression toward the baseline mean.
+The framing strongly motivates the methodology around advancing generative agents for social simulations, but the experimental execution is confined entirely to static, single-turn vignette tasks on isolated individual agents, leaving unaddressed how activation steering performs in interactive multi-agent environments where autoregressive context expansion could induce activation drift or cumulative distortion.
+Potential Issues And Suggestions
+[Introduction, Background, and Social Simulation Framing] (Pages: 1-3)
+Summary
+The reviewed segment (pages 1–3, lines 000–161) comprises the Abstract, Section 1 (Introduction), Section 2 (Related Work: Generative Agents in Social Science and Opening the Black Box), and the initial part of Section 3 (Methodology: Experimental Paradigms and Prompting Setting). The authors formulate the core epistemic problem confronting LLM-based generative agents in computational social science: the black-box opacity of transformer architectures, which impedes both the inductive discovery of behavioral mechanisms and deductive causal hypothesis testing. To address this, the paper proposes an interpretability and intervention framework that benchmarks prompt engineering ladders against Sparse Autoencoder (SAE) feature steering and linear probe activation steering. The empirical framework targets two behavioral pillars: preferences (risk attitudes in a lottery game and social decision-making in the ultimatum game) and capabilities (divergent thinking in the Alternative Uses Task and product innovation). Section 2 contextualizes generative agent simulations and mechanistic interpretability methods, and Section 3 introduces the experimental setup alongside a graded prompt ladder baseline.
+
+Potential Mistakes and Improvements
+Potential Conceptual Conflation in Operationalizing the Ultimatum Game Responder Role as Altruism
+Context: Section 1 (lines 018–020, 063–065) and Section 3 (lines 135–139) state that the ultimatum game measures "altruism" alongside risk preferences.
+Concern: In experimental economics and game theory (e.g., Camerer & Thaler, 1995), the canonical paradigm for measuring pure altruism is the Dictator Game, or alternatively the split offered by the proposer in an ultimatum game. The paper evaluates the LLM strictly in the responder role, deciding whether to accept or reject an offer 
+ out of 100 tokens (Section A.2). Under standard subgame-perfect Nash equilibrium with purely self-interested preferences, the rational responder accepts any strictly positive offer (
+), since receiving 
+ is preferable to receiving 0. In contrast, human responders typically reject low offers (
+) out of fairness sensitivity, negative reciprocity, or inequity aversion (costly punishment of an unfair proposer). Labeling an agent's increased willingness to accept low offers (e.g., accepting an offer of 10 tokens) as "altruistic and selfless" (lines 403–406, 915–917) conflates neoclassical payoff maximization with prosocial altruism.
+Improvement: Clarify the formal behavioral construct being evaluated. If the operationalized construct is fairness sensitivity or inequity aversion (e.g., Fehr-Schmidt social preferences), the manuscript should frame the behavior as costly fairness enforcement and clearly distinguish acceptance of asymmetric splits from pure altruism.
+
+Omission and Misattribution of Representation Steering Literature in Section 2.2
+Context: In Section 1 (lines 058–061) and Section 2.2 (lines 108–116), the paper attributes the mechanism of steering model generation via intermediate activation vectors to linear classifier probes, citing Alain & Bengio (2016, 2017), Hewitt & Manning (2019), and Belinkov (2022).
+Concern: Diagnostic linear probes as formulated by Alain & Bengio (2016) and Belinkov (2022) are passive readout classifiers designed to evaluate what information is linearly decodable from frozen intermediate layers; they do not intervene on activations during autoregressive generation. Using linear weight vectors or difference-of-means directions as intervention hooks (
+) is the subject of established representation control literature, such as Activation Addition / ActAdd (Turner et al., 2023), Representation Engineering / RepE (Zou et al., 2023), Inference-Time Intervention / ITI (Li et al., 2023), and Contrastive Activation Addition / CAA (Rimsky et al., 2024). Attributing activation-addition steering to diagnostic probing works leaves the methodological connection to standard contrastive activation steering unaddressed.
+Improvement: Expand Section 2.2 to contextualize the paper's probe steering within the broader representation engineering and activation addition literature, clarifying how using a normalized logistic regression weight vector differs from or complements standard difference-in-means steering vectors (e.g., CAA).
+
+Factual Mischaracterization of Prior SAE Literature (Angelopoulos et al., 2024)
+Context: In Section 3 (lines 130–132), the text states: "Previous attempts have utilized SAEs to demonstrate the steerability of generative agents in financial activities or marketing messaging design (Chen et al., 2025; Angelopoulos et al., 2024)."
+Concern: Angelopoulos, Lee, & Misra (2024) ("Causal alignment: Augmenting language models with a/b tests") investigates aligning generative model outputs with experimental treatment effects from field marketing A/B tests via prompt construction and causal estimators. It does not train, inspect, or intervene on model representations using Sparse Autoencoders. Attributing SAE-based steering to Angelopoulos et al. is factually inaccurate.
+Improvement: Remove the attribution of SAE steering to Angelopoulos et al. (2024), reserving that citation for prompt-level causal alignment, or substitute references that empirically evaluate SAE feature steering in specialized domains.
+
+Scope Alignment: "Social Simulations" Framing vs. Single-Turn Individual Vignette Design
+Context: The Title, Abstract (lines 001–031), and Introduction (lines 034–053) frame the paper around advancing generative agents in social simulations, referencing agent-based modeling (ABM), social networks, and community simulacra (citing Park et al., 2023, 2024; Horton, 2023; Anthis et al., 2025; Gao et al., 2024).
+Concern: The empirical execution evaluates isolated, single-turn vignette tasks (independent multiple-choice lottery and ultimatum decisions, and single-turn text generation for creativity) on individual model instances. The experimental design does not include multi-agent interaction, persistent agent memory, communication loops, or emergent network dynamics. While measuring individual preferences and capabilities provides the micro-foundations for social modeling, the framing creates an unaddressed gap between the multi-agent social simulation motivation and the static single-agent psychometric testing protocol.
+Improvement: Explicitly delineate the paper's empirical scope in Section 1 and Section 3, clarifying that the study targets the micro-foundational behavioral primitives of individual agents that serve as building blocks for downstream social simulations.
+
+Theoretical Grounding of Cognitive Capabilities as Social Simulation Primitives
+Context: Lines 017–020 and 062–066 position behavioral preferences (risk, altruism) and cognitive capabilities (divergent creativity, product innovation) symmetrically as foundational primitives of human agency. Section 3 (lines 144–149) adds a high-temperature baseline exclusively for capability tasks, citing Campbell's (1960) blind variation theory.
+Concern: In economics and analytical sociology (e.g., Hedström, 2005; Davis & Bingham, 2007), preferences are established decision-theoretic primitives defined over payoff distributions. In contrast, divergent semantic ideation (Alternative Uses Task) assesses open-ended cognitive generation rather than a standard strategic or social interaction primitive. The introductory framing does not articulate why divergent semantic ideation represents a core primitive for computational social science simulations (e.g., collective problem-solving, organizational adaptation, or team innovation), nor does it explain why temperature variation (a standard parameter for choice stochasticity and bounded rationality in discrete choice models) is excluded from the economic preference tasks.
+Improvement: Provide theoretical justification connecting divergent ideation to organizational or collective agent simulations, and clarify why the temperature manipulation is evaluated exclusively for capabilities rather than preference choice stochasticity.
+
+Minor Corrections and Typos
+Line 036–037: "and have similar behavioral patterns with humans" 
+ change to "and have behavioral patterns similar to those of humans".
+
+Line 059 vs. Line 105: Inconsistent citation years for Alain & Bengio: cited as "2016" on line 059 and line 111, but as "2017" on line 105. Both the 2016 arXiv preprint and the 2017 workshop paper appear in the references (lines 572–576); harmonize to a single citation entry.
+
+Line 070: "probe- and SAE-based method of steering" 
+ change to "probe- and SAE-based methods of steering".
+
+Line 089: "in using machine learning to social scientific research" 
+ change to "in using machine learning for social scientific research".
+
+Line 117: "SAEs takes a different approach." 
+ Subject-verb disagreement; change to "SAEs take a different approach."
+
+Line 128: "It is to the best of our knowledge that none of the existing methods..." 
+ change to "To the best of our knowledge, none of the existing methods...".
+
+Line 139–140: "...where we find the SAE feature activation for risk-taking and altruistic behaviors and manually steer them to a high value" 
+ Grammatical number disagreement ("feature activation" singular vs. "them" plural); change to "...steer their activations to high values".
+
+[Intervention Framework: Prompt Ladders, SAEs, and Linear Probes] (Pages: 3-6)
+Summary
+This segment (Section 3, pages 3–6, lines 108–269, supported by Figures 1 and 2) formalizes the technical intervention framework evaluated in the paper. The authors compare three paradigms for interpreting and steering large language model (Llama-3.3-70B-Instruct) generative agents across behavioral preferences (risk attitude in a lottery choice game, altruism in the ultimatum game) and cognitive capabilities (divergent creativity in the Alternative Uses Task, product innovation on a stapler task):
+
+Graded Prompting Ladder (§3.1): Formulates an in-context intervention hierarchy (C \in {\text{baseline}, \text{persona}, \text{cot}, \text{fewshot}, \text{fewshot_cot}}
+) implemented via Expected Parrot's EDSL. The ladder incorporates human-rated exemplars from the Ocsai Alternative Uses Task corpus (
+), chain-of-thought triggers (
+), combined few-shot CoT, and a demonstration dose-response schedule (
+).
+Sparse Autoencoders (SAEs) (§3.2, Figure 1): Utilizes Goodfire's open-source 65,536-feature SAE trained on LMSYS Chat data at intermediate layer 50 of Llama-3.3-70B-Instruct to extract latent feature activations and apply decoding-time feature "nudge" interventions.
+Linear Probes (§3.3, Figure 2): Trains 
+-regularized logistic regression classifiers on intermediate hidden representations (selected at layer 48 via cross-validated layer sweeps, reporting an 82% held-out classification accuracy on preference tasks). The unit-normalized weight vector 
+ serves as an activation-addition steering direction during autoregressive decoding.
+Potential Mistakes and Improvements
+Unreported Empirical Results for the Formally Defined Prompting Ladder
+Potential Concern: Section 3.1 formally establishes an extensive prompting ladder (C \in {\text{baseline}, \text{persona}, \text{cot}, \text{fewshot}, \text{fewshot_cot}}
+) and a demonstration dose-response parameter (
+). The Abstract (lines 024–026) and Introduction (lines 056–061) explicitly emphasize that while internal steering outperforms basic prompt methods, this advantage narrows against advanced prompting strategies (few-shot and chain-of-thought). However, in Section 4, Figures 3–6, and the appendices, quantitative results and psychometric curves are reported solely for the baseline, a single persona prompt, high temperature, and activation-space steering. The empirical results for cot, fewshot, fewshot_cot, and the dose-response variations (
+) do not appear in the results section or main figures.
+Suggested Improvement: Report the empirical results (e.g., psychometric curves, benchmark scores, or summary comparison tables) for the full condition set 
+ and parameter 
+ to substantiate the comparative claims introduced in Section 3.1 and asserted in the Abstract.
+
+Mathematical Inconsistency in SAE Steering Formulation in Figure 1
+Potential Concern: In Figure 1 (page 5), the steering and reinjection box annotates the intervened hidden state as: $$h_t^{(l)} = f_{\text{dec}}(c^) \quad \text{where} \quad c^* = c + \alpha e_i$$ In dictionary learning, an SAE reconstructs only a fraction of the total hidden activation variance. Replacing the hidden state vector directly with $f_{\text{dec}}(c^)
+r = h_t^{(l)} - f_{\text{dec}}(c)$, which typically causes severe syntax and fluency degradation in language models. In practice (and as specified in Appendix A.1.3), Goodfire's "mode": "nudge" applies an additive perturbation to the residual stream: $$h_t^{(l)} = h_t^{(l)} + \Delta h \quad \text{where} \quad \Delta h = f_{\text{dec}}(c^) - f_{\text{dec}}(c) \approx \alpha W_{\text{dec}}[:, i]$$ The replacement equation in Figure 1 is mathematically inconsistent with standard residual stream injection mechanics.
+Suggested Improvement: Update Figure 1 and the accompanying text in Section 3.2 to depict the steering operation as an additive perturbation to the existing hidden state ($h_t^{(l)} = h_t^{(l)} + \Delta h$).
+
+Operational Confounders Between SAE and Probe Steering Modalities
+Potential Concern: Section 3 frames SAE feature steering and linear probe steering as directly comparable activation-space intervention modalities. However, several operational differences exist between the two setups:
+
+Layer Depth: SAE steering operates at layer 50 (constrained by Goodfire's pre-trained checkpoint), whereas probe steering operates at layer 48 (selected via cross-validated sweep). In an 80-layer architecture, latent geometry and steerability can vary across layers.
+Token-Level Scope and Scheduling: In Appendix B.5.2, probe steering is applied only to the final 20% of tokens with a linear ramp from 0.5 to 1.0 (torch.linspace(0.5, 1.0)). In contrast, SAE steering is applied via Goodfire's API controller without sequence-position masking or ramping.
+Intervention Subspace: Probe steering intervenes along a single 1D vector direction, whereas SAE steering simultaneously modulates multiple dictionary latents (e.g., three features at strength 0.3 for creativity; two features for lottery).
+Suggested Improvement: Discuss whether observed differences in behavioral responsiveness, saturation, or output coherence stem from the underlying representation formats (sparse dictionary latents vs. dense discriminative directions) or from these operational asymmetries. Providing an ablation of probe steering without positional ramping or evaluated at layer 50 would help isolate these factors.
+Discrepancy in Probe Steering Formalism and Clarification of Decoding Hook Mechanics
+Potential Concern: Section 3.3 (lines 211–214) and Figure 2 present probe steering as standard activation addition: $$h_t^{(\ell)} = h_t^{(\ell)} + \lambda \hat{w}$$ However, Appendix B.5.2 shows that the implementation incorporates a directional sign 
+, norm scaling (
+), and a position-dependent linear scaling factor 
+ applied over the final 20% of tokens (start_idx = seq_len - max(1, seq_len // 5)).
+Furthermore, during standard autoregressive decoding with key-value (KV) caching, tokens are generated one at a time (seq_len = 1), meaning the final sequence length is not known in advance. If seq_len refers to the input prompt length during prefill, the hook modifies prompt tokens rather than generated output tokens. If applied during decoding, computing the final 20% of positions dynamically requires clarification.
+Suggested Improvement: Align the formal equation in Section 3.3 with the actual implementation: $$h_t^{(\ell)} = h_t^{(\ell)} + s \cdot \lambda \cdot \gamma_t \cdot v_{\text{scaled}}$$ and explicitly clarify in the text whether token-position windowing applies to prompt prefill or generated response tokens, detailing how sequence positions are indexed during inference.
+
+Underspecification of Capability Probe Training in Section 3.3
+Potential Concern: Section 3.3 discusses probe training and validation metrics exclusively in the context of economic preference tasks, reporting an 82% held-out classification accuracy. The training pipeline for capability probes (divergent creativity and product innovation) is omitted from this section. As noted later in Section 4.2.2 and Appendices A.3.5 and B.8, capability probes were trained on binarized ratings generated by an LLM judge (GPT-5).
+Suggested Improvement: Expand Section 3.3 to summarize the training methodology for capability probes, including the labeling source, binarization threshold, sample sizes, and held-out classification performance across candidate layers.
+
+Minor Corrections and Typos
+Page 3, Line 117: Subject-verb disagreement: "SAEs takes a different approach." 
+ change to "SAEs take a different approach."
+
+Page 4, Line 203: Typographical error: "...pipeline for both interpretatbility and steering in Figure 1" 
+ change to "interpretability".
+
+Page 4, Line 211: In the probe readout expression 
+, the token index 
+ is introduced without definition. Explicitly specifying 
+ (final prompt token, as per Appendix B.2) would clarify the readout site.
+
+Page 5, Figures 1 and 2: Notation inconsistency: Figure 1 uses superscript 
+ for layer indexing (
+), whereas Figure 2 and line 211 use 
+ (
+). Standardize layer notation across both figures and equations.
+
+Page 5, Figure 1: In the latent code box, the notation 
+ is informal; standard notation is 
+ subject to a sparsity constraint 
+.
+
+[Empirical Findings: Interpretability and Behavioral Controllability] (Pages: 6-10)
+Summary
+This segment (Section 4, Section 5, Table 1, and the opening of Limitations; pages 6–10) presents the empirical evaluation of sparse autoencoders (SAEs), linear classifier probes, and prompt-based intervention techniques on Llama-3.3-70B-Instruct. The investigation focuses on two behavioral primitives: preferences (risk-taking in a binary lottery game and acceptance thresholds in the responder role of an ultimatum game) and capabilities (divergent thinking on the Alternative Uses Task for a brick and product innovation on a stapler improvement task).
+
+In Section 4.1, the authors inspect top-activating latent features extracted from a 65,536-feature SAE dictionary at layer 50 across baseline, persona-prompted, feature-steered, and high-temperature conditions to interpret underlying decision representations. In Section 4.2, behavioral controllability is evaluated:
+
+Figure 3 plots psychometric choice curves comparing unsteered baseline, persona prompting, and SAE feature steering, while Figure 4 displays target-calibrated switching points achieved via linear probe activation addition.
+Figure 5 reports capability evaluations scored across five independent frontier LLM judges (GPT-5, Claude Sonnet 4.6, Gemini 2.5 Pro, Kimi K2.6, and DeepSeek V4 Pro) using a length-controlled Torrance rubric under baseline, persona prompting, high-temperature, and SAE steering conditions.
+Figure 6 assesses probe-based target-versus-achieved capability control across divergent creativity and product innovation tasks.
+Section 5 and Table 1 synthesize comparative trade-offs between prompting, linear probes, and SAEs across operational dimensions, followed by a discussion of steering hazards (e.g., saturation, off-target feature entanglement, and hallucinations) and single-agent scope boundaries.
+
+Potential Mistakes and Improvements
+Omission of Advanced Prompting Baselines from Section 4 Empirical Results
+
+Context & Observation: In Section 3.1 (lines 151–191), the manuscript formally establishes a multi-tier prompting ladder: \mathcal{C} \in {\text{baseline}, \text{persona}, \text{cot}, \text{fewshot}, \text{fewshot_cot}}
+, including human-rated exemplars from the Ocsai Alternative Uses Task corpus and an exemplar demonstration sweep (
+). The Abstract explicitly emphasizes this comparative evaluation, stating that the advantage of SAE- and probe-based techniques "narrows when compared with more advanced prompting strategies, such as few-shot and chain-of-thought prompting" (lines 24–26).
+Potential Concern: Across Section 4 and its primary figures (Figures 3, 4, 5, and 6), empirical data for Chain-of-Thought (cot), Few-Shot (fewshot), combined Few-Shot CoT (fewshot_cot), and the exemplar ratio parameter 
+ are entirely absent. Figure 3 plots only baseline, persona prompting, and SAE steering; Figure 5 plots only baseline, persona prompting, high temperature, and SAE steering. The quantitative trajectories, switching points, and capability scores of these advanced prompting baselines are neither plotted nor tabulated in Section 4. As a result, the claim that internal representation steering maintains a narrowed advantage over advanced prompting strategies remains unsupported by the presented results.
+Suggested Improvement: Report the empirical performance of cot, fewshot, and fewshot_cot directly within Section 4 (e.g., overlaying their response curves onto Figures 3 and 5 or summarizing their comparative switching points and ratings in a dedicated table) to substantiate the assertions made in the Abstract and Methodology.
+Directional Inconsistency in Probe Steering Polarity Description for Risk Preferences
+
+Context & Observation: In Section 4.2.1 (lines 396–399), the text describes linear probe steering on the lottery game: "Higher positive 
+ values increase risk-seeking behavior (lower switching points), while negative values enhance risk aversion."
+Potential Concern: This description appears directionally reversed relative to the empirical probe dynamics reported in Appendix B.7 and Figure 10(a). Appendix B.7 (lines 1332–1334) states: "mean probe scores increase monotonically as the target switching point rises from 40 to 240 tokens. Risky choices consistently receive lower probe scores than safe choices." Because the probe direction assigns higher positive values to safe choices, adding positive multiples of the probe direction (
+) pushes internal activations toward the safe decision boundary, thereby increasing the switching point (increasing risk aversion). This is corroborated by Figure 10(a), where the required steering strength 
+ increases monotonically from ~2.0 to ~5.5 as target switching points increase from 40 to 240 tokens.
+Suggested Improvement: Realign the signed polarity of 
+ in lines 396–399 with Figure 10(a) and Appendix B.7, explicitly clarifying that positive 
+ corresponds to the direction of risk aversion (higher switching points) or adjusting the vector sign convention accordingly.
+Empirical Discrepancy Between Text Narrative and Plotted Data in Figure 3(A) (Lottery Game)
+
+Context & Observation: In Section 4.2.1 (lines 373–375), the authors state: "We also observe changes in the steering scenario, where we identify the SAE features responsible for risky behaviors and manually boost them for outputs. However, agents only start to pivot to risky option when risky rewards become more than 50. This indicates that prompted agents are more risk-taking than steering agents."
+Potential Concern: Visual inspection of Figure 3(A) indicates that the green curve representing SAE Steering remains flat at 0% across 25, 50, 75, and 100 reward tokens. The curve begins to rise only after 100 tokens (reaching ~60% around 110 tokens, dipping to ~40% at 115 tokens, and reaching 100% at 125 tokens). The plotted data does not exhibit a behavioral pivot occurring at or near 50 tokens.
+Suggested Improvement: Reconcile the narrative in Section 4.2.1 with the empirical data plotted in Figure 3(A). If the run corresponding to a 50-token pivot used an alternative nudge magnitude or logging configuration, ensure the intended data series is rendered; otherwise, update the text to accurately reflect that the plotted SAE steering curve shifts only above 100 tokens.
+Inaccurate Characterization of Target-versus-Achieved Dynamics in Figure 6
+
+Context & Observation: In Section 4.2.2 (lines 458–461), the text describes probe-based capability steering: "The probe achieves meaningful control, shifting the mean achieved score from approximately 4.0 at a target of 3 to approximately 7.6 at a target of 9, though achieved scores consistently fall below the perfect-control diagonal."
+Potential Concern: Visual inspection of Figure 6(A) and 6(B) (as well as Appendix Figure 9 and Figure 16) reveals that at target scores of 3, 4, and 5, the achieved scores are approximately 4.0, 4.8, and 5.4, which lie visibly above the diagonal line 
+. Achieved scores cross below the diagonal only at targets 7, 8, and 9. Rather than falling below the diagonal across the entire range, the empirical response curve exhibits a sub-unity slope representing regression toward the unsteered baseline mean (~5.2), overshooting targets below the baseline mean and undershooting/saturating at targets above it.
+Suggested Improvement: Revise lines 458–461 to state accurately that probe steering exhibits range compression and regression toward the mean, overshooting targets at the lower end and undershooting at the higher end.
+Conflation of Game-Theoretic Rationality and Empirical Human Behavior in the Ultimatum Game
+
+Context & Observation: In Section 4.2.1 (lines 402–404), the authors state: "the baseline scenario demonstrates that the generative agents behave slightly more altruistically than perfectly rational humans, where they start to take the offer when it exceeds 30. We prompt the agents to have altruism or selfless behaviors in the prompting scenario and the effects are outstanding, as they start to take the offer even when the offer is only 10 tokens."
+Potential Concern: In standard non-cooperative game theory under backward induction with self-interested preferences, a payoff-maximizing rational responder accepts any strictly positive offer (
+), because receiving 
+ strictly dominates receiving 0 from rejection. In contrast, empirical human responders in laboratory experiments routinely reject offers below 30 tokens due to inequity aversion and costly punishment of unfairness. Rejecting offers below 30 tokens aligns agents with empirical human fairness norms rather than exceeding game-theoretic rationality. Furthermore, accepting an offer of 10 tokens (where the proposer retains 90 tokens) is standardly modeled as payoff maximization or submission to an unequal split, whereas rejecting an unfair split represents altruistic norm enforcement.
+Suggested Improvement: Align the narrative in Section 4.2.1 with standard behavioral economics terminology: characterize baseline rejection of low offers as reflecting human-like inequity aversion or empirical fairness norms, and clarify whether accepting 10 tokens represents payoff maximization or deference to the proposer.
+Under-Specification of Continuous Target Calibration in Capability Tasks
+
+Context & Observation: In Section 4.2.2 and Figure 6, probe controllability is evaluated by plotting achieved creativity scores against discrete target scores (
+). For preference tasks, target switching points have a physical unit (tokens) calibrated via a two-stage bracketed binary search over 
+ (Appendix B.6). For capability tasks, the probe is trained as an 
+-regularized binary classifier on median-split high versus low creativity labels (Appendix B.8).
+Potential Concern: The main text does not detail the mathematical mapping or calibration protocol used to convert target rubric scores (1–10) into steering multipliers 
+. In Appendix Figure 16, target scores 
+ correspond to discrete multipliers 
+. If targets were mapped to discrete 
+ values post-hoc without an independent calibration loop, the observed sub-unity slope and diminishing returns may reflect the scaling of the target axis rather than a genuine representational ceiling of linear activation addition.
+Suggested Improvement: Formally define the calibration protocol used to map discrete target rubric scores to intervention strengths 
+ in Section 4.2.2, and clarify whether this calibration was validated on a held-out prompt split.
+Incomplete Narrative Reporting of Ultimatum Game SAE Steering Results
+
+Context & Observation: In Section 4.2.1 (lines 400–410), the authors discuss the Ultimatum Game findings shown in Figure 3(B). The text analyzes the baseline acceptance threshold (30 tokens) and the persona prompting shift (10 tokens), and then transitions directly to probe steering in Figure 4.
+Potential Concern: Figure 3(B) displays an empirical curve for the SAE steering condition (green curve), but the narrative in the main text omits any reporting or discussion of its quantitative acceptance threshold, shift magnitude, or behavioral outcome.
+Suggested Improvement: Add the quantitative findings for SAE steering in the Ultimatum Game (e.g., the exact observed acceptance threshold and percentage shift) to Section 4.2.1 to complete the discussion of Figure 3(B).
+Absence of Agent-Level Inferential Statistical Testing for Capability Scores
+
+Context & Observation: In Section 4.2.2 and Figure 5, the mean creativity score gains reported for SAE steering are modest on divergent creativity (5.57 vs. 5.18 baseline, a +0.39 difference on a 1–10 scale; persona prompting achieves ~5.35), while being larger for product innovation (6.25 vs. 5.23 baseline). Lines 450–452 and Figure 5 define the error bars as the standard deviation across the five LLM judges (
+).
+Potential Concern: Reporting only judge dispersion captures inter-rater agreement, but omits the sampling variance across the 
+ agent completions generated per condition. Given the modest delta (+0.39) and overlapping error bars across conditions in Figure 5, inferential statistical hypothesis tests (such as paired 
+-tests or Wilcoxon signed-rank tests across agent instances) are necessary to determine whether the difference between SAE steering, baseline, and persona prompting is statistically significant.
+Suggested Improvement: Provide formal hypothesis testing (
+-values, effect sizes, and standard errors across agent completions) for pairwise condition comparisons in Section 4.2.2, and explicitly clarify in the Figure 5 caption whether error bars denote variance across agent instances or across the five LLM judges.
+Causal Attribution of Correlational SAE Latent Activations
+
+Context & Observation: In Section 4.1.1 (lines 301–306), the authors observe that "The assistant is explaining why it cannot fulfill an unethical request" ranks among the top features for the lottery game, interpreting this as evidence that agents "consider ethics in the lottery games." In Section 4.1.2 (lines 353–358), the activation of "marketing language for writing instruments" during the stapler innovation task is interpreted as demonstrating that "creativity in product innovation may stem from connecting the focal product to others that appear in the same context."
+Potential Concern: In sparse autoencoders trained on instruction-tuned models like Llama-3.3-70B-Instruct, refusal-related latents frequently show residual background firing triggered by betting, gambling, or payout terminology due to safety alignment, and office supply features naturally co-occur in pretraining text. Without conducting causal ablation, mediation, or activation patching, attributing these activations to internal deliberative mechanisms risks over-interpreting statistical co-occurrence and alignment artifacts as cognitive theory.
+Suggested Improvement: Acknowledge in Section 4.1 that top-activating observational features represent correlational hypotheses rather than established causal mechanisms until confirmed via targeted feature ablation or clamping experiments.
+Minor Corrections and Typos
+Page 9, Line 467: Typographical error: "this transfer-based imbrplementation is both feasible and effective" 
+ change "imbrplementation" to "implementation".
+
+Page 9, Line 470: Grammatical error: "...relative to the target scale, despite relatively reliable compared to SAE methods." 
+ revise to "...despite being relatively reliable compared to SAE methods" or "...although relatively reliable compared to SAE methods".
+
+Page 6, Line 312: Missing possessive apostrophe: "also the agents behavioral codes in general" 
+ change to "agents' behavioral codes".
+
+Page 7, Line 354: Indefinite article mismatch: "is not an usual behavioral code" 
+ change to "is not a usual behavioral code".
+
+Page 8, Line 400: Missing definite article: "demonstrate that ultimatum game has similar results" 
+ change to "demonstrate that the ultimatum game has similar results".
+
+Page 8, Line 413: Nested citation parentheses: "(GPT-5 (OpenAI, 2025)...)" 
+ replace inner parentheses with brackets or streamline citation typography.
+
+Page 8, Line 418: Awkward phrasing: "boosting their outputs' results" 
+ revise to "boosting their performance" or "boosting output quality".
+
+Page 9, Figure 5 Caption: The caption specifies "Performance of generative agents on capability tasks under SAE feature steering, scored by five independent LLM judges", but omits mentioning that the plot also displays Baseline, Prompting, and High Temperature conditions. Update the caption to encompass all displayed conditions.
+
+[Synthesis Framework, Methodological Trade-offs, and Limitations] (Pages: 9-14)
+Summary
+This segment encompasses Section 5 (Discussion), Table 1 (Comparative Overview of Interpretability Methods for Generative Agent Steering), the Limitations section (pages 10–11), Section 6 (Acknowledgments), and the bibliographic references (pages 11–14). The segment synthesizes the empirical and methodological findings of the paper regarding the use of mechanistic interpretability techniques—specifically Sparse Autoencoders (SAEs) and linear classifier probes—to interpret and steer generative agent behavior in computational social science simulations.
+
+Table 1 formalizes a comparative taxonomy contrasting prompt engineering, linear probing, and SAE feature steering across their operational strengths, computational limitations, and recommended use cases (rapid prototyping, deductive hypothesis testing, and inductive feature discovery, respectively). The Discussion and Limitations sections analyze the practical and epistemic trade-offs of internal steering, discussing failure modes such as activation saturation, feature entanglement, off-target behavioral shifts, the risks of hallucination under extreme intervention magnitudes, the empirical boundary condition of testing individual agents rather than multi-agent emergent societies, and the challenge of scaling activation interventions to abstract, context-dependent social scientific constructs.
+
+Potential Mistakes and Improvements
+Synthesis Disconnect Regarding Advanced Prompting Baselines
+
+Potential Concern: In Section 3.1 (lines 151–191) and the Abstract (lines 024–027), the authors specify a formal prompting ladder comprising five conditions—baseline, persona, chain-of-thought (cot), few-shot exemplars (
+ via Ocsai AUT), and combined few-shot CoT (fewshot_cot)—as well as a demonstration dose-response sweep (
+). The Abstract explicitly asserts that the steering advantage of SAEs and probes "narrows when compared with more advanced prompting strategies, such as few-shot and chain-of-thought prompting." However, in Section 5 (lines 477–485) and Table 1, prompting is characterized as a single monolithic approach ("Prompting") without distinguishing basic personas from structured reasoning scaffolds. More critically, the main empirical sections (Figures 3, 5, and 6) report data only for basic persona prompting, leaving the empirical outcomes of the fewshot, cot, and fewshot_cot conditions absent from the synthesis.
+Improvement: The Discussion and Table 1 should explicitly integrate and report the comparative performance of the advanced prompting baselines specified in Section 3.1. If data for the few-shot and CoT conditions are detailed in an omitted appendix table, provide direct cross-references and summarize their quantitative margins relative to probe and SAE steering to substantiate the claims made in the Abstract.
+Broad Controllability Claims in Section 5 Inconsistent with Empirical Results
+
+Potential Concern: Section 5 concludes that across preferences and capabilities, "the interpretability-driven methods produced more interpretable and more controllable agent behavior than prompting alone" (lines 480–482). This broad statement does not fully reflect several empirical findings reported in Section 4:
+In the lottery task (lines 373–375), persona prompting induced a more substantial shift in risk preference (shifting the switching point down to 20 tokens) than SAE feature steering (which shifted the switching point to 50 tokens), leading the authors to note in the results that "prompted agents are more risk-taking than steering agents."
+In the capability evaluation (lines 423–424), the authors report that SAE steering achieved only modest gains over baseline on divergent creativity (5.57 vs. 5.18) and that "prompting performs comparably on divergent creativity."
+For probe steering of capabilities (Figures 6 and 9), the achieved-versus-target slope is substantially below unity, exhibiting a plateau between scores of 7.3 and 7.6 when targeted at 9.0.
+Improvement: Refine the concluding claim in Section 5 to acknowledge these nuances. The text should explicitly distinguish linear probes (which provide continuous, monotonic parametric control for binary economic decisions, but exhibit saturation ceilings on multi-faceted creative tasks) from SAE feature steering (which operates via discrete scalar nudges and was matched or exceeded in dynamic range by prompting in specific preference regimes).
+Discrepancy Between Table 1 Recommendations for SAE Steering and Stated Limitations
+
+Potential Concern: Table 1 designates Sparse Autoencoders as "Best Suited For: Inductive feature discovery; steering complex, multidimensional behavioral traits." Recommending SAEs for steering complex, multidimensional traits is in tension with both the empirical methodology and the limitations disclosed in the paper:
+In the capability experiment (Appendix A.3.3), steering was operationalized by applying a fixed scalar nudge (
+) simultaneously to three handpicked features, without an established calibration protocol to balance their interactions or isolate orthogonal directions.
+In the Limitations section (lines 535–541), the authors state that choosing steering magnitudes is "more art than standardized practice," that excessive steering causes hallucinations and nonsensical output, and that because SAE features remain entangled, boosting a feature risks activating off-target representations and inducing unanalyzable behavioral shifts.
+Additionally, Table 1 cites high training compute as a core limitation of SAEs while describing probes as computationally efficient. However, in the authors' experimental pipeline, pre-trained open-source SAEs (Goodfire) were accessed via API calls at zero local training cost, whereas probe steering required custom synthetic data generation, layer sweeps, and supervised fitting.
+Improvement: Refine Table 1 to separate inductive representation discovery (well-suited for SAEs) from runtime multidimensional steering (where SAEs currently lack joint calibration protocols and suffer from polysemantic entanglement). Additionally, clarify the distinction between upstream dictionary training costs and downstream practitioner deployment costs.
+Contextualizing Probe Steering Relative to Established Activation Engineering Paradigms
+
+Potential Concern: Table 1 and Section 5 present the steering landscape strictly as a trichotomy between prompt engineering, linear probing, and SAE feature steering. In the mechanistic interpretability and representation steering literature, direction-based activation intervention is commonly executed using Contrastive Activation Addition (CAA), Representation Engineering (RepE), or Inference-Time Intervention (ITI), which derive steering vectors from contrastive prompt differences or attention-head projections. The authors' implementation instead fits an 
+-regularized logistic regression boundary on median-split behavioral data and injects the unit-normalized weight vector across the final 20% of generated tokens.
+Improvement: Situate the probe-based steering framework within the broader activation engineering literature in Section 5. Clarify whether fitting a regularized logistic regression hyperplane provides theoretical or empirical advantages (such as margin separation or robustness to class variance asymmetry) over standard difference-of-means contrast vectors (e.g., CAA or RepE reading vectors) when steering behavioral agent traits.
+Verifiability and Archival Validity of Judge Model Citations
+
+Potential Concern: In Section 4.2.2 (lines 413–415) and bibliographic entry [670] (line 670), the evaluation protocol cites "GPT-5 (OpenAI, 2025)" and a bibliographic entry for "OpenAI. GPT-5 system card. Technical report, OpenAI, San Francisco, CA, 2025." Citing an unreleased system card or non-verifiable model checkpoint designation undermines the archival precision and empirical reproducibility of the multi-judge evaluation suite.
+Improvement: Update model references to publicly accessible, verifiable model checkpoints, snapshot dates, or API model strings, and remove or document any placeholder citations.
+Minor Corrections and Typos
+Page 9, Line 467: Typo in "imbrplementation" 
+ change to "implementation".
+
+Page 10, Line 539: Grammatical agreement error in "causing behavioral shift that are hard to analyze" 
+ change to "causing behavioral shifts that are hard to analyze" (or "a behavioral shift that is hard to analyze").
+
+Page 11, Line 552: Subject-verb agreement error in "Future research in using SAE features to capture higher-order mechanisms need to examine" 
+ change "need" to "needs" (subject is "Future research").
+
+Page 11, Lines 572–576: Duplicate bibliographic entry: Alain & Bengio is listed twice consecutively (first as an arXiv preprint from 2016, and second as an ICLR Workshop paper from 2017). Consolidate into a single citation entry.
+
+Page 11, Line 577: Citation formatting: The venue for Angelopoulos et al. is truncated as "B Tests (April 2, 2024), 2024". Update to the complete journal or working paper citation format.
+
+Page 12, Line 608: Hyphenation artifact in reference title: "political ho-mophily" 
+ change to "political homophily".
+
+[Technical Appendix A: Prompting Scaffolds, EDSL Schemas, and SAE Implementation] (Pages: 14-23)
+Summary
+Technical Appendix A (pages 14–23) provides the technical implementation, orchestration specifications, and experimental protocols supporting the prompt-based and Sparse Autoencoder (SAE) interventions evaluated on meta-llama/Llama-3.3-70B-Instruct. Orchestrated via Expected Parrot's Domain-Specific Language (EDSL) and interfaced with Goodfire's API, the appendix defines:
+
+Behavioral task setups for the Lottery Game (§A.1) and the Ultimatum Game (§A.2), including typed multiple-choice schemas (QuestionMultipleChoice), agent cohort configurations, controller payloads, and parameter sweep procedures over reward and offer distributions.
+Capability task setups (§A.3) for divergent creativity (Alternative Uses Task for brick) and product innovation (stapler enhancement) using open-ended list schemas (QuestionList), persona prompting configurations, and simultaneous multi-feature steering across three SAE latents (indices 13142, 20117, and 4992).
+Evaluation methodology for capability tasks (§A.3.4–§A.3.6), outlining an initial Torrance-based linear scale rubric (§A.3.4), an inter-rater robustness analysis across five frontier LLM judges (§A.3.5; GPT-5, Claude Sonnet 4.6, Gemini 2.5 Pro, Kimi K2.6, and DeepSeek V4 Pro; mean pairwise Spearman 
+), and high-temperature ablation controls (§A.3.6).
+Experimental hygiene, activation inspection routines, schema validation rules, and logging specifications (§A.4–§A.7).
+Potential Mistakes and Improvements
+Omission of Advanced Prompting Ladder Scaffolds and Exemplar Specifications (§A.1–§A.3 vs. §3.1)
+Context & Description: Section 3.1 of the main text establishes a graded ladder of prompting baselines (C \in {\text{baseline}, \text{persona}, \text{cot}, \text{fewshot}, \text{fewshot_cot}}
+) and explicitly references the appendix for implementation details: "The trigger is tailored to the task family but always uses the same one-completion, reasoning-then-answer format. We document the detailed steps in the appendix" (lines 180–181). Furthermore, the abstract and introduction highlight that the advantage of SAE and probe steering narrows against advanced prompting strategies (lines 25–27). However, Appendix A contains neither the exact phrasing of the chain-of-thought trigger (
+) nor the specific synthetic exemplars (
+) and dose-response configurations (
+) used for the economic games. Sections A.1, A.2, and A.3 define only neutral baseline agents and zero-shot persona-prompted agents.
+Potential Concern: Without the exact trigger strings, demonstration texts, and prompt composition logic, the advanced prompting conditions cannot be independently reproduced or verified against the SAE and probe steering results.
+Improvement: Add a dedicated subsection detailing the verbatim prompt strings for 
+, the exact 
+ demonstration pairs for the lottery and ultimatum games, the exemplar selection rules from the Ocsai corpus for the Alternative Uses Task, and the prompt assembly logic within the EDSL survey pipelines.
+
+Discrepancy Between Documented Evaluation Code and Length-Controlled Multi-Judge Protocol (§A.3.4 vs. §A.3.5)
+Context & Description: In Section A.3.4 (lines 1067–1094), the code snippet defining eval_question includes the explicit directive: "Rate the creativity (you can be generous):". In Section A.3.5 (lines 1113–1119), the text notes that this initial single-judge rubric was flawed due to leniency and lack of length control, stating: "Two protocol changes were introduced to remove the biases noted above... the rubric was length-controlled: the generosity instruction was removed and an explicit instruction was added to score idea quality rather than response length."
+Potential Concern: The code listing in Section A.3.4 presents the superseded, uncorrected evaluation prompt rather than the length-controlled prompt that generated the primary empirical results reported in Figure 5 and Section 4.2.2. A reader deploying the listing in Section A.3.4 would execute the biased rubric.
+Improvement: Update the Python code block in Section A.3.4 (or provide a complementary code listing in Section A.3.5) containing the exact modified prompt template deployed across the five frontier LLM judges, showing the length-control and quality-focused directives.
+
+Ambiguity Regarding Exact Steering Hyperparameters for the Lottery Game (§A.1.3 vs. §4.2.1)
+Context & Description: In Section A.2.3 (Ultimatum Game) and Section A.3.3 (Capability Tasks), steering nudge values are explicitly defined in the controller configurations as 0.5 and 0.3, respectively. In contrast, Section A.1.3 defines two overlapping presets for the lottery game:
+
+"Standard (get_intervention): stronger nudges (e.g., value 0.5 to 0.7)"
+"Lite (get_lite_intervention): smaller magnitudes (e.g., value 0.4 to 0.6)"
+Section A.6 states that "We prefer 'lite' nudges when strong values saturate." The controller JSON snippet in lines 861–875 displays an illustrative "value": 0.5, but does not specify whether the Standard or Lite preset was used for the empirical sweep in Figure 3(A), nor whether both feature 184 and feature 4237 were nudged simultaneously at that magnitude.
+Potential Concern: Because the behavioral shift and switching point in risk tasks depend directly on intervention magnitude, underspecifying the exact scalar magnitude impedes exact replication of Figure 3(A).
+Improvement: Explicitly state the exact scalar nudge magnitude and combination rule applied to features 184 and 4237 for the lottery sweep reported in Figure 3(A).
+Missing UUIDs in the Lottery Controller Configuration (§A.1.3)
+Context & Description: In Section A.1.3 (lines 864–871), the controller configuration for the lottery game uses placeholder ellipses ("uuid": "...", "label": "...") for features index_in_sae=184 and index_in_sae=4237. In contrast, the ultimatum steering schema in Section A.2.3 provides the exact UUID ("a239616d4dcf470497b32ad3500f0145"), and Section A.3.3 provides explicit UUIDs for all three capability features.
+Potential Concern: While feature indices are provided, omitting the permanent UUIDs creates ambiguity in external SAE feature registries (e.g., Goodfire) if index mappings change across model releases or dictionary retrainings.
+Improvement: Replace the placeholder ellipses in lines 865 and 869 with the concrete 32-character hexadecimal UUIDs.
+
+Underspecified EDSL Persona Injection Mechanism (§A.1.2, §A.2.2, §A.3.2)
+Context & Description: In Sections A.1.2, A.2.2, and A.3.2, agent cohorts are instantiated using Agent(name=..., traits={...}, instruction=""). The task questions (choice_text, responder_text, and task_descriptions[task]) are passed as standard user questions without embedded Jinja template placeholders (such as {{ personality }}). While EDSL natively formats agent traits into the context (typically prepending them as a system message), this behavior is implicit.
+Potential Concern: Behavioral responses in economic games can vary depending on whether persona attributes are rendered in the system prompt versus the user context. Omitting the exact templating schema prevents exact reconstruction of the prompting baseline outside the EDSL framework.
+Improvement: Provide a brief note or code snippet illustrating the serialized prompt structure that maps the traits dictionary into the raw text passed to the base model.
+
+Minor Corrections and Typos
+Unused Loop Variables (Lines 808–809, 816, 910, 918): In the agent generation list comprehensions, for i, age in enumerate(range(20, 60, 1), start=1), the variable age is unpacked but never assigned to agent traits or used in the instantiation. If demographic age variation was intended, it should be mapped into traits; otherwise, the iteration should simply use range(1, 41).
+
+Formatting Artifact in Assignment (Lines 877–878): In the code listing, self.model.parameters["controller"] = \ controller contains an unnecessary line-continuation backslash directly preceding the variable name on the subsequent line.
+
+Inconsistent Condition Labeling (Line 1168): Section A.5 prints the condition label as SLIGHTLY PROMPTING (risk-leaning persona, no controller), whereas Section 4 and Section A.1.3 refer to it as PROMPTING. Aligning the label avoids confusion when reconciling logged CSV columns with main text figures.
+
+Section 3.2 Typo (Line 202): "interpretatbility" should read "interpretability".
+
+Section 4.2.2 Typo (Line 467): "imbrplementation" should read "implementation".
+
+Section B.11 Typo (Line 1394): "Figure15" lacks a space between the word and number.
+
+[Technical Appendices B & C: Probe Formulation, Cross-Object Generalization, and Robustness Replications] (Pages: 22-32)
+Summary
+This segment comprises Appendix A.5–A.7 (pages 22–23), Appendix B ("Technical Appendix for Probe-Based Steering and Analysis", pages 23–26), and Appendix C ("Appendix Figures and Tables", pages 27–32). It details the mathematical formulation, implementation architecture, calibration procedure, and empirical validation for linear probe scoring and activation steering across Llama-3.3-70B-Instruct and Qwen-2-7B-Instruct.
+
+The primary technical elements covered in this segment include:
+
+The software and modeling stack (PyTorch, Hugging Face Transformers, scikit-learn) for fitting 
+-regularized logistic regression probes on intermediate transformer representations (layer 48 for Llama-3.3-70B-Instruct and layer 17 for Qwen-2-7B-Instruct).
+The runtime intervention hook (
+) perturbing residual stream activations across the final 20% of sequence token positions with a linear ramp from 0.5 to 1.0.
+The two-stage 
+-calibration algorithm (coarse grid search followed by bracketed binary search) used to map target psychometric switching points and acceptance thresholds to steering multipliers.
+Internal probe readout dynamics (
+) assessing separation between choice alternatives (safe vs. risky; accept vs. reject).
+Cross-object generalization experiments assessing transfer of divergent creativity probes across four physical objects (brick, stapler, paperclip, and bowl).
+Cross-model architectural replication validating the probe training and steering pipeline on Qwen-2-7B-Instruct.
+Supplementary figures (Figures 7–18) detailing top SAE features, dose-response curves, probe score distributions, and capability control trajectories across both model families.
+Potential Mistakes and Improvements
+Directional Inconsistency Between Main Text Narrative and Appendix Calibration Curves
+Potential Concern: In Section 4.2.1 (lines 397–399), the main text states: "Higher positive 
+ values increase risk-seeking behavior (lower switching points), while negative values enhance risk aversion." However, this claim contradicts the empirical dose-response curves and probe readout dynamics reported in Appendices B and C:
+
+In Figure 10(a) (Llama-3.3-70B) and Figure 14(a) (Qwen-2-7B), the dose-response plots show that as the target switching point increases from 40 to 240 tokens (representing increasing risk aversion, where agents require higher risky payoffs to abandon a guaranteed 50 tokens), the required steering multiplier 
+ increases monotonically from ~1.0 to ~5.5 along the positive axis.
+Section B.7 (lines 1332–1334) and Figure 11(a) confirm that "mean probe scores increase monotonically as the target switching point rises from 40 to 240 tokens. Risky choices consistently receive lower probe scores than safe choices." Because safe choices project onto higher probe activation scores, the learned unit probe direction 
+ points toward the safe class (risk aversion). Injecting positive multiples 
+ mechanically drives activations toward higher switching points (greater risk aversion), contradicting lines 397–399. A similar ambiguity affects the ultimatum game in Figures 10(b) and 14(b), where 
+ increases monotonically as the target threshold rises from 35 to 100 tokens (demanding higher offers, i.e., less altruism/more selfishness), whereas Figure 2 labels the probe an "altruism probe."
+Suggested Improvement: Harmonize the polarity conventions across Section 4.2.1, Section B.5.2, and Figures 10, 11, 14, and 15. Clarify explicitly whether positive 
+ aligns with the psychological construct (e.g., risk-seeking) or the classifier's positive label (e.g., safe choice / risk aversion).
+Execution Mechanics and Algorithmic Ambiguity of the Autoregressive Steering Hook
+Potential Concern: Section B.5.2 (lines 1300–1310) specifies that the intervention hook adds 
+ during decoding:
+
+start_idx = seq_len - max(1, seq_len // 5)
+position_scale = torch.linspace(0.5, 1.0, seq_len - start_idx)
+hidden[:, start_idx:, :] += (sign * lambda_value * v_scaled) * position_scale.view(1, -1, 1)
+The text states: "We apply the intervention only to the final portion of the sequence (the last 20% of tokens) and scale the intervention linearly from 0.5 to 1.0 over these target positions."
+In standard Hugging Face autoregressive decoding with key-value caching (use_cache=True), the prefill pass processes the prompt, but subsequent token generation steps pass only the single newest token (seq_len = 1). Under this regime, seq_len // 5 evaluates to 0, start_idx = 1 - max(1, 0) = 0, and position_scale = torch.linspace(0.5, 1.0, 1) yields a scalar of 0.5. Consequently, during token generation with caching, the intervention applies a constant 0.5 multiplier to every generated token rather than ramping to 1.0. If KV caching is disabled (use_cache=False), the sequence length grows dynamically at each step, shifting start_idx and retroactively altering the perturbation applied to earlier tokens. Furthermore, during open-ended generation (e.g., divergent creativity paragraphs), the total sequence length is unknown until an EOS token is emitted, making it impossible to identify the "last 20% of tokens" during runtime decoding unless the intervention is restricted strictly to the prompt prefill phase.
+Suggested Improvement: Clarify the exact forward-pass stage where the hook executes (prompt prefill vs. autoregressive decoding), specify whether KV caching was enabled or disabled, and document how sequence length and positional scaling were tracked during generation.
+
+Underspecified Training Data and Token Extraction for Capability Probes
+Potential Concern: Section B.2 (lines 1224–1226) states: "To compute probe scores, we run a forward pass and capture the hidden state tensor at the selected layer using a forward hook. We use the final token representation as a compact summary of the prompt context."
+For open-ended capability tasks (divergent creativity), every agent receives an identical prompt ("List very detailed ways you can use a brick. Each answer should be a paragraph."). If activations are extracted strictly from the final token of the prompt context, the hidden representations are invariant across runs, making it impossible to train a discriminative probe that achieves 92% classification accuracy (Figure 12a). While Section B.5.2 mentions post-steering scores are computed on concatenated prompt and response, Appendix B does not specify:
+
+What token positions were extracted from open-ended responses for probe training (e.g., final token, EOS token, or mean pooling across response tokens);
+The size and generation parameters of the capability training dataset (e.g., temperature, sample count);
+The ground-truth source and binarization threshold used to split responses into "high" versus "low" creativity (e.g., human Ocsai scores vs. GPT-5 annotations, noted briefly in lines 1105–1107).
+Suggested Improvement: Add a dedicated paragraph in Appendix B.4 or B.8 defining the training corpus, sample sizes, labeling criteria, and exact token pooling method used to fit capability probes.
+Protocol Divergence Between Leave-One-Out Probing and Single-Object Steering Transfer
+Potential Concern: Cross-object generalization is described under two conflicting experimental designs:
+
+In Section B.8 (lines 1346–1349), cross-object evaluation is described as leave-one-out classifier training: "the probe is trained on a set of objects and tested on a held-out object that never appears in the training data (for instance, train on brick, stapler, and paperclip and test on bowl)." This setup matches Figure 12 and Figure 18.
+In Section 4.2.2 (lines 463–466) and the caption of Figure 9 (lines 1502–1505), behavioral steering is evaluated differently: "the divergent-creativity probe is trained on brick-only labeled data and then applied as a fixed steering direction across four object prompts: brick (in-distribution) and stapler, paperclip, and bowl (out-of-sample)."
+Suggested Improvement: Explicitly distinguish the two protocols in Section B.8: clarify that multi-object leave-one-out cross-validation was used to benchmark probe classification accuracy (Figures 12 and 18), whereas a single probe direction trained strictly on brick was deployed for cross-object generative steering (Figures 9 and 17).
+Textual Cross-Referencing Mismatches in Section B.11
+Potential Concern: Section B.11 (lines 1393–1400) mischaracterizes several supplementary figures:
+
+Lines 1393–1394 state: "Figure 14 and Figure15 shows the internal dynamics of probes for both lottery and ultimatum games." Figure 14 actually plots dose-response curves (
+ vs. target switching points), whereas only Figure 15 plots internal probe activation distributions.
+Lines 1397–1400 state: "Figure 18a and Figure 18b show the overall accuracy of probes achieving the targeted score is high, and out-of-sample steering is also possible. However, as with Llama, a ceiling effect is observed across all objects." Figure 18(a, b) plots diagnostic probe classification accuracies and cross-object performance degradation. The target-versus-achieved capability control curves and ceiling effects are presented in Figure 16 (brick) and Figure 17 (all four objects).
+Suggested Improvement: Correct the figure citations in lines 1393–1400 so that Figure 14 is cited for dose-response curves, Figure 15 for internal dynamics, Figure 17 for multi-object capability control and ceiling effects, and Figure 18 for classification generalization accuracy.
+Undefined Activation Scaling Factor (
+)
+Potential Concern: In Section 3.3 (lines 212–214), the steering direction is defined as the unit-normalized probe weight vector $\hat{w} = w / |w|2
+v{\text{scaled}}$, described as "the probe direction scaled to match typical activation magnitudes". Appendix B provides neither the mathematical formula nor the empirical reference distribution used to compute 
+ (e.g., whether it scales by the mean Euclidean norm of layer hidden states $\mathbb{E}[|h|2]
+\lambda$ values reported in Figures 10 and 14 directly depend on this scaling factor, the steering results cannot be reproduced without this definition.
+Suggested Improvement: Provide the exact formula used to derive $v{\text{scaled}}
+\hat{w}$ in Section B.2 or B.5.2.
+
+Contextualization Against Canonical Representation Steering Baselines
+Potential Concern: The manuscript benchmarks probe-based activation addition against prompt ladders and SAE feature nudging, but omits comparisons against canonical activation steering baselines established in the mechanistic interpretability literature, such as Contrastive Activation Addition (CAA; Rimsky et al., 2024), Representation Engineering difference-in-means vectors (RepE; Zou et al., 2023), and Inference-Time Intervention (ITI; Li et al., 2023). Because fitting regularized logistic regression probes requires supervision and parameter tuning, verifying whether probe weight vectors offer measurable advantages over non-parametric contrastive difference-of-means vectors (
+) is necessary to justify the additional procedural complexity.
+Suggested Improvement: Situate probe steering relative to difference-in-means contrastive baselines (e.g., CAA/RepE), and discuss or empirically evaluate the trade-offs between supervised logistic directions and non-parametric difference-of-means vectors.
+
+Minor Corrections and Typos
+Line 1393 (page 26): Missing space and subject-verb disagreement: "Figure 14 and Figure15 shows" should be corrected to "Figure 14 and Figure 15 show".
+
+Line 1404 (page 27): Section title mismatch: Header C reads "APPENDIX FIGURES AND TABLES", but the appendix contains only Figures 7 through 18 and no tables (Table 1 is located in Section 5). Consider amending the header to "APPENDIX FIGURES".
+
+Figure 12 Caption (a) (line 1560, page 29): Line-break hyphenation artifact: "compar-ing" should be corrected to "comparing".
+
+Figure 14 Caption (line 1598, page 30): Add explicit subfigure indicators (a) and (b) to the caption narrative to correspond with the plotted panels.
+
+Figure 15 Caption (lines 1616–1617, page 30): The caption reads "Probe activation score distributions for risky versus safe choices across different steering strengths on Qwen-2-7B-Instruct (layer 17)", but panel (b) displays the Ultimatum game (Accept vs. Reject), and the x-axis represents target switching points rather than steering strengths. Update the caption to match the plotted axes and choice types.
+
+Line 467 (page 9): Typo: "imbrplementation" should be corrected to "implementation".
+
+Line 202 (page 4): Typo: "interpretatbility" should be corrected to "interpretability".
+
+Line 354 (page 7): Grammar inconsistency: "is not an usual behavioral code" should be corrected to "is not a usual behavioral code".

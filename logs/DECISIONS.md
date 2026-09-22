@@ -934,3 +934,38 @@ kept and labelled partial; they are **not** pooled into a mean with the other tw
 Judge-independent measures (`results/S/s1/g5b_measures.csv`, S1.6's four text measures on all 240
 generations) are complete and unaffected — they need no API at all, which is why the phases were
 split.
+
+## D78 — Figure 11 is an inverse calibration, not a dose-response (22 Sept)
+
+Asked whether the paper's layer-48 steerability contradicts panel A. It does not, and
+the two cannot be compared directly, because they are different measurements.
+
+`Probes/raw_data/probe_results_final.json`, key `figure_11_dose_response_lottery_ultimatum_llama`,
+holds 30 records of the form (target switching point, `lambda_required`), produced by
+`coarse_grid_then_bracketed_binary_search` over a declared bracket `lambda_range: [-6.0, 0.0]`.
+That is the inverse of G4: it fixes the outcome and searches for the dose, where G4 fixes the
+dose and measures the outcome. A bracketed search returns a number whether or not the target
+was reached; no residual, convergence flag or failure case is recorded alongside it.
+
+Two features of the returned values are consistent with the bracket rather than with a
+measured response, and are recorded as observations, not as a verdict:
+  - lottery is linear in the target (R^2 = 0.981, 22 points) and its last value is -5.9987,
+    0.0013 from the declared bracket edge -6.0;
+  - 7 of its 21 steps reverse direction, which a smooth calibration would not do.
+  - ultimatum (R^2 = 0.989, 8 points) stops at -5.0661, short of the edge, so the pattern is
+    not uniform across games.
+
+The decisive test — steering with the paper's own direction at layer 48 — cannot be run.
+No probe weight vector exists in the repo: `probe_results_final.json` carries figure data and
+21,040 per-agent rows only, and `Probes/runs/` carries judge-scoring artefacts only. This is
+the same provenance gap recorded in `reports/PROBE_PROVENANCE.md`, now blocking the one
+experiment that would settle the discrepancy.
+
+Options not taken: (a) treat the flat L48 panel as refuting the paper — rejected, a rebuilt
+direction cannot refute a claim about a direction that was not kept; (b) refit a direction and
+call it theirs — rejected under rule 1. Chosen: report it as a failure to reproduce with the
+qualifier stated in the figure, which is cheapest to reverse if the direction is later found.
+
+Figure change: panel A's note in `cv_bench/g4_figure.py` now carries the qualifier its own
+title already had ("with a probe we rebuilt: its own direction was never saved"). No data
+changed; `figures/g4_summary.{pdf,png}` rebuilt.

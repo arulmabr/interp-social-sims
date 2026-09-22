@@ -1,10 +1,10 @@
 # STATUS.md
 
-Rewritten by `cv_bench/monitor.py` every 10 minutes. Cycle 31.
+Rewritten by `cv_bench/monitor.py` every 10 minutes. Cycle 52.
 
-**2026-09-22 05:31 UTC** — cutoff Thu 24 Sept 06:00 UTC, **48.5 h remaining**.
+**2026-09-22 09:01 UTC** — cutoff Thu 24 Sept 06:00 UTC, **45.0 h remaining**.
 
-**GPU-hours consumed, both sessions, `sacct` on job names starting `cvb_`: 38.05** of the 400 approved.
+**GPU-hours consumed, both sessions, `sacct` on job names starting `cvb_`: 47.81** of the 400 approved.
 
 
 ## Live jobs
