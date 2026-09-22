@@ -813,3 +813,17 @@ zero Track B names.
 describing yesterday's world: the monitor's imported table (D67), the watcher's hard-coded list
 (D72), and my own belief that an edit had applied when it had silently failed to match. A check that
 enumerates what it protects has to derive that enumeration, not restate it.
+
+**D73. Every job that runs a backward pass needs the same headroom; I fixed one and missed the other.**
+`cvb_g6` failed with `torch.OutOfMemoryError` in `z.backward()` -- 448 MiB requested, 42 MiB free --
+which is D71's failure exactly. G6 computes attribution as activation x (decoder . grad of z), so it
+backpropagates from the logits like the gradient anchor does.
+
+When D71 fixed `cvb_g4b` I treated it as a property of that job rather than of the operation. The
+generalisation was one grep away: `grep -ln "\.backward()" cv_bench/*.py` names `g4b`, `g6` and
+`bench_throughput`. G6 is now on 2 x H200 alongside g4b. `bench_throughput` is a timing harness that
+does not load the 70B for backward work and is unaffected.
+
+**Rule of thumb, recorded so the next such job is submitted correctly the first time:** a 70B forward
+pass fits in 2 x 80 GiB; a 70B *backward* pass does not. Anything calling `.backward()` on this model
+asks for `h200:2` or `a100:4`.
