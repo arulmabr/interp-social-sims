@@ -21,7 +21,11 @@ set -euo pipefail
 cd "${SLURM_SUBMIT_DIR}"
 export OMP_NUM_THREADS=4 MKL_NUM_THREADS=4
 
-TEMPLATE=(0.5 0.5 0.5 1.0 1.0 1.0 2.0 2.0 2.0)
+# Centred on B2-cal's measured template noise of 2.13, not the 0.5 the first
+# study called primary -- it was low by a factor of four. Numerical noise 0 is
+# the primary configuration because unbatched reads measured bit-identical;
+# 0.1 and 0.25 are sensitivity rows for batched reads only (author item 3).
+TEMPLATE=(2.13 2.13 2.13 1.0 1.0 1.0 3.0 3.0 3.0)
 NUMERICAL=(0.0 0.1 0.25)
 
 i=${SLURM_ARRAY_TASK_ID}
@@ -34,5 +38,5 @@ if [ "${policy_idx}" -eq 0 ]; then POLICY=exclude; else POLICY=lapse; fi
 echo "task=${i} template=${t} numerical=${n} policy=${POLICY} host=$(hostname) start=$(date -Is)"
 python -m cv_bench.estimator.recovery \
   --template-noise "${t}" --numerical-noise "${n}" --policy "${POLICY}" \
-  --reps 20 --seed $(( i + 1 )) --observe logit
+  --reps 20 --seed $(( i + 1 )) --observe logit --fitted-scale
 echo "done=$(date -Is)"

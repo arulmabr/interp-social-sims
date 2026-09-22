@@ -676,3 +676,24 @@ unexplained `CANCELLED` on a Track B job as an external event to be resubmitted 
 be diagnosed. The `cvb_` prefix was introduced (BD3) so the shared GPU budget could be totalled; it
 does not isolate the two sessions from each other's `scancel`. Worth the authors telling the Friday
 session, since the exposure runs the other way too: a mass cancel from here would kill their G4 runs.
+
+**BD43. The recovery study was about to run at the railed gamma.** `fitted_base` read `b2_cal.json`,
+which holds the *original* fit — the one that returned gamma exactly on its 1.60 cap. The refit under
+non-binding bounds lives in `b2_cal_check.json`, so the smoke run reported "running at B2-cal's fitted
+scale" while using alpha 0.6791 and **gamma 1.6000**, not the refit's 0.7012 and 1.6849. Every
+configuration would have been simulated at a parameter describing my optimiser rather than the model.
+Caught by reading the smoke's own banner rather than trusting the flag name. `fitted_base` now prefers
+the refit and **raises** if any parameter is still on a bound, rather than quietly running at it.
+
+This is the fourth instance tonight of the same failure: a name that stayed valid while its referent
+changed — the checkpoint key over trial ids, the gradient skip over filenames, `how_to_load` naming a
+deleted file, and now a flag called `--fitted-scale` that read the wrong file. The smoke run existed
+precisely to catch this class, and did.
+
+**BD44. The recovery array now runs at the measured scale.** Template noise sweeps **2.13 / 1.0 / 3.0**
+around B2-cal's measured 2.1338, replacing 0.5 / 1.0 / 2.0 around a guess; the first study's "primary"
+configuration of 0.5 was **low by a factor of four**. Numerical noise 0 is primary, because unbatched
+reads measured bit-identical at 1.1e-16; 0.1 and 0.25 remain as sensitivity rows explicitly labelled
+batched-reads-only (author item 3). The CPT base is the fitted theta0 rather than plan v4's defaults,
+with the other two families rescaled to it. Every Gate B2 verdict before this was computed at a quarter
+of the real noise on an agent that was not this model, and is superseded rather than merely re-run.

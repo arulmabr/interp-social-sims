@@ -583,7 +583,8 @@ def _solve_for_effect(trials, par0: AgentParams, knob: str,
     return 0.5 * (lo + hi)
 
 
-def build_crossed_zoo(trials, target_effect: Optional[float] = None
+def build_crossed_zoo(trials, target_effect: Optional[float] = None,
+                      base: Optional[AgentParams] = None
                       ) -> Tuple[Dict[Tuple[str, str], AgentParams],
                                  Dict[str, AgentParams],
                                  Dict[str, float]]:
@@ -601,7 +602,12 @@ def build_crossed_zoo(trials, target_effect: Optional[float] = None
         target_effect = behavioural_effect(
             trials, replace(cpt0, alpha=ALPHA0 + MDC["alpha"]), cpt0, pk=pk)
 
+    # With a fitted theta0 the CPT base is that agent, not the plan's defaults;
+    # the other two families keep their own shapes and are rescaled to it.
     bases = {b: base_params(b) for b in BASES}
+    if base is not None:
+        bases["cpt"] = replace(base, kind="cpt")
+        cpt0 = bases["cpt"]
     crossed: Dict[Tuple[str, str], AgentParams] = {}
     effects: Dict[str, float] = {}
 

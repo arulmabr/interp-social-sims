@@ -40,6 +40,43 @@ SHIFTED: Dict[str, Tuple[str, str]] = {
 }
 
 
+#: Where B2-cal leaves theta0 and the measured noise. The recovery study runs
+#: at the fitted scale, not at the synthetic defaults: the agents were scaled
+#: without a model, so power measured at TAU0 = 0.25 is a statement about an
+#: assumed choice function (BD16).
+CAL_JSON = Path("/orcd/data/gabrieli/001/guna23/iclr_risk_2027/trackB/b2_cal/b2_cal.json")
+
+
+def fitted_base(path: Path = CAL_JSON) -> Tuple[AgentParams, Dict[str, float]]:
+    """theta0 and the measured noise from B2-cal, or the defaults if absent.
+
+    The refit under non-binding bounds lives in `b2_cal_check.json`, not in
+    `b2_cal.json`: the latter holds the original fit, which returned gamma
+    exactly on its 1.60 cap. Reading only the latter would run the whole
+    recovery study at a railed parameter -- a value describing the optimiser
+    rather than the model (BD39).
+    """
+    if not path.exists():
+        return AgentParams(), {}
+    d = json.loads(path.read_text())
+    f = d["fitted"]
+    chk = path.with_name("b2_cal_check.json")
+    if chk.exists():
+        c = json.loads(chk.read_text())
+        if c.get("refit"):
+            f = c["refit"]
+            if any(c["refit"].get("railed", {}).values()):
+                raise RuntimeError(
+                    "the refit still has a parameter on its bound; widen the "
+                    "bounds or report it unidentified rather than running the "
+                    "recovery study at it")
+    par = AgentParams(alpha=float(f["alpha"]), gamma=float(f["gamma"]),
+                      tau=float(f["tau"]))
+    noise = {"template_noise_sd": float(d.get("template_noise_sd", 0.0)),
+             "numerical_noise_sd": float(d["numerical_noise"]["sd_mean"])}
+    return par, noise
+
+
 def build_trials(expand: bool = True) -> List[core.Trial]:
     """The risk grid B2 runs on, with formats expanded."""
     content = list(risk.generate_risk())
@@ -52,7 +89,8 @@ def run_config(trials: Sequence[core.Trial],
                dominated_policy: str,
                reps: int = 20,
                seed: int = 0,
-               observe: str = "logit") -> Dict[str, object]:
+               observe: str = "logit",
+               base_override: Optional[AgentParams] = None) -> Dict[str, object]:
     """One configuration: every (base, intervention) cell, `reps` times each.
 
     Author item 3: base in {CPT, mean-variance, monotone} crossed with
@@ -61,7 +99,7 @@ def run_config(trials: Sequence[core.Trial],
     *that* baseline, so D1 is a change from the base agent's own dominance rate
     rather than from CPT's.
     """
-    crossed, bases, effects = build_crossed_zoo(trials)
+    crossed, bases, effects = build_crossed_zoo(trials, base=base_override)
     sigma = max(numerical_noise, 1e-3)
 
     records: List[Dict[str, object]] = []
@@ -82,7 +120,7 @@ def run_config(trials: Sequence[core.Trial],
                              template_offsets=offsets)
             obs_b = sim_b["z"] if observe == "logit" else sim_b["choice"]
             fitted_base, _, _ = FIT.fit(trials, obs_b, ("alpha", "gamma", "tau"),
-                                        AgentParams(), dominated_policy=dominated_policy,
+                                        par0, dominated_policy=dominated_policy,
                                         seed=rep, free_templates=template_noise > 0,
                                         observe=observe, sigma=sigma)
             tpl_offsets = dict(FIT.fit.last_template_offsets)
@@ -188,6 +226,9 @@ def main(argv=None) -> int:
     ap.add_argument("--policy", choices=("exclude", "lapse"), default="exclude")
     ap.add_argument("--reps", type=int, default=20)
     ap.add_argument("--seed", type=int, default=1)
+    ap.add_argument("--fitted-scale", action="store_true",
+                    help="run at B2-cal's theta0 and measured noise, not the "
+                         "synthetic defaults")
     ap.add_argument("--observe", choices=("logit", "choice"), default="logit",
                     help="logit: z is read directly, which is what the readout gives; "
                          "choice: one Bernoulli draw per row, as sampled generation gives")
@@ -233,9 +274,18 @@ def main(argv=None) -> int:
         # Stride rather than truncate, so every format and cell stays present.
         step = max(1, len(trials) // args.max_rows)
         trials = trials[::step]
+    base_override = None
+    if args.fitted_scale:
+        base_override, noise = fitted_base()
+        if noise:
+            args.template_noise = noise["template_noise_sd"]
+            args.numerical_noise = noise["numerical_noise_sd"]
+        print(f"running at B2-cal's fitted scale: {base_override.as_dict()}")
+        print(f"  measured noise: template {args.template_noise:.4f}, "
+              f"numerical {args.numerical_noise:.2e}")
     res = run_config(trials, args.template_noise, args.numerical_noise,
                      args.policy, reps=args.reps, seed=args.seed,
-                     observe=args.observe)
+                     observe=args.observe, base_override=base_override)
     res["utc"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
 
     args.out.mkdir(parents=True, exist_ok=True)

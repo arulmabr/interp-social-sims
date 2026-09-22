@@ -19,7 +19,7 @@ echo "$(date -Is) dry run $JOB finished: $state"
 read -r PASS STEPS <<< "$(python - <<'PY'
 import json, sys
 from pathlib import Path
-p = Path("/orcd/data/gabrieli/001/guna23/iclr_risk_2027/trackB/b3_lora_dryrun_8b_v4/b3_lora.json")
+p = Path("/orcd/data/gabrieli/001/guna23/iclr_risk_2027/trackB/b3_lora_dryrun_8b_v5/b3_lora.json")
 if not p.exists():
     print("no 0"); sys.exit()
 d = json.loads(p.read_text())
