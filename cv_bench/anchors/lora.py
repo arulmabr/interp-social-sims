@@ -71,13 +71,17 @@ def _sha256(p: Path) -> str:
 ADAPTERS = ("reference", "preference", "bias")
 
 
-def agent_for(name: str, tau: float, bias: float) -> AgentParams:
+def agent_for(name: str, tau: float, bias: float,
+              pref_mdc_multiple: float = 1.0) -> AgentParams:
     """The Tversky-Kahneman fallback agent behind each adapter."""
     base = AgentParams(alpha=ALPHA0, gamma=GAMMA0, lam=LAMBDA0, tau=tau)
     if name == "reference":
         return base
     if name == "preference":
-        return replace(base, alpha=ALPHA0 + MDC["alpha"])
+        # The MDC itself is unchanged; a multiple > 1 adds a SECOND anchor further
+        # from the detection limit so the anchor set brackets a range (author
+        # decision, 22 Sept item 3).
+        return replace(base, alpha=ALPHA0 + pref_mdc_multiple * MDC["alpha"])
     if name == "bias":
         return replace(base, action=bias)
     raise ValueError(f"unknown adapter {name!r}")
@@ -361,6 +365,14 @@ def main(argv=None) -> int:
                     help="load adapter_<name>.pt from this run instead of training. "
                          "Used to re-probe cloning on more rows without retraining "
                          "(BD47: n=240 was the binding constraint, not the adapters).")
+    ap.add_argument("--preference-mdc-multiple", type=float, default=1.0,
+                    help="the shifted adapter is alpha0 + this many MDC. 1.0 is the "
+                         "original anchor at the detection limit; 3.0 is the second "
+                         "anchor. The MDC itself never changes.")
+    ap.add_argument("--reinit", action="store_true",
+                    help="reset the retrained adapter to a fresh LoRA initialisation "
+                         "first, so it is trained INDEPENDENTLY rather than continuing "
+                         "from loaded weights or from the reference adapter.")
     ap.add_argument("--retrain", default="",
                     help="comma-separated adapters to retrain; the rest are "
                          "loaded from --adapters-from unchanged")
@@ -398,9 +410,12 @@ def main(argv=None) -> int:
         "theta0": {"alpha": ALPHA0, "gamma": GAMMA0, "lambda": LAMBDA0},
         "adapters": {}, "cloning": {}, "contrasts": {},
         "retrained": retrain, "init_from_reference": bool(args.init_from_reference),
+        "reinit": bool(args.reinit),
+        "preference_mdc_multiple": float(args.preference_mdc_multiple),
     }
 
-    agents = {n: agent_for(n, args.tau, args.bias) for n in ADAPTERS}
+    agents = {n: agent_for(n, args.tau, args.bias, args.preference_mdc_multiple)
+              for n in ADAPTERS}
     targets = {n: soft_targets(train, p) for n, p in agents.items()}
 
     t0 = datetime.now(timezone.utc)
@@ -444,6 +459,22 @@ def main(argv=None) -> int:
                 set_peft_model_state_dict(peft_model, ref_sd, adapter_name=name)
                 print(f"--- retraining {name}, initialised FROM REFERENCE "
                       f"({len(ref_sd)} tensors copied) ---", flush=True)
+            elif args.reinit:
+                import torch.nn.init as _init
+                n_reset = 0
+                for mod in peft_model.modules():
+                    for attr, zero in (("lora_A", False), ("lora_B", True)):
+                        d_ = getattr(mod, attr, None)
+                        if d_ is None or name not in d_:
+                            continue
+                        w = d_[name].weight
+                        if zero:
+                            _init.zeros_(w)
+                        else:
+                            _init.kaiming_uniform_(w, a=5 ** 0.5)
+                        n_reset += 1
+                print(f"--- retraining {name} INDEPENDENTLY, fresh LoRA init "
+                      f"({n_reset} matrices reset) ---", flush=True)
             else:
                 print(f"--- retraining {name} from its loaded weights ---", flush=True)
             info = train_adapter(peft_model, tok, ro, name, train, targets[name],
