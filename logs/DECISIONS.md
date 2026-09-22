@@ -905,3 +905,32 @@ the failure is on the record and the rerun does not skip them.
 — completion marker present, expected rows on disk, job exited 0 — G5b's judging was finished. Only
 reading `parse_status` showed that 100% of it was empty. A marker says a job ran to the end; it says
 nothing about whether what it wrote means anything.
+
+**D77. G5b is scored by two judges, not three; the gap is reported, not hidden.**
+Authors' decision, 22 Sept, on the measured cost of the alternative.
+
+| judge | scored | note |
+|---|---|---|
+| `gpt-5` | **240 / 240** | complete |
+| `claude-sonnet-4-6` | **240 / 240** | complete |
+| `gemini-2.5-pro` | 23 / 240 | rate limited; `http 429` on 216 of its first 240 calls |
+| `deepseek-v4-pro` | 0 | no credential in `~/secrets/working_apis` |
+| `kimi-k2.6` | 0 | no credential |
+
+Retrying Gemini with 4/8/16/32/64 s backoff reached **0.5 rows per minute** — measured over a
+110-second window, not estimated — putting the remaining 215 calls at about **6.5 hours**. The limit
+is a hard quota rather than a transient, so the backoff worked as designed and made no difference to
+the throughput. The authors chose to stop and report two judges.
+
+**What this means for any G5b figure.** It is a **two-judge** figure and will say so. The published
+five-judge mean was already unreproducible on this side for want of two credentials (D70), and V2
+established that the paper's own five-judge passes carry **no API response ids**. So the comparison
+available here is narrower than the paper's in a way no amount of compute fixes.
+
+Means on the 480 complete rows: `gpt-5` 7.651, `claude-sonnet-4-6` 6.316. The 23 Gemini rows are
+kept and labelled partial; they are **not** pooled into a mean with the other two, because a
+23-of-240 subsample of one judge is not that judge's score.
+
+Judge-independent measures (`results/S/s1/g5b_measures.csv`, S1.6's four text measures on all 240
+generations) are complete and unaffected — they need no API at all, which is why the phases were
+split.
