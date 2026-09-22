@@ -3,7 +3,7 @@
 #SBATCH --partition=mit_preemptable
 #SBATCH --account=mit_general
 #SBATCH --qos=normal
-#SBATCH --gres=gpu:a100:2
+#SBATCH --gres=gpu:h200:2
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=128G
 #SBATCH --time=06:00:00
