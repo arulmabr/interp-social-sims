@@ -605,3 +605,42 @@ this step.
 **The dependency lesson generalises.** `afterany` was the right choice for a step that should run
 whatever the upstream outcome; it is the wrong choice for a step that consumes the upstream's output.
 Every chain of the second kind is now `afterok`.
+
+**D64. Two systematic faults, found because a job finished too fast to be real.**
+Taken under rule 16, recorded with the alternatives.
+
+`cvb_g5` reported **COMPLETED in 3:11** and `cvb_g4b` **FAILED in 1:09**. Neither had loaded a model.
+
+**Fault 1 — a GPU request that does not fit the model.** `--gres=gpu:2` asks for two GPUs of any
+type. On this cluster L40S is by far the most plentiful, and two of them give 80.1 GiB usable against
+the 141.1 GB the 70B needs, so accelerate placed 36 layers on **disk**. Usable capacity by request:
+
+| request | usable | fits |
+|---|---|---|
+| a100:2 / h100:2 | 142.6 GiB | yes |
+| h200:2 | 251.5 GiB | yes |
+| l40s:2 | 80.1 GiB | **no** |
+| l40s:4 | 160.2 GiB | yes |
+
+Every 70B job now requests `a100:2` explicitly, in the sbatch files and in the monitor's resubmission
+arguments. *Alternatives not taken:* `--gres=gpu:4` generic always fits but consumes the whole
+4-GPU preemptable cap for a job needing two; `l40s:4` fits and is the most plentiful type but runs
+roughly 2.4x slower because pipeline placement leaves one card active at a time. Both remain
+available if a100 queues badly, and that is why they are written down here.
+
+**This fault was caught by the guard added earlier today,** which refuses a CPU or disk placement
+instead of silently running a forward pass that takes hours. Without it, both jobs would have looked
+healthy while producing nothing.
+
+**Fault 2 — the sbatch scripts masked their own failures.** Each ended
+
+    srun python3 -u -m cv_bench.<mod> ...
+    echo "$(date -u +%FT%TZ) exit=$?"
+
+The `echo` succeeds, and *its* status becomes the script's status, so a job whose python raised
+reported **COMPLETED** to `sacct`. That is why `cvb_g5` looked fine: the monitor saw COMPLETED, and
+only the missing completion marker would eventually have caught it. Every script now captures `rc`
+and exits with it; all 16 verified, all syntax-checked.
+
+Fault 2 is the more serious of the two. Fault 1 announced itself; fault 2 made a crash indistinguishable
+from success in the one place both the monitor and the watcher look first.

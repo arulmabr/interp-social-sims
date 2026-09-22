@@ -22,4 +22,6 @@ case "${STEP:-instr}" in
   g2)      python3 -u -m cv_bench.g2_summary ;;
   *)       echo "unknown STEP=${STEP}"; exit 2 ;;
 esac
-echo "$(date -u +%FT%TZ) analyse exit=$?"
+rc=$?
+echo "$(date -u +%FT%TZ) analyse exit=$rc"
+exit "$rc"

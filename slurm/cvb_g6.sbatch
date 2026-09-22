@@ -20,4 +20,6 @@ export HF_HOME=/orcd/data/gabrieli/001/guna23/hf_cache
 export HF_HUB_OFFLINE=1
 cd /home/guna23/shrey/risk
 srun python3 -u -m cv_bench.g6 --model llama --levels 12
-echo "$(date -u +%FT%TZ) exit=$?"
+rc=$?
+echo "$(date -u +%FT%TZ) exit=$rc"
+exit $rc

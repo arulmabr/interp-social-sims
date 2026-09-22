@@ -3,7 +3,7 @@
 #SBATCH --partition=mit_preemptable
 #SBATCH --account=mit_general
 #SBATCH --qos=normal
-#SBATCH --gres=gpu:2
+#SBATCH --gres=gpu:a100:2
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=128G
 #SBATCH --time=01:30:00
@@ -22,3 +22,5 @@ cd /home/guna23/shrey/risk
 for L in 48 50; do
   srun python3 -u -m cv_bench.g4b --fallback --layer $L --game both
 done
+rc=$?
+exit "$rc"

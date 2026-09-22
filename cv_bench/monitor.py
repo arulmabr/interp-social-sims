@@ -88,7 +88,7 @@ PREEMPT = ["--partition=ou_bcs_low", "--qos=normal", "--account=mit_general"]
 EXPECTED.update({
     "cvb_instr": dict(
         sbatch=REPO_SLURM / "cvb_instr.sbatch",
-        args=PREEMPT + ["--gres=gpu:2", "--time=03:00:00"],
+        args=PREEMPT + ["--gres=gpu:a100:2", "--time=03:00:00"],
         outputs={"instr/norms_llama.jsonl": 50,
                  "instr/readout_grid_llama.jsonl": 128,
                  "instr/freegen_llama.jsonl": 840},
@@ -96,7 +96,7 @@ EXPECTED.update({
     ),
     "cvb_neutral2": dict(
         sbatch=REPO_SLURM / "cvb_neutral.sbatch",
-        args=PREEMPT + ["--gres=gpu:2", "--time=03:00:00"],
+        args=PREEMPT + ["--gres=gpu:a100:2", "--time=03:00:00"],
         outputs={"neutral/mass_llama.jsonl": 344,   # 50 lottery + 36 ultimatum: CAL_ULTIMATUM has 36 values, not 50
                  "neutral/free_llama.jsonl": 640},
         done="neutral/done_neutral_llama.json",
@@ -104,7 +104,7 @@ EXPECTED.update({
 })
 for _v in ("as_written", "reconstruction"):
     for _l in (48, 50):
-        _g = "gpu:2"
+        _g = "gpu:a100:2"
         EXPECTED[f"cvb_g4_{_v[:5]}_L{_l}"] = dict(
             sbatch=REPO_SLURM / "cvb_g4.sbatch",
             args=PREEMPT + [f"--gres={_g}", "--time=16:00:00",

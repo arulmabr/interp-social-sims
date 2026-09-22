@@ -3,7 +3,7 @@
 #SBATCH --partition=ou_bcs_low
 #SBATCH --account=mit_general
 #SBATCH --qos=normal
-#SBATCH --gres=gpu:2
+#SBATCH --gres=gpu:a100:2
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=128G
 #SBATCH --time=04:00:00
@@ -20,4 +20,6 @@ export HF_HOME=/orcd/data/gabrieli/001/guna23/hf_cache
 export HF_HUB_OFFLINE=1
 cd /home/guna23/shrey/risk
 srun python3 -u -m cv_bench.neutral --model llama --phase all --agents 8 --levels 10
-echo "$(date -u +%FT%TZ) exit=$?"
+rc=$?
+echo "$(date -u +%FT%TZ) exit=$rc"
+exit $rc

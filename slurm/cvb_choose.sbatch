@@ -16,3 +16,5 @@ set -u
 export ICLR_RUNROOT=/orcd/data/gabrieli/001/guna23/iclr_risk_2027
 cd /home/guna23/shrey/risk
 python3 -u -m cv_bench.neutral --model llama --phase choose
+rc=$?
+exit "$rc"

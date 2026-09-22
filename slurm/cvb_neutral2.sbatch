@@ -23,3 +23,5 @@ export HF_HUB_OFFLINE=1
 cd /home/guna23/shrey/risk
 srun python3 -u -m cv_bench.neutral --model llama --phase free --agents 8 --levels 10
 srun python3 -u -m cv_bench.neutral --model llama --phase choose
+rc=$?
+exit "$rc"
