@@ -556,3 +556,28 @@ between the two versions is itself a number worth having — it says how much of
 property of the surface format rather than of the readout. `legacy_one_format` is the version the
 geometry table treats as *the* gradient; `both_orders` enters as its own row. The hash gate, the
 fallback and the `duplicate_to_reconcile` labelling of **D59** are unchanged and apply to both.
+
+**D62. Rule 16 is in force; what it changes and what it does not.**
+Appended to `CLAUDE.md` at the authors' instruction of 22 Sept. Four hard stops keep an approval
+step — a pre-registered threshold or metric, an anchor's training objective after its dry run has
+passed, the GPU budget (400 here to the cutoff, 1,000 for Track B through 5 Nov, both on the shared
+`cvb_` prefix), and paid API spend above the standing $50. Everything else proceeds under "keep every
+threshold and lock intact, choose the option cheapest to reverse, record it with the alternatives".
+
+Two consequences worth stating rather than discovering later.
+
+**The recording obligation is not a formality.** Rule 16 trades an approval step for a written one.
+An entry naming the alternatives has to exist *when the choice is made*; a decision reconstructed
+afterwards has none of the property that makes autonomy safe, which is that a reader can see what was
+not chosen. This file is where that happens, and the rule says as much.
+
+**The test-split change is the consequential one.** Rule 3 required an affirmative unlock in session.
+It now requires only that the `prereg-v1` tag exist and that 24 hours pass without a veto — silence
+becomes consent. That is a real loosening of the project's strongest lock, and it is the authors' call
+to make. What is in our gift is keeping the window meaningful: the window opens only once the tag is
+present, its opening and expiry are posted here at the moment it opens, and nothing on the test split
+is touched before the full 24 hours have elapsed. An unannounced window would satisfy the letter of
+the rule and defeat its purpose.
+
+**Numbering.** Neither checkout has rules 13–15; this file holds 1–12. The authors' number 16 is kept
+as given so their reference resolves, rather than renumbered to 13.

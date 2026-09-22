@@ -57,3 +57,58 @@ results are read-only), rule 4 (the outcome never decides a rerun — technical 
 rule 5 (every arm that runs is reported), rule 9 (secrets and anonymity), rule 12 (the authors decide).
 
 After the cutoff, rules 6 and 7 apply as originally written.
+
+---
+
+## Amendment, 22 Sept 2026 — rule 16: autonomy, both sessions
+
+Added at the authors' instruction. **Numbering note:** this file contains rules 1–12; there are no
+rules 13–15 in either checkout. The number 16 is the authors' and is kept so their reference resolves,
+rather than renumbered to 13. Track B merges this section; it is authored here, per the coordination
+amendment.
+
+16. **No task waits for author approval except four hard stops.** Outside them the standing procedure
+    is: **keep every threshold and lock intact, choose the option cheapest to reverse, record it with
+    the alternatives, proceed.**
+
+    **The four hard stops — these still require the authors:**
+
+    1. **Changing a pre-registered threshold or metric.** Any value fixed in advance — the minimum
+       detectable change, the 0.8–1.2 slope band, the ≥ 0.8 preference share, the cloning
+       correlation ≥ 0.95, a dose grid once logged — is not ours to move.
+    2. **Changing an anchor's training objective after its dry run has passed.** Once B3.2's soft-label
+       cross-entropy has cloned to criterion, the objective is frozen; re-specifying it after seeing a
+       result is exactly the move rule 4 forbids.
+    3. **Exceeding the GPU budget.** This session: **400 GPU-hours to the cutoff**. Track B:
+       **1,000 GPU-hours through 5 Nov**. Both are evaluated on `sacct` totals for the shared `cvb_`
+       prefix, so the figure is project-wide, not per-session.
+    4. **Paid API spend above what is already approved.** The standing approval is $50 for G5b's
+       five-judge scoring. Anything beyond it is a new request.
+
+    **What "cheapest to reverse" means in practice.** Prefer recoding saved text to regenerating it;
+    prefer adding a run to replacing one; prefer a new output file to overwriting an old one; prefer a
+    subset that can be widened to a sweep that must be discarded. Where two options cost the same, take
+    the one that leaves more evidence behind.
+
+    **What "record it with the alternatives" means.** An entry in `logs/DECISIONS.md` naming the choice
+    made, the options not taken, and why — written when the choice is made, not reconstructed
+    afterwards. A decision taken under rule 16 without that entry is not covered by rule 16.
+
+    **The test split (amends rule 3).** The unlock is no longer an affirmative instruction in session.
+    After the `prereg-v1` tag exists, a **24-hour veto window** opens; if no author vetoes within it,
+    the split may be opened. Operationally, and to keep the window meaningful rather than nominal:
+    the window opens only once the tag is present, its opening and its expiry time are posted in
+    `logs/DECISIONS.md` at the moment it opens, and nothing on the test split is generated, opened or
+    evaluated before the full 24 hours have elapsed. Silence is consent under this rule, which is
+    precisely why the announcement is not optional.
+
+    **What rule 16 does not touch.** Rule 1 (no number without a file behind it), rule 2 (existing
+    results are read-only), rule 4 (the outcome never decides a rerun — rule 16's "keep every threshold
+    and lock intact" restates it), rule 5 (every arm that runs is reported), rule 9 (secrets and
+    anonymity) and rule 12 (paper text is drafted here and decided by the authors). Rule 16 removes the
+    approval step from ordinary work; it removes no obligation to record, to report, or to leave the
+    legacy directories alone.
+
+    **Relation to the earlier 22 Sept amendment.** That amendment suspended rules 6 and 7 until the
+    cutoff. Rule 16 generalises it and outlasts it: after the cutoff, rules 6 and 7 return as written
+    *except* where rule 16's four hard stops already define what needs approval.
