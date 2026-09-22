@@ -1,7 +1,11 @@
 # B_B3.md — Track B B3: the anchors
 
 **B3.1 (gradient) is complete on Llama-3.3-70B. B3.2 (LoRA) is now complete on Llama-3.3-70B too, and
-GATE B3 FAILS: all three adapters clone, but the preference contrast is unresolved.** Values in `MANIFEST_B.csv`; decisions in `logs/B_DECISIONS.md` BD27, BD37, BD40, BD46.
+GATE B3 FAILS.** All three adapters clone. At n = 1016 with the contrast floor MEASURED rather than
+assumed independent (BD49: the adapters share a seed and data order, rho = +0.576), the preference
+interval is [+0.0054, +0.0522] -- clear of zero, 0.38 MDC from the truth, but 1.33 MDC wide against
+the <= 1 MDC the gate requires. Earlier intervals in this report assumed independence and were too
+wide; see BD49. Values in `MANIFEST_B.csv`; decisions in `logs/B_DECISIONS.md` BD27, BD37, BD40, BD46.
 
 `$TRACKB_SHARE` is the project directory on the lab share.
 

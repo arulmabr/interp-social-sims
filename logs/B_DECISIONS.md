@@ -830,3 +830,34 @@ random matched-norm direction, not along B3.1. Re-running against the real ancho
 fp32 weights (282 GB) are entirely resident on-GPU, so host RAM only streams shards; at 64G it placed
 within minutes. The cluster had idle a100s throughout -- the binding constraint was allocatable RAM,
 not GPUs. Also fixed: generic `--gres=gpu:4` (could land on l40s, useless at 80 GB) and `ou_bcs_low`.
+
+**BD49. The contrast noise floor was assumed independent when the adapters are correlated BY DESIGN,
+and correcting it moves the preference interval clear of zero.** 22 Sept.
+
+`gate_b3.py` computed the floor as `hypot(sd_reference, sd_preference)`. That is the contrast SD only
+if the two adapters' cloning residuals are independent -- and A5 specifies **identical data order and
+seed** for all three adapters, so they are not. Measured from the per-row residuals the fullrows run
+now persists, the correlation is **rho = +0.576**, and the floor is **0.3805** rather than the assumed
+0.5806. Every earlier burial figure and interval in this file and in `reports/B_B3.md` was computed
+under the wrong assumption and was too pessimistic.
+
+| n = 1016, preference - reference | floor | 95% CI | half-width | contains zero |
+|---|---|---|---|---|
+| assumed independent | 0.5806 | [-0.0069, +0.0645] | 2.03 MDC | yes |
+| **measured, rho +0.576** | **0.3805** | **[+0.0054, +0.0522]** | **1.33 MDC** | **no** |
+
+Burial falls from 26.4x to 17.3x. **GATE B3 still FAILS**, but on the other clause: the estimate is now
+distinguishable from zero and |est - truth| is 0.38 MDC, while the half-width is 1.33 MDC against the
+<= 1 MDC the gate requires. The verdict is unchanged; the distance to passing is much smaller than
+reported.
+
+*Why this matters beyond the number.* The paired run under way is aimed at raising rho. At the step-250
+probe the paired preference adapter already has residual SD 0.320 against the original's 0.471. If rho
+reaches ~0.85 the floor falls to ~0.24 and the half-width to ~0.83 MDC, which would PASS. That is a
+projection, not a result, and it is recorded here so the projection can be checked against what the run
+actually returns rather than remembered selectively.
+
+*Method change, not a threshold change.* No gate threshold moved. The floor is now **measured** from
+the residuals rather than **assumed** from a formula; `empirical_floor()` falls back to the independent
+form and says so when the per-row residuals are absent, which is the case for every run before the
+fullrows rerun.

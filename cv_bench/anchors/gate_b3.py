@@ -49,6 +49,32 @@ def residual_sd(run: Path, adapter: str, r: float) -> tuple[float, float]:
     return sd, sd * math.sqrt(max(0.0, 1.0 - r * r))
 
 
+def empirical_floor(run: Path, other: str) -> tuple[float, float, int]:
+    """SD of the CONTRAST residual, measured rather than assumed.
+
+    `hypot(sd_ref, sd_other)` is the floor only when the two adapters' cloning
+    residuals are independent. That holds when each is trained from its own
+    initialisation and fails by design once the shifted adapter is started from
+    the reference adapter's weights -- the whole point of pairing is to make the
+    residuals correlate so they cancel here. Assuming independence would hide
+    exactly the improvement the paired run exists to produce, so when the
+    per-row residuals are on disk the contrast SD is taken from them directly.
+
+    Returns (contrast SD, correlation between the two residuals, n).
+    """
+    fr, fo = run / "residuals_reference.npz", run / f"residuals_{other}.npz"
+    if not (fr.exists() and fo.exists()):
+        return float("nan"), float("nan"), 0
+    a = np.load(fr, allow_pickle=False)["residual"]
+    b = np.load(fo, allow_pickle=False)["residual"]
+    ok = np.isfinite(a) & np.isfinite(b)
+    a, b = a[ok], b[ok]
+    if a.size < 10:
+        return float("nan"), float("nan"), int(a.size)
+    return (float((b - a).std(ddof=1)),
+            float(np.corrcoef(a, b)[0, 1]), int(a.size))
+
+
 def evaluate(run: Path) -> Dict[str, object]:
     d = json.loads((run / "b3_lora.json").read_text())
     cl, co = d["cloning"], d["contrasts"]
@@ -71,7 +97,9 @@ def evaluate(run: Path) -> Dict[str, object]:
         c = co[f"{other}_minus_reference"]
         truth = float(c["agent_mean_dz"])
         est = float(c["model_mean_dz"])
-        floor = math.hypot(resid["reference"], resid[other])
+        indep = math.hypot(resid["reference"], resid[other])
+        emp, rho, n_emp = empirical_floor(run, other)
+        floor = emp if np.isfinite(emp) else indep
         se = floor / math.sqrt(n)
         lo, hi = est - 1.96 * se, est + 1.96 * se
         out["contrasts"][other] = {
@@ -79,6 +107,12 @@ def evaluate(run: Path) -> Dict[str, object]:
             "recovery_ratio": float(c["recovery_ratio"]),
             "trial_correlation": float(c["correlation"]),
             "noise_floor_sd": floor,
+            "noise_floor_source": ("measured from the per-row residuals"
+                                   if np.isfinite(emp) else
+                                   "assumed independent (no residual files)"),
+            "noise_floor_if_independent": indep,
+            "residual_correlation": rho,
+            "n_residual_rows": n_emp,
             "buried_x": floor / truth if truth else float("inf"),
             "se": se, "ci_lo": lo, "ci_hi": hi,
             "ci_contains_truth": bool(lo <= truth <= hi),
@@ -120,6 +154,9 @@ def main(argv=None) -> int:
         print(f"   true signal        {c['truth']:.4f}")
         print(f"   noise floor SD     {c['noise_floor_sd']:.4f}   "
               f"-> signal buried {c['buried_x']:.1f}x")
+        if np.isfinite(c.get("residual_correlation", float("nan"))):
+            print(f"     residual corr    {c['residual_correlation']:+.4f}  "
+                  f"(independent would give {c['noise_floor_if_independent']:.4f})")
         print(f"   estimate           {c['estimate']:.4f}  "
               f"95% CI [{c['ci_lo']:+.4f}, {c['ci_hi']:+.4f}]")
         print(f"   |est-truth|        {c['abs_err_in_mdc']:.2f} MDC     "
