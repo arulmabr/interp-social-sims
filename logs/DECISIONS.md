@@ -782,3 +782,16 @@ ids. Any G5b judge figure is a three-judge figure and will say so.
 `Probes/judge.py` rather than retyping them, so the wording is the paper's own. Keys are read at the
 moment of use, held in local variables, and never printed; a provider error is reported as a class
 (`http 401`, `no json in reply`) and its body is never echoed.
+
+**D71. The gradient anchor needs roughly twice the model's memory.**
+`cvb_g4b` failed on node2102 with a genuine `torch.OutOfMemoryError`: 128 MiB requested, 90 MiB free,
+the model holding 79.15 of the card's 79.25 GiB. The gradient of z with respect to a layer-48
+activation retains the forward graph from that layer to the logits, so the backward pass needs
+headroom the 70B leaves none of on 2 x A100-80GB. This is a property of the computation, not a
+transient — and it is distinct from the three earlier `g4b` failures, which were node2119's CUDA
+faults.
+
+**Chosen:** 2 x H200 (139.7 GiB each) on the amf pool, leaving about 70 GiB per card free.
+*Alternatives not taken:* `a100:4`, which also fits and spreads the model to ~35 GiB per card, but
+consumes the whole 4-GPU preemptable cap for a 20-minute job; gradient checkpointing, which would
+change the computation to fit the hardware rather than the other way round.
