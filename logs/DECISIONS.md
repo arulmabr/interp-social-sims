@@ -1250,3 +1250,43 @@ interval reaches 0.3115 and was colliding with the corner note, and the rule lab
 y=0.205 to 0.235 to stay clear. Condition labels drop to zorder 3.5, above the dashed reference
 lines so their boxes still mask them but below the markers so a box never covers its own point,
 which it was doing to target40.
+
+## D88 — panel A's note corrected: the mechanism is the option list, not truncation (22 Sept)
+
+The authors asked whether panel A is an effect of responses being truncated. Measured rather
+than assumed, on the two caps that bracket the dip, both from `g2_lambda0/llama_chat*_lottery.jsonl`:
+
+    cap    n      looks cut off   mentions both labels   legacy-strict agreement
+     12   1800        0.680              0.000                  1.0000
+     64   1800        0.641              0.559                  0.5906
+
+Truncation is marginally HIGHER at 12 tokens and agreement there is perfect. Truncation
+therefore does not explain the dip. What changes is whether the severed text got far enough to
+name both options: at 12 tokens the reply is cut before the second option, so the two rules read
+the same single label by construction; at 64 it has echoed "1. Safe Option ... 2. Risky Option"
+and been cut before choosing, so first-mention and last-mention differ on 56% of trials.
+
+Being cut off is necessary (a completed reply states a choice and all three rules find it) and
+not sufficient. The note said the opposite:
+
+  was: "Agreement collapses where responses are cut mid-sentence and returns once they can
+        finish, so the token budget drives it, not real ambiguity."
+  now: "A mid-range budget lets the reply list both options before it stops, so first and last
+        mention diverge. Shorter and longer budgets each leave one answer."
+
+The claim line changes from "is a truncation effect" to "is a budget artefact". The panel's
+conclusion is unchanged and still correct: it is an artefact of the decoding budget, not real
+ambiguity about what the model chose. Only the stated mechanism was wrong. No data, no point
+and no axis changed; `figures/g4_summary.{pdf,png}` rebuilt. The word "truncation" now appears
+nowhere in `cv_bench/g4_figure.py`.
+
+STILL OPEN, and it blocks this panel from going in the paper. Its three points are hard-typed
+in `panel_c`:
+
+    pts = [(12, 0.982, "27,120"), (64, 0.591, "1,800"), (256, 0.999, "920")]
+
+They are not read from a file and are not in `MANIFEST.csv`, which is a rule 1 violation. The
+64-token point reconciles exactly against the source (0.5906, n=1,800). The 12-token point does
+not: the figure says 0.982 on n=27,120 while `llama_chat_lottery.jsonl` gives 1.0000 on n=576
+both-coded, so the figure's value comes from some larger aggregation not yet identified. Offered
+to the authors: recompute all three from files and register them. Not done yet.

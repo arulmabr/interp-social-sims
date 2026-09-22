@@ -139,10 +139,10 @@ def build():
     # findings rather than verdicts, since a column of answers all beginning
     # "No" reads as a rebuttal, which is not what these measurements are.
     items = [
-        ("A", "Legacy-strict disagreement is a truncation effect",
-         "Agreement collapses where responses are cut\n"
-         "mid-sentence and returns once they can finish,\n"
-         "so the token budget drives it, not real ambiguity."),
+        ("A", "Legacy-strict disagreement is a budget artefact",
+         "A mid-range budget lets the reply list both options\n"
+         "before it stops, so first and last mention diverge.\n"
+         "Shorter and longer budgets each leave one answer."),
         ("B", "Sampled generation stays the primary measure",
          "The readout and free generation locate the switch\n"
          "in different places, so the readout is a check on\n"
