@@ -1,18 +1,19 @@
 #!/bin/bash
 #SBATCH --job-name=cvb_b0_numerics
-#SBATCH --partition=ou_bcs_low
+#SBATCH --partition=ou_bcs_normal,ou_bcs_low
 #SBATCH --account=mit_general
 #SBATCH --qos=normal
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --gres=gpu:4
+#SBATCH --gres=gpu:a100:4
 #SBATCH --cpus-per-task=16
-#SBATCH --mem=256G
-#SBATCH --time=06:00:00
+#SBATCH --mem=64G
+#SBATCH --time=04:00:00
 #SBATCH --requeue
 #SBATCH --open-mode=append
 #SBATCH --output=logs/cvb_b0_numerics_%j.out
 #SBATCH --error=logs/cvb_b0_numerics_%j.err
+#SBATCH --exclude=node2119
 
 # Amendment item 5(c): the 70B in fp32 against bf16 unbatched, at baseline and
 # one dose, on ~200 calibration-split prompts. 4 GPUs as instructed.
