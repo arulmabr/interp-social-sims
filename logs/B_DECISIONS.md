@@ -736,3 +736,38 @@ introduced precisely the noise that destroys the diagnostic.
 The one misspecified cell that fails at every configuration is `mean_variance/preference`, which is
 BD25's structural result and not a power effect: on a mean-SD base a preference change is
 observationally an action bias.
+
+**BD46. All three adapters clone, and the preference *contrast* is still buried 24x under their own
+cloning noise.** The cloning bar is met comfortably — r = 0.990, 0.992, 0.991 and slopes 0.980, 0.988,
+0.987, all three selected at step 500. But A5 is explicit that **the anchors are the contrasts against
+the reference adapter**, not the adapters, and the contrasts are where this falls down:
+
+| contrast | true signal (agent mean dz) | model mean dz | recovery ratio | r |
+|---|---|---|---|---|
+| bias - reference | 0.6000 | 0.6818 | **1.136** | 0.0148 |
+| preference - reference | **0.0302** | 0.1408 | **4.665** | 0.3914 |
+
+The arithmetic explains both rows. At r = 0.990 and a clone-set z SD of 3.62, each adapter's cloning
+residual has SD about **0.506**; a contrast of two independent adapters carries **0.715**. Against that:
+
+- the **bias** contrast has a true signal of 0.600, so S/N ~ **0.84** — its *magnitude* recovers at
+  1.14x, which is what matters for a constant offset. Its near-zero correlation is expected rather than
+  alarming: a constant shift has no per-trial variation to correlate with.
+- the **preference** contrast has a true signal of **0.0302**, so S/N ~ **0.042**. The quantity the
+  anchor exists to measure is roughly **twenty-four times smaller than the noise floor created by the
+  adapters' own imperfection**, which is why its recovery ratio comes back at 4.7x rather than 1.0.
+
+**Passing the cloning bar is therefore not sufficient for the contrast to be usable**, and the plan
+does not check the contrast anywhere. This is the same root cause as BD45: a preference shift at the
+minimum detectable change produces a mean dz of 0.030, which is small against every noise source
+measured tonight — the template effect at 2.13, and now the cloning residual at 0.506.
+
+Not acted on. Three remedies exist and each is an author's to choose: a **larger Delta** for the
+preference adapter, which is a pre-registered quantity; **tighter cloning**, which would need r about
+0.99995 to bring S/N to 1 and is probably unreachable; or **training the adapters so their residuals
+correlate and cancel in the contrast**, which A5 already gestures at by requiring identical data order
+and seed but which evidently is not sufficient. Changing the adapter's objective after a passing dry
+run is a hard stop under the autonomy amendment, so this is reported rather than fixed.
+
+The 70B run proceeds as launched: it is worth knowing whether a larger model clones tightly enough to
+lift the preference contrast out of the floor, and that is exactly what its contrast numbers will say.
