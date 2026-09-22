@@ -1,38 +1,32 @@
 # STATUS.md
 
-Rewritten by `cv_bench/monitor.py` every 10 minutes. Cycle 1.
+Rewritten by `cv_bench/monitor.py` every 10 minutes. Cycle 31.
 
-**2026-09-21 21:39 UTC** — cutoff Thu 24 Sept 06:00 UTC, **56.3 h remaining**.
+**2026-09-22 05:31 UTC** — cutoff Thu 24 Sept 06:00 UTC, **48.5 h remaining**.
 
-**GPU-hours consumed, both sessions, `sacct` on job names starting `cvb_`: 8.03** of the 400 approved.
+**GPU-hours consumed, both sessions, `sacct` on job names starting `cvb_`: 38.05** of the 400 approved.
 
 
 ## Live jobs
 
-| job | name | state | elapsed | left | reason |
-|---|---|---|---|---|---|
-| 23414443 | cvb_g4_recon_L50 | PENDING | 0:00 | 16:00:00 | (QOSMaxGRESPerUser) |
-| 23414442 | cvb_g4_recon_L48 | PENDING | 0:00 | 16:00:00 | (QOSMaxGRESPerUser) |
-| 23414440 | cvb_g4_as_wr_L48 | PENDING | 0:00 | 16:00:00 | (QOSMaxGRESPerUser) |
-| 23414439 | cvb_neutral | RUNNING | 11:10 | 2:48:50 | node4309 |
-| 23414441 | cvb_g4_as_wr_L50 | RUNNING | 2:59 | 15:57:01 | node3209 |
+*none*
 
 ## Recent jobs
 
 | job | name | state | elapsed | exit |
 |---|---|---|---|---|
-| 23379474 | g2_qwen | COMPLETED | 00:09:28 | 0:0 |
-| 23379475 | g2_llama | COMPLETED | 03:42:51 | 0:0 |
-| 23379816 | bench70b | COMPLETED | 00:04:10 | 0:0 |
-| 23412430 | cvb_instr | CANCELLED by 234238 | 00:00:00 | 0:0 |
-| 23414439 | cvb_neutral | RUNNING | 00:11:10 | 0:0 |
-| 23414441 | cvb_g4_as_wr_L50 | RUNNING | 00:02:59 | 0:0 |
-| 23414442 | cvb_g4_recon_L48 | PENDING | 00:00:00 | 0:0 |
-| 23414443 | cvb_g4_recon_L50 | PENDING | 00:00:00 | 0:0 |
-| 23414416 | cvb_instr | COMPLETED | 01:06:37 | 0:0 |
-| 23421227 | cvb_instr | CANCELLED by 234238 | 00:00:00 | 0:0 |
-| 23414440 | cvb_g4_as_wr_L48 | PENDING | 00:00:00 | 0:0 |
-| 23421312 | cvb_instr | CANCELLED by 234238 | 00:00:00 | 0:0 |
+| 23432509 | cvb_g4_recon_L50 | CANCELLED by 234238 | 00:00:00 | 0:0 |
+| 23432941 | cvb_g4_recon_L48 | CANCELLED by 234238 | 00:00:00 | 0:0 |
+| 23432942 | cvb_g4_recon_L50 | CANCELLED by 234238 | 00:00:00 | 0:0 |
+| 23433099 | cvb_g4_recon_L48 | CANCELLED by 234238 | 00:00:00 | 0:0 |
+| 23433100 | cvb_g4_recon_L50 | CANCELLED by 234238 | 00:00:00 | 0:0 |
+| 23433101 | cvb_neutral2 | COMPLETED | 00:02:48 | 0:0 |
+| 23435661 | cvb_neutral2 | CANCELLED by 234238 | 00:00:00 | 0:0 |
+| 23437068 | cvb_neutral2 | COMPLETED | 00:00:24 | 0:0 |
+| 23437338 | cvb_neutral2 | CANCELLED by 234238 | 00:00:00 | 0:0 |
+| 23437447 | cvb_g4_recon_L48 | COMPLETED | 02:13:58 | 0:0 |
+| 23437448 | cvb_g4_recon_L50 | COMPLETED | 01:12:26 | 0:0 |
+| 23437451 | cvb_neutral2 | COMPLETED | 00:34:32 | 0:0 |
 
 ## Outputs
 
@@ -43,37 +37,49 @@ Rewritten by `cv_bench/monitor.py` every 10 minutes. Cycle 1.
 |---|---:|---:|
 | `bench/bench_llama.json` | 1 | — |
 
-### cvb_g4_as_wr_L48 — INCOMPLETE
+### cvb_g4_as_wr_L48 — complete
 
 | output | rows | expected |
 |---|---:|---:|
-| `g4/readout_as_written_L48.jsonl` | 212 | — |
-| `g4/sampled_as_written_L48.jsonl` | 0 | — |
+| `g4/readout_as_written_L48.jsonl` | 2816 | — |
+| `g4/sampled_as_written_L48.jsonl` | 678 | — |
 
 | file | n | legacy vs strict agreement | blank gens | constant? |
 |---|---:|---:|---:|---|
-| `readout_as_written_L48.jsonl` | 212 | 1.0000 | 212 | legacy/strict |
+| `sampled_as_written_L48.jsonl` | 27120 | 0.9816 | 6385 | no |
 
-### cvb_g4_as_wr_L50 — INCOMPLETE
-
-| output | rows | expected |
-|---|---:|---:|
-| `g4/readout_as_written_L50.jsonl` | — | — |
-| `g4/sampled_as_written_L50.jsonl` | — | — |
-
-### cvb_g4_recon_L48 — INCOMPLETE
+### cvb_g4_as_wr_L50 — complete
 
 | output | rows | expected |
 |---|---:|---:|
-| `g4/readout_reconstruction_L48.jsonl` | — | — |
-| `g4/sampled_reconstruction_L48.jsonl` | — | — |
+| `g4/readout_as_written_L50.jsonl` | 2816 | — |
+| `g4/sampled_as_written_L50.jsonl` | 678 | — |
 
-### cvb_g4_recon_L50 — INCOMPLETE
+| file | n | legacy vs strict agreement | blank gens | constant? |
+|---|---:|---:|---:|---|
+| `sampled_as_written_L50.jsonl` | 27120 | 0.9819 | 6798 | no |
+
+### cvb_g4_recon_L48 — complete
 
 | output | rows | expected |
 |---|---:|---:|
-| `g4/readout_reconstruction_L50.jsonl` | — | — |
-| `g4/sampled_reconstruction_L50.jsonl` | — | — |
+| `g4/readout_reconstruction_L48.jsonl` | 4928 | — |
+| `g4/sampled_reconstruction_L48.jsonl` | 894 | — |
+
+| file | n | legacy vs strict agreement | blank gens | constant? |
+|---|---:|---:|---:|---|
+| `sampled_reconstruction_L48.jsonl` | 17800 | 0.6430 | 449 | no |
+
+### cvb_g4_recon_L50 — complete
+
+| output | rows | expected |
+|---|---:|---:|
+| `g4/readout_reconstruction_L50.jsonl` | 4928 | — |
+| `g4/sampled_reconstruction_L50.jsonl` | 894 | — |
+
+| file | n | legacy vs strict agreement | blank gens | constant? |
+|---|---:|---:|---:|---|
+| `sampled_reconstruction_L50.jsonl` | 17800 | 0.7071 | 449 | no |
 
 ### cvb_instr — complete
 
@@ -85,21 +91,14 @@ Rewritten by `cv_bench/monitor.py` every 10 minutes. Cycle 1.
 
 | file | n | legacy vs strict agreement | blank gens | constant? |
 |---|---:|---:|---:|---|
-| `norms_llama.jsonl` | 50 | 1.0000 | 50 | legacy/strict |
-| `readout_grid_llama.jsonl` | 128 | 1.0000 | 128 | legacy/strict |
-| `freegen_llama.jsonl` | 840 | 0.0000 | 0 | /strict |
+| `freegen_llama.jsonl` | 840 | 0.0000 | 0 | no |
 
-### cvb_neutral — INCOMPLETE
+### cvb_neutral2 — complete
 
 | output | rows | expected |
 |---|---:|---:|
-| `neutral/mass_llama.jsonl` | 344 | 400 |
-| `neutral/free_llama.jsonl` | 421 | 640 |
-
-| file | n | legacy vs strict agreement | blank gens | constant? |
-|---|---:|---:|---:|---|
-| `mass_llama.jsonl` | 344 | 1.0000 | 344 | legacy/strict |
-| `free_llama.jsonl` | 421 | 1.0000 | 0 | legacy/strict |
+| `neutral/mass_llama.jsonl` | 344 | 344 |
+| `neutral/free_llama.jsonl` | 640 | 640 |
 
 ### g2_llama — complete
 
@@ -144,3 +143,10 @@ Rewritten by `cv_bench/monitor.py` every 10 minutes. Cycle 1.
 ## Automatic resubmissions
 
 - `cvb_instr`: 2 of 2
+- `cvb_neutral`: 2 of 2
+- `cvb_g4_as_wr_L50`: 2 of 2
+- `cvb_neutral2`: 1 of 2
+
+## Stopped — needs a human
+
+- **`cvb_neutral`** exhausted its retries.

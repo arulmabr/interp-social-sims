@@ -265,6 +265,14 @@ def g4_directions(variant: str, layer: int, game: str) -> Dict[str, np.ndarray]:
         out["probe"] = np.asarray(g["direction_raw"], dtype=np.float32)
     if g.get("reward_raw"):
         out["reward"] = np.asarray(g["reward_raw"], dtype=np.float32)
+    # The G4b baselines themselves: difference-of-means (CAA / ActAdd form),
+    # first PCA (RepE / LAT form) and a ridge probe for log n. FRIDAY_PLAN asks
+    # for the cosine matrix among all of them and the choice probe, so leaving
+    # them out of this table left the question unanswered.
+    for name in ("diffmean", "pca1", "ridge_logn"):
+        v = g.get(f"{name}_raw")
+        if v:
+            out[name] = np.asarray(v, dtype=np.float32)
     d = len(g["direction_raw"])
     for which in ("rand0", "rand1"):
         seed = abs(hash((layer, game, which))) % (2**31)
