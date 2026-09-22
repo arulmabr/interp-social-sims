@@ -1190,3 +1190,31 @@ source comments and one docstring, which render nowhere.
 One layout fix this forced. s1_7's legend had `frameon=False`, and the longer "Goodfire
 baseline" label put the grey reference curve straight through the text. The legend now has an
 opaque SURFACE background at zorder 6. No data changed; all eleven figures regenerated.
+
+## D86 — s1_2 annotation layout rebuilt to remove five text collisions (22 Sept)
+
+Reported by the authors. Layout only; no value, interval or marker position changed.
+
+Collisions and what each one was:
+  1. the "(threshold not identified)" labels were annotated at (2, y) with y the condition's
+     own rate, so baseline_rp (0.0278), persona (0.003) and cot (0.000) were written within
+     0.03 of each other and struck through one another. They are now collected and printed
+     once as a single corner block, "no threshold on this grid: baseline_rp, cot, persona",
+     while each still draws its own dashed reference line.
+  2. every marker label used the same (7, 4) offset, so fs+cot 025 (y=0.031) and fs+cot 075
+     (y=0.014) landed on top of each other. The offset now drops to -11 when a label already
+     sits within 0.02 in y and 12 in x.
+  3. "offers at or above half the pie" sat at (51, 0.28), right of the rule, which on the
+     probe panel is exactly where target60 and its interval are. It moved left of the rule and
+     down to y=0.205.
+  4. "offer grid ends at N" sat at the bottom right, where the fs+cot labels land. It moved to
+     the top right.
+  5. after 4, it collided with the rule label along the top row, which is what 3's move to
+     mid height resolves.
+
+Every small annotation now carries an opaque SURFACE bbox at zorder 5, because these panels
+have full-width dashed reference lines at 0.000, 0.003 and 0.0278 that ran through the text
+whatever the placement.
+
+Only s1_2 was rebuilt. The other figures were checked visually after the label rename (D85) and
+the grid removal (D85's predecessor) and are clear.

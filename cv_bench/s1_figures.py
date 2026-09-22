@@ -219,9 +219,14 @@ def s1_2_catch():
     rows = read("s1_2_catch_ultimatum.csv")
     stacks = ["hosted", "vllm", "probe-llama-l48"]
     fig, axes = plt.subplots(1, 3, figsize=(13.2, 4.3), sharey=True)
+    # Opaque background for every small annotation: several dashed reference
+    # lines run the full width of these panels and struck through the text.
+    LBOX = dict(facecolor=SURFACE, edgecolor="none", pad=1.2)
     for ax, stack in zip(axes, stacks):
         sub = [r for r in rows if r["stack"] == stack]
         seen = {}
+        unidentified = []            # collected, then laid out as one block
+        placed = []                  # (x, y) of labels already written
         for r in sorted(sub, key=lambda r: f(r["threshold_interp"], 1e9)):
             x = f(r["threshold_interp"])
             y = f(r["p_reject_hyperfair"])
@@ -230,8 +235,7 @@ def s1_2_catch():
             m = MARKERS[seen.setdefault(c, len(seen)) % len(MARKERS)]
             if not np.isfinite(x):
                 ax.axhline(y, color=c, linewidth=1.0, linestyle=(0, (2, 3)), zorder=3)
-                ax.annotate(f"{r['condition']}\n(threshold not identified)", (2, y),
-                            fontsize=7, color=INK2, va="bottom")
+                unidentified.append((r["condition"], c))
                 continue
             imp = f(r.get("implied_by_translation", ""))
             if np.isfinite(imp):
@@ -242,13 +246,30 @@ def s1_2_catch():
                         markersize=8, capsize=3, elinewidth=1.6,
                         markeredgecolor=SURFACE, markeredgewidth=1.4, zorder=4)
             if y > 0.005:
+                # drop the label below the marker when a previous one sits within
+                # 0.02 of it in y; a fixed offset stacked fs+cot 025 on 075
+                dy = 5
+                if any(abs(y - py) < 0.02 and abs(x - px) < 12 for px, py in placed):
+                    dy = -11
                 ax.annotate(r["condition"].replace("fewshot_cot_dose", "fs+cot "), (x, y),
-                            textcoords="offset points", xytext=(7, 4), fontsize=7.5, color=INK2)
+                            textcoords="offset points", xytext=(8, dy), fontsize=7.5,
+                            color=INK2, bbox=LBOX, zorder=5)
+                placed.append((x, y))
+        if unidentified:
+            names = ", ".join(n for n, _ in unidentified)
+            ax.text(0.03, 0.97, f"no threshold on this grid:\n{names}",
+                    transform=ax.transAxes, fontsize=7, color=INK2, va="top",
+                    bbox=LBOX, zorder=5)
         gmax = max((f(r["offer_grid_max"]) for r in sub), default=90)
         ax.axvline(50, color=INK2, linewidth=1.1, linestyle=":", zorder=3)
-        ax.text(51, 0.28, "offers at or above\nhalf the pie", fontsize=7.5, color=INK2, va="top")
-        ax.text(0.98, 0.02, f"offer grid ends at {int(gmax)}", transform=ax.transAxes,
-                ha="right", fontsize=7.5, color=MUTED)
+        # left of the rule, not right: on the probe panel the right side is where
+        # the target60 point and its interval sit
+        # mid height, so the top row belongs to the two corner notes alone
+        ax.text(49, 0.205, "offers at or above\nhalf the pie", fontsize=7.5, color=INK2,
+                va="top", ha="right", bbox=LBOX, zorder=5)
+        # top right, not bottom: the bottom right is where the fs+cot labels land
+        ax.text(0.98, 0.97, f"offer grid ends at {int(gmax)}", transform=ax.transAxes,
+                ha="right", va="top", fontsize=7.5, color=MUTED, bbox=LBOX, zorder=5)
         style(ax, STACK_TITLE[stack], "acceptance threshold of the same curve (tokens)",
               "P(reject | offer $\\geq$ 50)" if stack == "hosted" else "")
         ax.set_xlim(0, 70)
