@@ -293,8 +293,10 @@ def _call_judge(judge: str, prompt: str):
         body = dict(model="claude-sonnet-4-5", max_tokens=200,
                     messages=[{"role": "user", "content": prompt}])
     elif provider == "google":
+        # gemini-2.0-flash is not served on this key; the models endpoint lists
+        # gemini-2.5-flash, which is also the family V2 records as the judge.
         url = ("https://generativelanguage.googleapis.com/v1beta/models/"
-               "gemini-2.0-flash:generateContent")
+               "gemini-2.5-flash:generateContent")
         body = dict(contents=[{"parts": [{"text": prompt}]}])
     else:
         url = {"openai": "https://api.openai.com/v1/chat/completions",
@@ -314,12 +316,29 @@ def _call_judge(judge: str, prompt: str):
         return False, None, f"http {e.code}"
     except Exception as e:
         return False, None, type(e).__name__
-    text = json.dumps(payload)
+    # Pull the assistant's TEXT out of each provider's envelope. Searching
+    # json.dumps(payload) instead -- which is what the first version did -- looks
+    # for "fluency" in a string where every quote is backslash-escaped, so it
+    # matched nothing and reported "no json in reply" for all 480 successful
+    # calls.
+    try:
+        if provider == "anthropic":
+            text = "".join(b.get("text", "") for b in payload.get("content", []))
+        elif provider == "google":
+            cand = payload.get("candidates", [{}])[0]
+            text = "".join(pt.get("text", "")
+                           for pt in cand.get("content", {}).get("parts", []))
+        else:
+            text = payload["choices"][0]["message"]["content"]
+    except (KeyError, IndexError, TypeError):
+        return False, None, "unexpected reply shape"
+    if not text.strip():
+        return False, None, "empty reply"
     m = re.search(r'\{[^{}]*"fluency"[^{}]*\}', text)
     if not m:
         return False, None, "no json in reply"
     try:
-        raw = json.loads(m.group(0).replace('\\"', '"'))
+        raw = json.loads(m.group(0))
     except json.JSONDecodeError:
         return False, None, "unparseable json"
     out = {}

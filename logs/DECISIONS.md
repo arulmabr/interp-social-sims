@@ -883,3 +883,25 @@ computes.
 and wrong in how it asked for its resources -- the L40S capacity fault, the two backward-pass OOMs,
 and this teardown race. None was a bug in the science; all four were me mis-specifying the
 environment a correct computation needed.
+
+**D76. All 720 judge calls succeeded and every one was recorded as failed.**
+Two independent bugs in `_call_judge`, both mine.
+
+**Parsing.** The scores were searched for in `json.dumps(payload)` — the response envelope
+re-serialised — where every quote inside the assistant's text is backslash-escaped. The pattern
+`"fluency"` therefore matched nothing and 480 good replies from gpt-5 and claude-sonnet-4-6 were
+recorded as `no json in reply`. The fix pulls the assistant's text out of each provider's envelope
+first (`choices[0].message.content`, `content[*].text`, `candidates[0].content.parts[*].text`) and
+parses that.
+
+**Endpoint.** `gemini-2.0-flash` is not served on this key; all 240 Gemini calls returned `http 404`.
+The models endpoint lists `gemini-2.5-flash`, which is used instead.
+
+Verified with one live call per judge before rerunning — all three now return four integer fields.
+The 720 failed rows and their completion marker are moved to `*_ALLFAILED.*` rather than deleted, so
+the failure is on the record and the rerun does not skip them.
+
+**What this nearly cost.** The marker had been written, so by every automated check this project has
+— completion marker present, expected rows on disk, job exited 0 — G5b's judging was finished. Only
+reading `parse_status` showed that 100% of it was empty. A marker says a job ran to the end; it says
+nothing about whether what it wrote means anything.
