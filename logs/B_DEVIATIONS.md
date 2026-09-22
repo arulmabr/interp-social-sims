@@ -94,3 +94,25 @@ rerun, and no threshold was relaxed to accommodate an outcome.
 - *Resolution:* no preemption was needed. Job 23460913 was placed by the scheduler on `ou_bcs_normal`
   node3910, which had 2 idle a100s, and started at 2026-09-22T02:52 resuming from step 25. The four
   `ou_bcs_low` array tasks that `sbatch --test-only` had listed as preemptable were left running.
+
+**B3.3 pass 1: the first dose solve matched 2 of 12 directions and its read is void.** 22 Sept,
+technical (my bug), jobs 23502634 / 23502635.
+- *Planned:* every direction dosed to the bias adapter's legacy switching-point shift (-91.14 tokens,
+  from 210.08 unmodified to 118.94), so the comparison is at matched behaviour.
+- *What happened:* `switching_points` returns nothing when P(risky) never crosses 0.5 on the ramp, and
+  the solver collapsed that to NaN and treated NaN as "dose too weak", so it walked the scale UP.
+  A ramp with no crossing saturates for **opposite** reasons -- always-gamble or always-sure -- and on
+  a too-strong dose the correct move is down. `readout_anchor_L50` went 2.0 -> 3.94 and never looked
+  below 2.0. **Only 2 of 12 directions matched to within 3%.**
+- *Consequence:* the read stage ran anyway, at the fallback scale for 10 of 12 directions, so
+  `b33_probe_vs_anchors/z_selection.npz` is **not a matched-behaviour comparison and is not analysed**.
+  It is kept, unanalysed, as the record.
+- *Fix:* `measure()` now reports which way the ramp saturated; the solver probes the SIGN first (some
+  directions move the switching point the wrong way and need sign -1, which the old solver could not
+  express at all), then walks a ladder to bracket, then bisects with saturation pulling the bracket
+  down rather than up. Regression test in `cv_bench/tests/test_steer.py`.
+- *Re-run in a NEW directory* `b33_probe_vs_anchors_v2`. Only `ckpt_dose_unmodified` and
+  `ckpt_dose_bias` are carried over, because they are dose-independent. The `sel_*` checkpoints are
+  deliberately NOT carried over: their tags and item list are unchanged, so a resumed read would have
+  silently returned the old z at the old wrong doses -- the BD37 failure mode.
+- *No threshold, prompt, seed or metric changed.*

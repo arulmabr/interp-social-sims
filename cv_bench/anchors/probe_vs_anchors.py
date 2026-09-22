@@ -120,6 +120,22 @@ def _p_from_z(z: np.ndarray) -> np.ndarray:
     return 1.0 / (1.0 + np.exp(-np.asarray(z, dtype=float)))
 
 
+def measure(trials, z: np.ndarray, s0: float) -> Tuple[float, Optional[str]]:
+    """Switching-point shift, and if there is no crossing, which way it ran out.
+
+    `switching_points` returns nothing when P(risky) never crosses 0.5 across
+    the ramp, and that happens for OPPOSITE reasons: a dose strong enough that
+    the model always takes the gamble, or one that pushes it to always take the
+    sure thing. Collapsing both to NaN and treating NaN as "too weak" is what
+    made the first solver march the scale upwards and match 2 of 12.
+    """
+    p = _p_from_z(z)
+    s = legacy_switch(trials, p)
+    if s is not None:
+        return s - s0, None
+    return float("nan"), ("risky" if float(np.nanmean(p)) > 0.5 else "safe")
+
+
 # --------------------------------------------------------------------------
 def dose_trials():
     """The legacy cell's sure-gain ramp on `cal`: 11 reward levels, 30..230.
@@ -152,7 +168,7 @@ def main(argv=None) -> int:
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--tol", type=float, default=0.03,
                     help="relative tolerance on the matched switching-point shift")
-    ap.add_argument("--max-iter", type=int, default=6)
+    ap.add_argument("--max-iter", type=int, default=5)
     ap.add_argument("--scale-hi", type=float, default=4.0,
                     help="upper bracket, in median-residual-norm units")
     a = ap.parse_args(argv)
@@ -254,38 +270,73 @@ def stage_dose(a) -> int:
     print("median residual norm:", units, flush=True)
 
     solved = {}
+    LADDER = (0.25, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0)
+
+    def read_at(name, L, v, scale, sign, tag):
+        iv = steer.Intervention(layer=L, vectors=v, scale=scale, sign=sign,
+                                positions="last", mode="add", norm_unit=units[L])
+        z = _read(ro, peft_model, trials, a.out, tag, intervention=iv)
+        return measure(trials, z, s0)
+
     for m in meta:
         name, L = m["name"], m["layer"]
         v = vecs[f"{name}_L{L}"]
-        lo, hi = 0.0, a.scale_hi
-        best = None
-        for it in range(a.max_iter):
-            mid = 0.5 * (lo + hi)
-            iv = steer.Intervention(layer=L, vectors=v, scale=mid,
-                                    positions="last", mode="add",
-                                    norm_unit=units[L])
-            z = _read(ro, peft_model, trials, a.out, f"dose_{name}_L{L}_it{it}",
-                      intervention=iv)
-            s = legacy_switch(trials, _p_from_z(z))
-            shift = (s - s0) if s is not None else float("nan")
-            print(f"  {name} L{L} it{it} scale={mid:.4f} switch={s} "
-                  f"shift={shift:+.3f} (target {target:+.3f})", flush=True)
-            rec = {"scale": mid, "switch": s, "shift": shift}
-            if best is None or (np.isfinite(shift) and
-                                abs(shift - target) < abs(best["shift"] - target)):
-                best = rec
-            if np.isfinite(shift) and abs(shift - target) <= abs(target) * a.tol:
+
+        # 1. which sign moves the switching point toward the target at all
+        sign, probe = +1, None
+        for cand in (+1, -1):
+            sh, sat = read_at(name, L, v, 1.0, cand, f"dose_{name}_L{L}_sgn{cand}")
+            toward = (np.isfinite(sh) and np.sign(sh) == np.sign(target)) or \
+                     (sat == ("risky" if target < 0 else "safe"))
+            print(f"  {name} L{L} sign{cand:+d} scale=1.0 shift={sh:+.3f} "
+                  f"sat={sat} toward={toward}", flush=True)
+            if toward:
+                sign, probe = cand, (sh, sat)
                 break
-            # the shift is monotone in |scale| for a fixed direction
-            if not np.isfinite(shift) or abs(shift) < abs(target):
-                lo = mid
+        if probe is None:
+            solved[f"{name}_L{L}"] = {**m, "scale": float("nan"), "sign": 0,
+                                      "shift": float("nan"), "switch": None,
+                                      "target_shift": target, "norm_unit": units[L],
+                                      "matched": False,
+                                      "note": "no sign moves the switching point "
+                                              "toward the bias adapter's shift"}
+            continue
+
+        # 2. ladder until the shift overshoots the target or the ramp saturates
+        lo, hi, best = 0.0, None, {"scale": 0.0, "shift": 0.0, "switch": s0}
+        for sc in LADDER:
+            sh, sat = read_at(name, L, v, sc, sign, f"dose_{name}_L{L}_lad{sc}")
+            print(f"  {name} L{L} sign{sign:+d} scale={sc:.3f} shift={sh:+.3f} "
+                  f"sat={sat} (target {target:+.3f})", flush=True)
+            if np.isfinite(sh) and abs(sh - target) < abs(best["shift"] - target):
+                best = {"scale": sc, "shift": sh, "switch": s0 + sh}
+            if sat is not None or (np.isfinite(sh) and abs(sh) >= abs(target)):
+                hi = sc
+                break
+            lo = sc
+        if hi is None:
+            hi = LADDER[-1]
+
+        # 3. bisect the bracket
+        for it in range(a.max_iter):
+            if abs(best["shift"] - target) <= abs(target) * a.tol:
+                break
+            mid = 0.5 * (lo + hi)
+            sh, sat = read_at(name, L, v, mid, sign, f"dose_{name}_L{L}_bis{it}")
+            print(f"  {name} L{L} sign{sign:+d} scale={mid:.4f} shift={sh:+.3f} "
+                  f"sat={sat} (target {target:+.3f})", flush=True)
+            if np.isfinite(sh) and abs(sh - target) < abs(best["shift"] - target):
+                best = {"scale": mid, "shift": sh, "switch": s0 + sh}
+            if sat is not None or (np.isfinite(sh) and abs(sh) > abs(target)):
+                hi = mid          # saturated or overshot: come down
             else:
-                hi = mid
-        solved[f"{name}_L{L}"] = {**m, **best, "target_shift": target,
-                                  "norm_unit": units[L],
-                                  "matched": bool(np.isfinite(best["shift"]) and
-                                                  abs(best["shift"] - target)
-                                                  <= abs(target) * a.tol)}
+                lo = mid          # still short: go up
+        solved[f"{name}_L{L}"] = {
+            **m, **best, "sign": sign, "target_shift": target,
+            "norm_unit": units[L],
+            "matched": bool(np.isfinite(best["shift"]) and
+                            abs(best["shift"] - target) <= abs(target) * a.tol)}
+
     (a.out / "doses.json").write_text(json.dumps(
         {"target_shift": target, "switch_unmodified": s0, "switch_bias": sb,
          "units": units, "solved": solved}, indent=2))
