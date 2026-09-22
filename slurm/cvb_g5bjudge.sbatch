@@ -21,11 +21,11 @@ set -u
 echo "$(date -u +%FT%TZ) node=$SLURMD_NODENAME job=$SLURM_JOB_ID"
 export ICLR_RUNROOT=/orcd/data/gabrieli/001/guna23/iclr_risk_2027
 # The measures phase loads the sentence encoder for S1.6's category spread.
-# It lives in the DEFAULT cache (~/.cache/huggingface), not in the project's
-# HF_HOME -- that cache holds the 70B and the SAE, which this job never touches.
-# Setting HF_HOME here would point the encoder lookup away from the only copy
-# of it, so the default is deliberately left alone. Offline stops any attempt
-# to reach huggingface.co, which compute nodes cannot do anyway.
+# cv_bench modules do os.environ.setdefault("HF_HOME", <project cache>) at
+# import, so leaving HF_HOME unset is not enough -- the module would set it to
+# the cache that holds the 70B and not the encoder. Set it explicitly to the
+# cache the encoder is actually in; this job loads nothing else from HF.
+export HF_HOME="$HOME/.cache/huggingface"
 export HF_HUB_OFFLINE=1
 cd /home/guna23/shrey/risk
 python3 -u -m cv_bench.g5b --model llama --phase measures || exit $?
