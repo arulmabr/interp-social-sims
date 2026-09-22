@@ -309,13 +309,28 @@ def _call_judge(judge: str, prompt: str):
     req = urllib.request.Request(
         url, data=json.dumps(body).encode(),
         headers={**_headers(provider, key), "Content-Type": "application/json"})
-    try:
-        with urllib.request.urlopen(req, timeout=60) as r:
-            payload = json.loads(r.read().decode())
-    except urllib.error.HTTPError as e:
-        return False, None, f"http {e.code}"
-    except Exception as e:
-        return False, None, type(e).__name__
+    # Gemini rate-limited 216 of its first 240 calls with http 429 while gpt-5
+    # and claude-sonnet-4-6 took all 240 without complaint. A 429 is a "come
+    # back later", not a failure, so it is retried with growing backoff; every
+    # other HTTP status is reported as it is.
+    payload = None
+    for attempt in range(6):
+        try:
+            with urllib.request.urlopen(req, timeout=90) as r:
+                payload = json.loads(r.read().decode())
+            break
+        except urllib.error.HTTPError as e:
+            if e.code in (429, 503) and attempt < 5:
+                time.sleep(4 * (2 ** attempt))      # 4, 8, 16, 32, 64 s
+                continue
+            return False, None, f"http {e.code}"
+        except Exception as e:
+            if attempt < 2:
+                time.sleep(4)
+                continue
+            return False, None, type(e).__name__
+    if payload is None:
+        return False, None, "no reply after retries"
     # Pull the assistant's TEXT out of each provider's envelope. Searching
     # json.dumps(payload) instead -- which is what the first version did -- looks
     # for "fluency" in a string where every quote is backslash-escaped, so it
