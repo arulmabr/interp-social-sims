@@ -116,3 +116,41 @@ technical (my bug), jobs 23502634 / 23502635.
   deliberately NOT carried over: their tags and item list are unchanged, so a resumed read would have
   silently returned the old z at the old wrong doses -- the BD37 failure mode.
 - *No threshold, prompt, seed or metric changed.*
+
+**GATE B3's statistic changes from the mean of dz to the estimator itself.** Author decision, 22 Sept,
+recorded BEFORE any Pass 1 probe-comparison result was read (their item 5).
+- *Planned:* `ICLR_PLAN.md:186` is evaluated on the anchor contrast, and Track B implemented that
+  contrast as the **mean of dz** between the shifted and reference adapters.
+- *Amended to:* fit the parametric model to each adapter's z and require **(a)** the fitted alpha
+  difference to be within one MDC of the planted shift, and **(b)** the contrast to be classified
+  preference-like under the decision rule -- preference share >= 0.8 and the action model rejected at
+  0.95 on the cluster bootstrap (BD12). The slope of measured-on-planted contrast with its intercept,
+  and the mean dz, are reported beside it and decide nothing.
+- *Why, in the authors' words:* the planted change is a **curvature** shift. Alpha moves, so its effect
+  on z varies with the payoff and changes sign across it; the mean of dz therefore does not measure it,
+  and **a faithful adapter could show mean dz near zero**. The statistic was wrong for the quantity,
+  independently of what it returned.
+- *Not outcome-driven, and the ordering proves it:* the decision was taken on the structural argument
+  and committed before Pass 1 was read. The mean-dz numbers it supersedes are kept in `MANIFEST_B.csv`
+  under `B3.2.70b.*.contrast.preference.estimate` and in BD50, not deleted.
+- *Scope:* the same statistic applies to **every contrast from here on, including the probe's**.
+
+**The anchor is the independently trained full-row pair; the paired adapter becomes a negative control.**
+Author decision, 22 Sept.
+- The paired preference adapter carries a constant offset of **-0.045 in z** relative to the reference
+  (BD50), which is an **action component acquired during retraining**. That makes it impure as a
+  preference-like anchor however well it clones (r 0.9968, slope 0.9947).
+- It is retained as a **documented failure mode and negative control**: an adapter that clones better
+  than any other in this project and is nonetheless the wrong thing to anchor on.
+- The standing anchor is `b3_lora_70b_fullrows`, independently trained, n = 1016.
+
+**A second preference anchor at 3x the MDC.** Author decision, 22 Sept.
+- Trained independently with the same recipe, so the anchor set **brackets a range** instead of sitting
+  at the detection limit. **The MDC itself is unchanged** -- this adds an anchor, it does not move a
+  threshold.
+- Scheduled after Pass 1 of the probe comparison.
+
+**Under-recovery is a property of the adapters, not an error term.** Author decision, 22 Sept.
+- The adapters recover ~0.62 of the planted shift (slope 0.620 independent, 0.774 paired; BD50).
+- Therefore the anchor's known value is the **achieved alpha difference measured on the selection
+  split**, not the planted target. Downstream comparisons use the achieved value.
