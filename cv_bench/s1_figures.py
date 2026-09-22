@@ -61,7 +61,7 @@ for _d in ("000", "025", "050", "075", "100"):
 
 STACK_TITLE = {
     "hosted": "Goodfire hosted API",
-    "vllm": "local vLLM, bf16",
+    "vllm": "local vLLM",
     "probe-llama-l48": "local probe, Llama layer 48",
     "probe-llama-l50": "local probe, Llama layer 50",
     "probe-qwen-l17": "local probe, Qwen layer 17",
@@ -217,7 +217,7 @@ def s1_1_dominated():
 # ===========================================================================
 def s1_2_catch():
     rows = read("s1_2_catch_ultimatum.csv")
-    stacks = ["hosted", "vllm", "probe-llama-l48"]
+    stacks = ["hosted", "vllm", "probe-llama-l50"]
     fig, axes = plt.subplots(1, 3, figsize=(13.2, 4.3), sharey=True)
     # Opaque background for every small annotation: several dashed reference
     # lines run the full width of these panels and struck through the text.
@@ -251,9 +251,11 @@ def s1_2_catch():
                 dy = 5
                 if any(abs(y - py) < 0.02 and abs(x - px) < 12 for px, py in placed):
                     dy = -11
+                # 3.5: above the dashed reference lines (3) so the box still masks
+                # them, below the markers (4) so a box never covers its own point
                 ax.annotate(r["condition"].replace("fewshot_cot_dose", "fs+cot "), (x, y),
                             textcoords="offset points", xytext=(8, dy), fontsize=7.5,
-                            color=INK2, bbox=LBOX, zorder=5)
+                            color=INK2, bbox=LBOX, zorder=3.5)
                 placed.append((x, y))
         if unidentified:
             names = ", ".join(n for n, _ in unidentified)
@@ -265,7 +267,7 @@ def s1_2_catch():
         # left of the rule, not right: on the probe panel the right side is where
         # the target60 point and its interval sit
         # mid height, so the top row belongs to the two corner notes alone
-        ax.text(49, 0.205, "offers at or above\nhalf the pie", fontsize=7.5, color=INK2,
+        ax.text(49, 0.235, "offers at or above\nhalf the pie", fontsize=7.5, color=INK2,
                 va="top", ha="right", bbox=LBOX, zorder=5)
         # top right, not bottom: the bottom right is where the fs+cot labels land
         ax.text(0.98, 0.97, f"offer grid ends at {int(gmax)}", transform=ax.transAxes,
@@ -273,7 +275,8 @@ def s1_2_catch():
         style(ax, STACK_TITLE[stack], "acceptance threshold of the same curve (tokens)",
               "P(reject | offer $\\geq$ 50)" if stack == "hosted" else "")
         ax.set_xlim(0, 70)
-        ax.set_ylim(-0.012, 0.32)
+        # headroom for the layer-50 target60 interval, whose top is 0.3115
+        ax.set_ylim(-0.014, 0.37)
     fig.suptitle("S1.2  Hyper-fair rejections, against the rate a clean translation implies "
                  "(P13); dash = implied, marker = observed",
                  fontsize=11.5, color=INK, x=0.02, ha="left")

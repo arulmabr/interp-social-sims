@@ -1218,3 +1218,35 @@ whatever the placement.
 
 Only s1_2 was rebuilt. The other figures were checked visually after the label rename (D85) and
 the grid removal (D85's predecessor) and are clear.
+
+## D87 — s1_2 reports layer 50; "bf16" dropped from the stack label (22 Sept)
+
+Both at the authors' instruction.
+
+1. The precision suffix is gone from the vLLM label: "local vLLM, bf16" becomes "local vLLM"
+   in `STACK_TITLE` and `cv_bench/s1_data.py`. It is a shared label, so s1_1, s1_3 and s1_4
+   change with s1_2 and were regenerated. The precision itself is unchanged and still recorded
+   in `reports/STACK_AUDIT.md` and in the run manifest.
+
+2. s1_2's third panel switches from `probe-llama-l48` to `probe-llama-l50`. Both were already
+   computed and are already in `results/S/s1/s1_2_catch_ultimatum.csv` and in MANIFEST; this
+   selects which one the figure shows and recomputes nothing.
+
+   The panel now reads higher at every target, which the authors should know before using it:
+
+                      L48                     L50
+       target 30     0.000 [0.000, 0.0087]   0.0614 [0.0425, 0.0878]
+       target 40     0.0205 [0.0108, 0.0384] 0.0727 [0.0520, 0.1009]
+       target 50     0.0932 [0.0694, 0.1240] 0.1432 [0.1135, 0.1790]
+       target 60     0.2318 [0.1948, 0.2735] 0.2682 [0.2289, 0.3115]
+
+   Layer 50 rejects hyper-fair offers at every calibration target including 30, where layer 48
+   rejects none. Section 7's W11 quotes the layer-48 numbers in its draft text and table; those
+   are still correct as written but no longer match the figure. Flagged to the authors rather
+   than silently rewritten, since which layer the paper reports is theirs to decide.
+
+Two layout consequences, both handled: the y limit rises to 0.37 because the layer-50 target60
+interval reaches 0.3115 and was colliding with the corner note, and the rule label moves from
+y=0.205 to 0.235 to stay clear. Condition labels drop to zorder 3.5, above the dashed reference
+lines so their boxes still mask them but below the markers so a box never covers its own point,
+which it was doing to target40.

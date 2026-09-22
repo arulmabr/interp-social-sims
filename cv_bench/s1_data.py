@@ -57,7 +57,7 @@ BASELINE_OF = {
 
 STACK_LABEL = {
     "hosted": "Goodfire hosted API",
-    "vllm": "local vLLM bf16",
+    "vllm": "local vLLM",
     "probe-llama-l48": "local probe, Llama L48",
     "probe-llama-l50": "local probe, Llama L50",
     "probe-qwen-l17": "local probe, Qwen L17",
