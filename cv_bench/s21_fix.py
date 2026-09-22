@@ -147,6 +147,7 @@ def load(model_key: str, dtype: str, per_gpu_gib: Optional[float] = None):
     same code runs on 2 x A100-80GB and on 4 x L40S-48GB. Handing accelerate a
     budget larger than the card leads it to over-assign and OOM mid-load.
     """
+    import time as _t
     import torch
     from transformers import AutoModelForCausalLM, AutoTokenizer
     td = {"bf16": torch.bfloat16, "fp32": torch.float32}[dtype]
@@ -159,7 +160,28 @@ def load(model_key: str, dtype: str, per_gpu_gib: Optional[float] = None):
         raise RuntimeError("no CUDA device visible; this job needs GPUs")
     # "free" means free relative to the card, so this also works on a 48 GiB
     # card where 70 GiB could never be free.
-    total_gib = min(torch.cuda.mem_get_info(i)[1] / 2**30 for i in range(n))
+    # Asking a device how much memory it has initialises CUDA on it, and on a
+    # shared node that raises "CUDA-capable device(s) is/are busy or unavailable"
+    # while a previous job is still tearing down. That is the same transient the
+    # wait loop below exists for -- but it happened *before* the wait, so the job
+    # died instead of waiting. Retry the probe itself.
+    total_gib = None
+    for attempt in range(12):                       # up to ~4 minutes
+        try:
+            total_gib = min(torch.cuda.mem_get_info(i)[1] / 2**30 for i in range(n))
+            break
+        except RuntimeError as e:
+            if "busy or unavailable" not in str(e) and "initialization" not in str(e):
+                raise
+            print(f"[load] device busy while probing memory "
+                  f"(attempt {attempt + 1}/12): {e.__class__.__name__}; waiting",
+                  flush=True)
+            _t.sleep(20)
+    if total_gib is None:
+        raise RuntimeError(
+            "every GPU reported busy or unavailable for ~4 minutes. This is a "
+            "node-level condition, not a budget one; the job exits non-zero so it "
+            "is resubmitted rather than silently producing nothing.")
     if per_gpu_gib is None:
         per_gpu_gib = 0.90 * total_gib
     per_gpu_gib = min(per_gpu_gib, 0.92 * total_gib)

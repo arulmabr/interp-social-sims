@@ -644,3 +644,30 @@ and exits with it; all 16 verified, all syntax-checked.
 
 Fault 2 is the more serious of the two. Fault 1 announced itself; fault 2 made a crash indistinguishable
 from success in the one place both the monitor and the watcher look first.
+
+**D65. The memory probe now waits for a busy device instead of dying on it.**
+Taken under rule 16, recorded with the alternatives.
+
+`cvb_g5` failed a third time, differently:
+
+    RuntimeError: CUDA error: CUDA-capable device(s) is/are busy or unavailable
+
+raised from `torch.cuda.mem_get_info` inside `load()`. Asking a device its capacity initialises CUDA
+on it, and on a shared node that raises while a previous job is still tearing down. The irony is that
+`wait_for_gpus` exists for exactly this transient — but the probe that *computes the budget* ran
+**before** the wait, so the job died instead of waiting a few seconds.
+
+**Chosen:** retry the probe itself, 12 attempts at 20 s, and only on the two transient messages
+("busy or unavailable", "initialization"); any other `RuntimeError` still propagates immediately.
+After ~4 minutes it raises with a message saying this is a node condition, and exits non-zero so the
+job is resubmitted rather than silently producing nothing.
+
+**Alternatives not taken.** (a) Catch all `RuntimeError` and retry — rejected: it would swallow real
+CUDA faults and turn a broken build into a four-minute hang. (b) Skip the probe and hard-code a
+budget per GPU type — rejected: that is what caused D64's disk offload, a fixed number outliving the
+hardware it was written for. (c) Let the monitor's retry handle it — it would have, eventually, but a
+transient lasting seconds should not cost a queue cycle and a model reload.
+
+**Three failures, three distinct causes, one job.** `cvb_g5` failed on a request too small for the
+model (D64), on a script that reported the crash as success (D64), and now on a probe that could not
+tolerate a busy device. Each was hidden by the one before it.
