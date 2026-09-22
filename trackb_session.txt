@@ -361,9 +361,26 @@ instructed 4 with the capacity evidence recorded.
           exactly its MDC. Anchoring at a MULTIPLE of the MDC lifts the signal
           without touching the estimator, at the cost of no longer testing the
           detection limit. Changes a pre-registered dose -> AUTHOR DECISION.
-      (c) MORE CLONE ROWS. The floor scales as 1/sqrt(n); n = 240. A 20x burial
-          needs n ~ 1e5. THIS LEVER DOES NOT WORK and is recorded so it is not
-          retried.
+      (c) MORE CLONE ROWS -- CORRECTED. An earlier version of this file said a
+          20x burial needs n ~ 1e5 and that this lever "does not work". THAT WAS
+          WRONG ARITHMETIC: it squared the burial ratio and scaled the current
+          n, instead of applying the gate's own criterion to the CI half-width
+          1.96*floor/sqrt(n). The real requirement is n >= 1,543 to exclude zero
+          and n >= 4,539 for a half-width within 1 MDC, against 240 used. And
+          the rows already exist: cloning_trials() yields 1,016 at mc/legacy
+          (the run took the first 240) and 8,128 across all 32 formats of the
+          254 selection-split content items. No new trials, no test-split
+          access. THIS IS THE CHEAPEST LEVER and the ONLY one that changes no
+          pre-registered quantity -- it needs no author decision.
+          CAVEAT THAT DECIDES IT: those rows span only 254 distinct content
+          items. If the cloning residual is content-driven rather than
+          format-driven, the effective n saturates near 254 and the lever fails
+          for a subtler reason. The deciding quantity is the residual's
+          intraclass correlation within content. It cannot be recovered from
+          what the run saved (ckpt_read_*.npz holds model-side reads only; a
+          reconstruction of the agent side came back at corr = -0.081 against
+          the recorded 0.9909, i.e. misaligned). lora.py should persist per-row
+          residual and content id; the ICC then costs no GPU time.
  2. GATE B2'S REMEDY, which is the same question one level down: the estimator
     recovers alpha and gamma accurately but classifies at 0.70 against a 0.95
     bar. Whether the bar or the design moves is not Track B's to settle.
