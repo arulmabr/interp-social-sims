@@ -76,6 +76,35 @@ class Intervention:
 
 
 # ---------------------------------------------------------------------------
+def decoder_layers(model):
+    """The decoder block list, through any wrapper indirection.
+
+    `model.model.layers` is correct for a bare `LlamaForCausalLM` and wrong the
+    moment the model is wrapped -- a PeftModel puts the causal-LM one level down,
+    so the same expression raises `'LlamaForCausalLM' object has no attribute
+    'layers'`. Both the dose solver and the steering hook must find the SAME
+    module objects whether or not an adapter is attached, because PEFT injects
+    into those blocks in place rather than replacing them.
+    """
+    m = model
+    for _ in range(5):
+        inner = getattr(m, "model", None)
+        if inner is not None and hasattr(inner, "layers"):
+            return inner.layers
+        if hasattr(m, "layers"):
+            return m.layers
+        if hasattr(m, "get_base_model"):
+            m = m.get_base_model()
+        elif hasattr(m, "base_model"):
+            m = m.base_model
+        elif inner is not None:
+            m = inner
+        else:
+            break
+    raise AttributeError(
+        f"cannot find the decoder layer list on {type(model).__name__}")
+
+
 @torch.inference_mode()
 def median_residual_norm(model, tokenizer, prompts: Sequence[str], layer: int,
                          skip_first_token: bool = True) -> float:
@@ -86,7 +115,7 @@ def median_residual_norm(model, tokenizer, prompts: Sequence[str], layer: int,
     make `scale` mean something different at every layer.
     """
     norms: List[float] = []
-    block = model.model.layers[layer]
+    block = decoder_layers(model)[layer]
     captured: List[torch.Tensor] = []
 
     def hook(_m, _inp, output):
@@ -194,7 +223,7 @@ class SteeringHook:
     def __enter__(self) -> "SteeringHook":
         self._seen = 0
         self.modified = []
-        block = self.model.model.layers[self.iv.layer]
+        block = decoder_layers(self.model)[self.iv.layer]
         self._handle = block.register_forward_hook(self._make_hook())
         return self
 

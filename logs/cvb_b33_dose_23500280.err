@@ -1,0 +1,27 @@
+Loading checkpoint shards:   0%|          | 0/30 [00:00<?, ?it/s]Loading checkpoint shards:   3%|▎         | 1/30 [00:08<03:58,  8.22s/it]Loading checkpoint shards:   7%|▋         | 2/30 [00:16<03:44,  8.02s/it]Loading checkpoint shards:  10%|█         | 3/30 [00:25<03:48,  8.46s/it]Loading checkpoint shards:  13%|█▎        | 4/30 [00:35<04:02,  9.32s/it]Loading checkpoint shards:  17%|█▋        | 5/30 [00:45<03:59,  9.60s/it]Loading checkpoint shards:  20%|██        | 6/30 [00:56<03:56,  9.86s/it]Loading checkpoint shards:  23%|██▎       | 7/30 [01:05<03:43,  9.70s/it]Loading checkpoint shards:  27%|██▋       | 8/30 [01:14<03:26,  9.38s/it]Loading checkpoint shards:  30%|███       | 9/30 [01:22<03:08,  8.96s/it]Loading checkpoint shards:  33%|███▎      | 10/30 [01:29<02:47,  8.39s/it]Loading checkpoint shards:  37%|███▋      | 11/30 [01:36<02:34,  8.14s/it]Loading checkpoint shards:  40%|████      | 12/30 [01:44<02:24,  8.03s/it]Loading checkpoint shards:  43%|████▎     | 13/30 [01:52<02:17,  8.06s/it]Loading checkpoint shards:  47%|████▋     | 14/30 [02:01<02:10,  8.13s/it]Loading checkpoint shards:  50%|█████     | 15/30 [02:09<02:01,  8.08s/it]Loading checkpoint shards:  53%|█████▎    | 16/30 [02:17<01:53,  8.08s/it]Loading checkpoint shards:  57%|█████▋    | 17/30 [02:26<01:48,  8.36s/it]Loading checkpoint shards:  60%|██████    | 18/30 [02:37<01:50,  9.20s/it]Loading checkpoint shards:  63%|██████▎   | 19/30 [02:48<01:48,  9.89s/it]Loading checkpoint shards:  67%|██████▋   | 20/30 [03:00<01:42, 10.27s/it]Loading checkpoint shards:  70%|███████   | 21/30 [03:11<01:35, 10.57s/it]Loading checkpoint shards:  73%|███████▎  | 22/30 [03:22<01:25, 10.68s/it]Loading checkpoint shards:  77%|███████▋  | 23/30 [03:34<01:18, 11.23s/it]Loading checkpoint shards:  80%|████████  | 24/30 [03:47<01:09, 11.63s/it]Loading checkpoint shards:  83%|████████▎ | 25/30 [03:58<00:57, 11.58s/it]Loading checkpoint shards:  87%|████████▋ | 26/30 [04:10<00:46, 11.68s/it]Loading checkpoint shards:  90%|█████████ | 27/30 [04:22<00:35, 11.83s/it]Loading checkpoint shards:  93%|█████████▎| 28/30 [04:35<00:24, 12.06s/it]Loading checkpoint shards:  97%|█████████▋| 29/30 [04:48<00:12, 12.50s/it]Loading checkpoint shards: 100%|██████████| 30/30 [04:54<00:00, 10.46s/it]Loading checkpoint shards: 100%|██████████| 30/30 [04:54<00:00,  9.82s/it]
+/orcd/home/002/guna23/shrey/risk-trackB/cv_bench/anchors/probe_vs_anchors.py:201: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  sd = torch.load(B32 / "adapter_bias.pt", map_location="cpu")
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/orcd/home/002/guna23/shrey/risk-trackB/cv_bench/anchors/probe_vs_anchors.py", line 330, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/orcd/home/002/guna23/shrey/risk-trackB/cv_bench/anchors/probe_vs_anchors.py", line 164, in main
+    return stage_dose(a)
+           ^^^^^^^^^^^^^
+  File "/orcd/home/002/guna23/shrey/risk-trackB/cv_bench/anchors/probe_vs_anchors.py", line 252, in stage_dose
+    units = {L: float(steer.median_residual_norm(peft_model, tok, prompts, L))
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/orcd/home/002/guna23/shrey/risk-trackB/cv_bench/anchors/probe_vs_anchors.py", line 252, in <dictcomp>
+    units = {L: float(steer.median_residual_norm(peft_model, tok, prompts, L))
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guna23/.local/lib/python3.11/site-packages/torch/utils/_contextlib.py", line 116, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/orcd/home/002/guna23/shrey/risk-trackB/cv_bench/steer.py", line 89, in median_residual_norm
+    block = model.model.layers[layer]
+            ^^^^^^^^^^^^^^^^^^
+  File "/home/guna23/.local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1931, in __getattr__
+    raise AttributeError(
+AttributeError: 'LlamaForCausalLM' object has no attribute 'layers'
