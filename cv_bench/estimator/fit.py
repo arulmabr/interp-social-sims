@@ -30,7 +30,13 @@ FREE_SETS: Dict[str, Tuple[str, ...]] = {
 }
 
 BOUNDS: Dict[str, Tuple[float, float]] = {
-    "alpha": (0.20, 1.60), "gamma": (0.25, 1.60), "lam": (0.50, 6.00),
+    # gamma's upper bound was 1.60 and the B2-cal refit landed exactly on it,
+    # which makes the value a statement about the bound rather than about the
+    # model. Widened so the optimiser can say where it actually wants to be; if
+    # it rails again the parameter is genuinely unidentified and is reported as
+    # such rather than quoted. These are optimiser bounds, not pre-registered
+    # thresholds -- no gate criterion moves.
+    "alpha": (0.20, 2.50), "gamma": (0.25, 4.00), "lam": (0.50, 6.00),
     "tau": (0.02, 4.00), "action": (-6.0, 6.0), "position": (-6.0, 6.0),
     "label": (-6.0, 6.0), "kappa": (0.20, 5.00), "lapse": (0.0, 0.40),
 }

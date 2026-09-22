@@ -533,3 +533,42 @@ about.
   families**, `accept_bias_control` (true/false statements, yes/no) and `offer_bias_control`
   (accept/reject offers), which is what B1 asks for when it says "unrelated accept/reject **and**
   yes/no items" rather than one kind wearing the other's clothing.
+
+**BD37. The gradient rerun returned the withdrawn run's vectors in 32 seconds.** The skip-if-done check
+tested only that `grad_*.npy` and its metadata existed. After the prompt rewrite the filenames were
+unchanged and the words were not, so the job "completed" instantly and reported the very vectors BD27
+was withdrawn for — sha256 `e23ea580...`, identical to the old run. This is BD33's bug recurring in a
+second place: an identity check that does not cover the thing that actually changed. The metadata now
+carries the `items_key` fingerprint over trial ids **and rendered prompt text**, and a version is
+recomputed unless that matches. The stale outputs were deleted and the job resubmitted.
+
+**BD38. B2-cal on corrected prompts: what changed, and what gamma is now doing.** All first-run numbers
+were withdrawn; these replace them. 864 rows, legacy labels, `Answer:` stem, unbatched, 4:52 on 4 GPUs.
+
+| quantity | first run (withdrawn) | corrected prompts |
+|---|---|---|
+| valid mass | 0.9641 | **0.9945** |
+| z mean | -0.947 | **-3.199** |
+| z range | [-10.3, +12.2] | [-17.1, +6.1] |
+| template noise SD | 0.5816 | **2.1338** |
+| numerical noise SD | 0.0 | **1.1e-16** (bit-identical) |
+| readout vs free generation | 0.36 (bug: no chat template) | **0.59** |
+
+Three consequences:
+- **The recovery study's noise assumptions were wrong by 4x.** Template noise is 2.13, at the very top
+  of the 0.5/1/2 range simulated, while the "primary" configuration used 0.5. The rerun centres on the
+  measured value. Numerical noise is zero to machine precision, confirming item 3.
+- **gamma is railed.** The fit returned exactly 1.600, its optimiser bound. That is a statement about
+  the bound, not the model. Bounds widened to gamma 4.0 and alpha 2.5 — optimiser bounds, not
+  pre-registered thresholds, so no gate criterion moves — and if it rails again gamma is unidentified
+  on this grid and will be reported as such rather than quoted.
+- **The readout agrees with free generation on 59 of 100 held-out prompts**, with zero unparseable.
+  Barely above chance, measured with the chat template on both sides. This is Track B's half of the
+  comparison item 6 asks for and it goes beside the Friday session's when theirs lands.
+
+The within-cell slope is again positive and the pooled table again is not: mean within-cell slope
+**+2.74**, all four p=0.5 stakes positive (2.77, 5.97, 2.91, 2.35), joint within-cell log x **+3.00**
+against a pooled log p of +5.12. Two of 40 cells have a negative slope, both in the saturated floor.
+So the withdrawal of "undermines the contextual-utility assumption" stands on the corrected prompts
+too. CPT's residual RMSE is **3.87** against a z SD of 3.96 — the parametric model explains almost
+none of the variance, which is the same story gamma railing tells.

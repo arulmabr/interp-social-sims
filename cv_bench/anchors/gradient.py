@@ -249,10 +249,21 @@ def main(argv=None) -> int:
             key = f"L{layer}_{name}"
             vec_path = args.out / f"grad_{key}.npy"
             meta_path = args.out / f"grad_{key}.meta.json"
+            # Skip only if the saved vector was computed on THESE prompts.
+            # Checking file existence alone is what let a rerun on corrected
+            # prompts return the previous run's vectors in 32 seconds (BD33's
+            # bug, recurring here): the words changed, the filenames did not.
+            want_key = CK.items_key([t.trial_id for t in trials],
+                                    [core.prompt_text(t) for t in trials])
             if vec_path.exists() and meta_path.exists():
-                summary["versions"][key] = json.loads(meta_path.read_text())
-                print(f"{key}: already on disk, skipping", flush=True)
-                continue
+                prev = json.loads(meta_path.read_text())
+                if prev.get("items_key") == want_key:
+                    summary["versions"][key] = prev
+                    print(f"{key}: already on disk for these prompts, skipping",
+                          flush=True)
+                    continue
+                print(f"{key}: on disk but for different prompts, recomputing",
+                      flush=True)
             res = average_gradient(model, tok, ro, trials, layer, hb,
                                    f"L{layer}:{name}",
                                    ckpt=args.out / f"ckpt_{key}.npz")
@@ -268,6 +279,7 @@ def main(argv=None) -> int:
             res["shape"] = list(np.asarray(vec).shape)
             res["dtype"] = str(np.asarray(vec).dtype)
             res["file"] = vec_path.name
+            res["items_key"] = want_key
             meta_path.write_text(json.dumps(res, indent=2, sort_keys=True,
                                             default=float) + "\n")
             summary["versions"][key] = res
