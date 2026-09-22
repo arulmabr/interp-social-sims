@@ -1039,3 +1039,27 @@ coding all work, so a flat curve was a measurement rather than a dead pipeline. 
 plotted the remaining curve has nothing to be read against. Options not taken: keep both layers
 (rejected, the authors asked for one); keep layer 48 as an unlabelled grey control line
 (rejected, it would still be a second layer on the panel). Reversible by reverting this commit.
+
+## D81 — G4 figure reduced to three measurement panels (22 Sept)
+
+At the authors' instruction the dose-response panel and the variant-coding panel are removed.
+The figure is now 2x2: coding agreement against the token cap (A), readout against free
+generation (B), direction geometry at layer 50 (C), and the notes block.
+
+  - `panel_a` and `panel_b` deleted from `cv_bench/g4_figure.py`; both remain in git history
+    at a3710c0 and can be restored by reverting this commit.
+  - surviving panels relabelled A, B, C; layout 2x2 at 9.8x7.2 in.
+  - suptitle "G4: coding, instrument and direction geometry".
+  - the notes block is rewritten as findings rather than verdicts. Every entry previously
+    began "No", which reads as a rebuttal; the panels are measurements of how the instruments
+    behave, not a rebuttal of anything, and the column of "No"s misrepresented that.
+
+Consequence, recorded for the authors rather than as an objection: the figure no longer carries
+a steering result. What remains is entirely about how the measurements behave -- the parser, the
+readout and the direction's geometry. That is a coherent figure and every panel is well
+evidenced, but the G4 dose-response is now reported only in `results/S/s1/g4_curves.csv` and
+`reports/G4_DECISION.md`, not in any figure. Nothing was deleted or regenerated; rule 5 holds
+through the report and the CSV.
+
+Options not taken: keep the dose-response as a fourth panel (rejected, the authors asked for its
+removal); split it into a separate figure (not asked for, and available on request).

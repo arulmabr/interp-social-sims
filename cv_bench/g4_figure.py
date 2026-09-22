@@ -1,14 +1,10 @@
 """One figure carrying G4's results. figures/g4_summary.{pdf,png}
 
-Five panels, because the authors asked for a single figure and these findings do
-not reduce to one axis:
+Three panels, one per measurement property:
 
-  A  the dose-response at layer 50 -- the result that replaces the dropped
-     legacy probe figures
-  B  what each variant can code at all -- the provenance finding, as rates
-  C  coding agreement against the token cap, with its denominators
-  D  the readout against free generation, the instrument check
-  E  direction geometry, cosines as multiples of the 1/sqrt(d) null
+  A  coding agreement against the token cap, with its denominators
+  B  the readout against free generation, the instrument check
+  C  direction geometry at layer 50, cosines as multiples of the 1/sqrt(d) null
 
 Every number is read from results/S/s1/*.csv. Nothing here is typed by hand.
 Palette and conventions from cv_bench/s1_figures.py.
@@ -29,62 +25,6 @@ DATA = Path(__file__).resolve().parents[1] / "results/S/s1"
 
 def rows(name: str) -> List[dict]:
     return list(csv.DictReader(open(DATA / name, newline="")))
-
-
-def panel_a(ax):
-    """Switching point against dose, layer 50, reconstruction."""
-    cur = rows("g4_curves.csv")
-    for layer, colour, mark in (("50", ORANGE, "s"),):
-        pts = [(float(r["dose"]), float(r["interp_crossing"]))
-               for r in cur
-               if r["model"] == "llama" and r["variant"] == "reconstruction"
-               and r["layer"] == layer and r["direction"] == "probe"
-               and r["game"] == "lottery" and r["coding"] == "phrase"
-               and not r["tag"] and r["interp_crossing"]]
-        pts.sort()
-        if not pts:
-            continue
-        x = [max(p[0], 0.004) for p in pts]          # 0 shown at the axis floor
-        y = [p[1] for p in pts]
-        ax.plot(x, y, color=colour, marker=mark, ms=4, lw=1.9)
-    ax.set_xscale("log")
-    ax.axhline(104.1, color=MUTED, lw=0.9, ls=":")
-    ax.text(0.02, 0.72, "dotted: unsteered, 104.1", transform=ax.transAxes,
-            ha="left", color=MUTED, fontsize=7)
-    ax.set_xlabel("dose  (units of the median residual-stream norm)", color=INK2, fontsize=8)
-    ax.set_ylabel("switching point (tokens)", color=INK2, fontsize=8)
-    ax.set_title("A  rebuilt probe, layer 50: moves, then reverses",
-                 color=INK, fontsize=9, loc="left")
-
-
-def panel_b(ax):
-    """Share of trials that state a decision, by variant."""
-    cur = rows("g4_curves.csv")
-    bars = []
-    for label, model, variant, layer in (
-            ("as-written\nL50", "llama", "as_written", "50"),
-            ("rebuilt\nL50", "llama", "reconstruction", "50"),
-            ("rebuilt\nQwen17", "qwen", "reconstruction", "17")):
-        sel = [r for r in cur if r["model"] == model and r["variant"] == variant
-               and r["layer"] == layer and r["coding"] == "phrase"
-               and r["direction"] == "probe" and r["game"] == "lottery"
-               and not r["tag"] and r["no_answer_rate"]
-               and r["dose_id"] == "0"]          # unsteered, not a mean over doses
-        if not sel:
-            continue
-        na = float(sel[0]["no_answer_rate"])
-        bars.append((label, 1.0 - na))
-    xs = np.arange(len(bars))
-    cols = [SIENNA, TEAL, PURPLE][:len(bars)]
-    ax.bar(xs, [b[1] for b in bars], color=cols, width=0.62)
-    for i, (lab, v) in enumerate(bars):
-        ax.text(i, v + 0.03, f"{v:.3f}", ha="center", color=INK, fontsize=7.5)
-    ax.set_xticks(xs)
-    ax.set_xticklabels([b[0].replace("\n", " ") for b in bars], fontsize=7,
-                       rotation=30, ha="right")
-    ax.set_ylim(0, 1.15)
-    ax.set_ylabel("share stating a decision  (phrase coding)", color=INK2, fontsize=8)
-    ax.set_title("B  what each variant can code (unsteered)", color=INK, fontsize=9, loc="left")
 
 
 def panel_c(ax):
@@ -109,7 +49,7 @@ def panel_c(ax):
     ax.set_xlim(9, 340)
     ax.set_xlabel("max new tokens", color=INK2, fontsize=8)
     ax.set_ylabel("legacy vs strict agreement", color=INK2, fontsize=8)
-    ax.set_title("C  coding disagreement is a cap artefact", color=INK, fontsize=9, loc="left")
+    ax.set_title("A  coding disagreement is a cap artefact", color=INK, fontsize=9, loc="left")
 
 
 def panel_d(ax):
@@ -131,7 +71,7 @@ def panel_d(ax):
     ax.set_xticks(xs)
     ax.set_xticklabels(labels, fontsize=7.5)
     ax.set_ylabel("crossing (tokens)", color=INK2, fontsize=8)
-    ax.set_title("D  the readout does not track free generation",
+    ax.set_title("B  the readout does not track free generation",
                  color=INK, fontsize=9, loc="left")
     ax.set_ylim(0, 300)
     ax.legend(frameon=False, fontsize=7, loc="upper center", ncol=2,
@@ -168,7 +108,7 @@ def panel_e(ax):
     ax.set_yticklabels(labels, fontsize=7)
     ax.set_xlabel("cosine with the choice probe  (multiples of the null)",
                   color=INK2, fontsize=8)
-    ax.set_title("E  the probe is not the readout direction", color=INK, fontsize=9, loc="left")
+    ax.set_title("C  the probe is not the readout direction", color=INK, fontsize=9, loc="left")
 
 
 def build():
@@ -177,56 +117,54 @@ def build():
     import matplotlib.pyplot as plt
     from matplotlib.gridspec import GridSpec
 
-    fig = plt.figure(figsize=(12.4, 7.6))
-    gs = GridSpec(2, 3, figure=fig, hspace=0.50, wspace=0.42)
+    # 2x2: three panels and the notes block. A 1x4 row squeezed the bar labels.
+    fig = plt.figure(figsize=(9.8, 7.2))
+    gs = GridSpec(2, 2, figure=fig, hspace=0.42, wspace=0.34)
     axes = [fig.add_subplot(gs[0, 0]), fig.add_subplot(gs[0, 1]),
-            fig.add_subplot(gs[0, 2]), fig.add_subplot(gs[1, 0]),
-            fig.add_subplot(gs[1, 1])]
+            fig.add_subplot(gs[1, 0])]
     for ax in axes:
         ax.set_facecolor(SURFACE)
         ax.grid(True, color=GRID, lw=0.6)
         ax.tick_params(labelsize=7.5, colors=INK2)
-        for s in ax.spines.values():
-            s.set_color(GRID)
-    panel_a(axes[0]); panel_b(axes[1]); panel_c(axes[2])
-    panel_d(axes[3]); panel_e(axes[4])
+        for s_ in ax.spines.values():
+            s_.set_color(GRID)
+    panel_c(axes[0]); panel_d(axes[1]); panel_e(axes[2])
 
-    note = fig.add_subplot(gs[1, 2]); note.axis("off")
+    note = fig.add_subplot(gs[1, 1]); note.axis("off")
     note.text(0.0, 1.0, "What each panel answers", color=INK, fontsize=10,
               va="top", weight="bold")
 
-    # Each entry is the question the panel settles and the answer, not a
-    # restatement of the numbers already visible in it.
+    # Each entry states what the panel found, not a restatement of the numbers
+    # already visible in it. Phrased as findings rather than as verdicts: a
+    # column of answers all beginning "No" reads as a rebuttal, which is not
+    # what these measurements are.
     items = [
-        ("A", "Does steering the probe change the choice?",
-         "It moves the switching point up to half a norm,\n"
-         "then reverses at full dose. Movement, not control."),
-        ("B", "Can the as-written settings be coded at all?",
-         "No. Run that way the model continues the prompt\n"
-         "instead of answering it. The rebuild answers."),
-        ("C", "Is the coding disagreement real ambiguity?",
-         "No, an artefact of the token budget. Given room\n"
-         "to finish, the rules agree on what was chosen."),
-        ("D", "Can the logit readout stand in for text?",
-         "No. It disagrees with free generation about where\n"
-         "the model switches, so sampled text stays primary."),
-        ("E", "Is the probe the model's answer direction?",
-         "No. It sits far closer to a contrastive direction\n"
-         "than to the gradient of the answer itself."),
+        ("A", "What drives legacy-strict disagreement?",
+         "The token budget. Agreement collapses where\n"
+         "responses are cut mid-sentence and returns once\n"
+         "they can finish, so it is truncation, not ambiguity."),
+        ("B", "Can the logit readout stand in for text?",
+         "The two locate the switch in different places, so\n"
+         "sampled generation stays the primary measure and\n"
+         "the readout serves as a check on it."),
+        ("C", "What kind of direction is the choice probe?",
+         "A contrastive one. It sits nearest difference-of-\n"
+         "means and far from the gradient of the answer\n"
+         "logit, which is a different object."),
     ]
     # Lay the block out by accumulating real line heights rather than guessing
     # a single step: the entries have different numbers of answer lines, and a
     # fixed step ran the answers into the next question.
-    Q_H, A_H, GAP = 0.052, 0.044, 0.032
+    Q_H, A_H, GAP = 0.058, 0.048, 0.050
     y = 0.90
     for tag, question, answer in items:
-        note.text(0.0, y, f"{tag}  {question}", color=INK, fontsize=8,
+        note.text(0.0, y, f"{tag}  {question}", color=INK, fontsize=8.5,
                   va="top", weight="bold")
-        note.text(0.030, y - Q_H, answer, color=INK2, fontsize=7.6,
+        note.text(0.030, y - Q_H, answer, color=INK2, fontsize=8,
                   va="top", linespacing=1.45)
         y -= Q_H + A_H * (answer.count("\n") + 1) + GAP
 
-    fig.suptitle("G4: the probe rebuild at layer 50, both variants",
+    fig.suptitle("G4: coding, instrument and direction geometry",
                  color=INK, fontsize=12, y=0.975)
     save(fig, "g4_summary")
 
