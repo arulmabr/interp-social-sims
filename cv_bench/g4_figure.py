@@ -232,15 +232,7 @@ def build():
         y -= Q_H + A_H * (answer.count("\n") + 1) + GAP
 
     fig.suptitle("G4: the probe rebuild, both variants and both layers",
-                 color=INK, fontsize=12, y=0.995)
-    # Two lines: a single long line makes bbox_inches="tight" stretch the whole
-    # figure to the width of the text.
-    fig.text(0.5, 0.955,
-             "\"As-written\" reproduces the paper's published settings: raw prompt, no chat "
-             "template, 12 new tokens, the legacy parser and position policy,\n"
-             "with prompt strings verified character-identical to Probes/tasks/prompts.py. "
-             "G2 imports those modules and runs them directly.",
-             ha="center", va="top", color=INK2, fontsize=7.5, linespacing=1.5)
+                 color=INK, fontsize=12, y=0.975)
     save(fig, "g4_summary")
 
 
