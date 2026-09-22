@@ -64,3 +64,25 @@ rerun, and no threshold was relaxed to accommodate an outcome.
   the mini-ultimatum's alternatives never reach the model. Free-text cells carry the same caveat: they
   are scored by the first-token readout, not by sequence log-probability, so they are a second
   multiple-choice arm.
+
+**B3.2 70B LoRA: 2 GPUs instead of the instructed 4, and a shortened walltime.** 22 Sept, technical
+(scheduling capacity), no author involvement in the numbers.
+- *Instructed:* train the 70B LoRA anchor in bf16 on **4 GPUs**, one job, no partition races.
+- *Done:* submitted on **2x A100-80GB** (`--gres=gpu:a100:2 --mem=48G`), first at `--time=10:00:00`,
+  then `--time=04:00:00` after the longer request proved unbackfillable.
+- *Why:* the QOS cap leaves 2 GPUs free once Friday's `cvb_g5b` holds 2, and the measurement says 2 is
+  enough: on node2102 the bf16 weights (141 GB) loaded into 160 GB of HBM with no OOM --
+  `loaded in 323s; 207.1M trainable LoRA params; 4bit=False`. Waiting for a 4-GPU window costs more
+  than the run. **No fallback to 4-bit was taken**; the anchor is bf16 as specified.
+- *Effect on the numbers:* none expected. Per-device batch and `--accum 8` are unchanged, so the
+  optimiser sees the same effective batch; only wall-clock differs.
+- *Cheapest to reverse:* resubmit at `--gres=gpu:a100:4` if a window opens before the cutoff.
+
+**B3.2 70B LoRA: first attempt lost to preemption after ~11 minutes.** 22 Sept, technical.
+- Job 23460192 on `mit_preemptable`/node2102 reached `reference step 25/500 loss 0.5992`, then
+  `JOB 23460192 ON node2102 CANCELLED AT 2026-09-22T02:39:11 DUE TO PREEMPTION` (in the job's `.err`).
+- The checkpoint survived and was verified before resubmission: **resumes from step 25, 3360 adapter
+  tensors**. Nothing was retrained from scratch and no seed, prompt, dose, threshold or metric changed
+  -- this is CLAUDE.md rule 4's technical-reason case only.
+- At ~13 s/step, checkpoints every 25 steps cost ~5.4 min and a cold reload costs ~5.4 min, so an
+  11-minute mean uptime makes `mit_preemptable` net-zero for this job. Hence the move off it.
