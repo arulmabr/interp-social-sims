@@ -2,10 +2,10 @@
 
     python -m cv_bench.s1_ladder
 
-The ladder ran on the local vLLM stack (Stack B). The paper's Figs. 3 and 5 ran on
-the hosted Goodfire stack (Stack A). Everything here is reported on Stack B's own
-axes, with Stack A's baseline shown only as a separately labelled reference line
-in the figure, never averaged in and never differenced against.
+The ladder ran on the local vLLM stack. The paper's Figs. 3 and 5 ran on the
+hosted Goodfire stack. Everything here is reported on the local stack's own axes,
+with the Goodfire baseline shown only as a separately labelled reference line in
+the figure, never averaged in and never differenced against.
 
 Also writes `paper_patches/appendix_prompts.md`: the verbatim chain-of-thought
 trigger and the few-shot demonstrations for each task, which the paper promises
@@ -144,7 +144,7 @@ def appendix_prompts():
            "Extracted by `cv_bench/s1_ladder.py` from",
            "`cleaned/behavioral_games_combined.csv`, at the 50-token cell of each condition.",
            "",
-           "All of these ran on the **local vLLM stack** (Stack B): Llama-3.3-70B-Instruct, bfloat16,",
+           "All of these ran on the **local vLLM stack**: Llama-3.3-70B-Instruct, bfloat16,",
            "tensor-parallel 2, temperature 0.7, top-p 1.0, no system prompt except in `persona`.",
            "They did **not** run on the hosted Goodfire stack that produced Figures 3 and 5.",
            "",

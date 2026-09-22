@@ -60,11 +60,20 @@ for _d in ("000", "025", "050", "075", "100"):
     FAMILY[f"fewshot_cot_dose{_d}"] = GOLD
 
 STACK_TITLE = {
-    "hosted": "Stack A: hosted Goodfire/EDSL",
-    "vllm": "Stack B: local vLLM, bf16",
-    "probe-llama-l48": "Stack C: local HF probe, Llama layer 48",
-    "probe-llama-l50": "Stack C: local HF probe, Llama layer 50",
-    "probe-qwen-l17": "Stack C: local HF probe, Qwen layer 17",
+    "hosted": "Goodfire hosted API",
+    "vllm": "local vLLM, bf16",
+    "probe-llama-l48": "local probe, Llama layer 48",
+    "probe-llama-l50": "local probe, Llama layer 50",
+    "probe-qwen-l17": "local probe, Qwen layer 17",
+}
+
+# Short forms for axis ticks, where the full STACK_TITLE will not fit.
+SHORT_STACK = {
+    "hosted": "Goodfire",
+    "vllm": "local vLLM",
+    "probe-llama-l48": "local probe L48",
+    "probe-llama-l50": "local probe L50",
+    "probe-qwen-l17": "local probe Qwen17",
 }
 
 MARKERS = ["o", "s", "^", "D", "v", "P", "X", "*", "<"]
@@ -490,14 +499,20 @@ def s1_7_ladder():
         bx = hosted.by_x()
         ax.plot(list(bx), [np.mean(bx[x]) for x in bx], linestyle=(0, (5, 3)),
                 color=MUTED, linewidth=1.6, zorder=2,
-                label="Stack A baseline (reference only,\nnot compared)")
+                label="Goodfire baseline (reference only,\nnot compared)")
     ax.axvline(50, color=INK2, linewidth=1.0, linestyle=":", zorder=1)
-    style(ax, "Stack B: the ladder on its own axes", "risky reward n (tokens)",
+    style(ax, "local vLLM: the ladder on its own axes", "risky reward n (tokens)",
           "P(risky)")
     ax.set_ylim(-0.03, 1.03)
-    ax.legend(fontsize=7.0, frameon=False, loc="upper left",
-              bbox_to_anchor=(0.0, 0.99), labelcolor=INK2, ncol=2,
-              columnspacing=0.8, handlelength=1.6)
+    # Opaque background, not frameon=False: the Goodfire reference curve runs
+    # straight through this block and struck out the label text.
+    leg = ax.legend(fontsize=7.0, frameon=True, loc="upper left",
+                    bbox_to_anchor=(0.0, 0.99), labelcolor=INK2, ncol=2,
+                    columnspacing=0.8, handlelength=1.6)
+    leg.get_frame().set_facecolor(SURFACE)
+    leg.get_frame().set_edgecolor("none")
+    leg.get_frame().set_alpha(1.0)
+    leg.set_zorder(6)
 
     ax = axes[1]
     for game, col, mk in (("lottery", GOLD, "o"), ("ultimatum", PURPLE, "s")):
@@ -526,7 +541,7 @@ def s1_7_ladder():
           "switching point (tokens)")
     ax.set_xlim(-0.06, 1.06)
     ax.legend(fontsize=7.8, frameon=False, loc="center right", labelcolor=INK2)
-    fig.suptitle("S1.7  The prompting ladder, reported on Stack B only",
+    fig.suptitle("S1.7  The prompting ladder, run on the local vLLM stack only",
                  fontsize=11.5, color=INK, x=0.02, ha="left")
     fig.tight_layout(rect=(0, 0, 1, 0.93))
     save(fig, "s1_7_ladder")
@@ -542,7 +557,7 @@ def s1_8_persona():
     for r in rows:
         b, p = f(r["unsteered_switching_point"]), f(r["persona_switching_point"])
         col = colour(r["persona_condition"])
-        lab = f"{r['stack']} / {r['game']}\n{r['persona_condition']}"
+        lab = f"{SHORT_STACK.get(r['stack'], r['stack'])} / {r['game']}\n{r['persona_condition']}"
         if not (np.isfinite(b) and np.isfinite(p)):
             ax.text(2, y, "switching point not identified on this grid "
                           "(the curve never crosses 0.5)", fontsize=8, color=MUTED,

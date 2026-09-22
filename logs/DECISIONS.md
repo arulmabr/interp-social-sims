@@ -1164,3 +1164,29 @@ for the ultimatum drop at rho = 1.0.
 
 Changed: friday_session.txt section 7 (W10 "Why" block, W9 caveats 1, 1b and 4);
 paper_patches/CLAIMS.csv rows GAP-persona-ci and GAP-ladder. No figure or data changed.
+
+## D85 — stack labels named directly instead of A/B/C (22 Sept)
+
+At the authors' instruction the figures name the serving setups rather than lettering them.
+
+    hosted          -> "Goodfire hosted API"        (ticks: "Goodfire")
+    vllm            -> "local vLLM, bf16"           (ticks: "local vLLM")
+    probe-llama-l48 -> "local probe, Llama layer 48"
+    probe-llama-l50 -> "local probe, Llama layer 50"
+    probe-qwen-l17  -> "local probe, Qwen layer 17"
+
+Changed in `cv_bench/s1_figures.py` (STACK_TITLE, plus a new SHORT_STACK for axis ticks where
+the full name will not fit) and `cv_bench/s1_data.py`. s1_8 built its y-tick labels from the raw
+stack key and now routes them through SHORT_STACK. s1_7's title, panel title and reference-line
+label follow: "run on the local vLLM stack only", "local vLLM: the ladder on its own axes",
+"Goodfire baseline (reference only, not compared)".
+
+The lettering is also gone from the paper-facing prose so the vocabulary matches the figures:
+`friday_session.txt` section 7, `paper_patches/appendix_prompts.md`, and the `cv_bench/s1_ladder.py`
+string that generates that appendix, edited together to stay in sync without re-running the
+script (which would have appended duplicate MANIFEST rows). "Stack C" survives only in two
+source comments and one docstring, which render nowhere.
+
+One layout fix this forced. s1_7's legend had `frameon=False`, and the longer "Goodfire
+baseline" label put the grey reference curve straight through the text. The legend now has an
+opaque SURFACE background at zorder 6. No data changed; all eleven figures regenerated.

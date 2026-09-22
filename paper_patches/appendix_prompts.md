@@ -5,7 +5,7 @@ rho sweep). The paper's abstract refers to these conditions; no appendix contain
 Extracted by `cv_bench/s1_ladder.py` from
 `cleaned/behavioral_games_combined.csv`, at the 50-token cell of each condition.
 
-All of these ran on the **local vLLM stack** (Stack B): Llama-3.3-70B-Instruct, bfloat16,
+All of these ran on the **local vLLM stack**: Llama-3.3-70B-Instruct, bfloat16,
 tensor-parallel 2, temperature 0.7, top-p 1.0, no system prompt except in `persona`.
 They did **not** run on the hosted Goodfire stack that produced Figures 3 and 5.
 
