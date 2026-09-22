@@ -168,7 +168,7 @@ def figure(model: str, rows: List[dict]) -> None:
         ax.set_title(game, color=INK, fontsize=11)
         ax.set_xlabel("reward" if game == "lottery" else "offer", color=INK2)
         ax.set_ylim(-0.03, 1.03)
-        ax.grid(True, color=GRID, lw=0.6)
+        ax.grid(False)
         ax.set_facecolor(SURFACE)
         for s in ax.spines.values():
             s.set_color(GRID)

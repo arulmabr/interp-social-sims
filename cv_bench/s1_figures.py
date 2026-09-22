@@ -97,7 +97,7 @@ def colour(cond: str) -> str:
 
 def style(ax, title: str = "", xlabel: str = "", ylabel: str = ""):
     ax.set_facecolor(SURFACE)
-    ax.grid(True, color=GRID, linewidth=0.7, zorder=0)
+    ax.grid(False)
     ax.set_axisbelow(True)
     for s in ("top", "right"):
         ax.spines[s].set_visible(False)

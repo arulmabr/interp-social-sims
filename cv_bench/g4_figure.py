@@ -124,7 +124,7 @@ def build():
             fig.add_subplot(gs[1, 0])]
     for ax in axes:
         ax.set_facecolor(SURFACE)
-        ax.grid(True, color=GRID, lw=0.6)
+        ax.grid(False)
         ax.tick_params(labelsize=7.5, colors=INK2)
         for s_ in ax.spines.values():
             s_.set_color(GRID)
