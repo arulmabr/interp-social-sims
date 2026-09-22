@@ -795,3 +795,21 @@ faults.
 *Alternatives not taken:* `a100:4`, which also fits and spreads the model to ~35 GiB per card, but
 consumes the whole 4-GPU preemptable cap for a 20-minute job; gradient checkpointing, which would
 change the computation to fit the hardware rather than the other way round.
+
+**D72. The failure watcher was watching a list that never grew.**
+`cvb_g4b` failed inside a 30-minute watch window and the watcher reported nothing. The cause was not
+a filter or a query: **`cvb_g4b` was not in the watched list at all**, along with `cvb_g4q`,
+`cvb_g5b`, `cvb_s32`, `cvb_s35` and `cvb_instr`. The list was hard-coded when the watcher was written
+and five of those tasks did not exist yet.
+
+This is the same failure as **D67**, where the in-cluster monitor ran a table it had imported before a
+task was renamed. Both times a static list silently stopped describing the work. The fix is the same
+in kind: the watcher now derives its list from `cv_bench.mine --names` at the top of **every** cycle,
+so it cannot drift, and because `mine.py` refuses anything matching `^cvb_b\d` it cannot drift onto
+Track B's jobs either. Verified: 21 task names watched, all five previously-missing ones present,
+zero Track B names.
+
+**The pattern, stated once.** Three times tonight a guard was defeated not by being wrong but by
+describing yesterday's world: the monitor's imported table (D67), the watcher's hard-coded list
+(D72), and my own belief that an edit had applied when it had silently failed to match. A check that
+enumerates what it protects has to derive that enumeration, not restate it.
