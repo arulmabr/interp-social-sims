@@ -1063,3 +1063,47 @@ through the report and the CSV.
 
 Options not taken: keep the dose-response as a fourth panel (rejected, the authors asked for its
 removal); split it into a separate figure (not asked for, and available on request).
+
+## D82 — W9 to W12 drafted: the four additive S1 patches (22 Sept)
+
+The authors chose the paper-patch route over expanding `friday_session.txt`. Four entries
+written to `paper_patches/`, eight rows appended to `paper_patches/CLAIMS.csv`.
+
+  W9  the prompting ladder and the rho dose-response  (s1_7)
+  W10 an effect size and an interval for the persona result  (s1_8, hosted rows)
+  W11 catch trials for the ultimatum responder  (s1_2)
+  W12 uncertainty on every switching point  (s1_3)
+
+All four are re-analyses of `cleaned/` logs. No new compute, no GPU, nothing regenerated, and
+rule 2 is untouched: the legacy directories were read, never written.
+
+**Selection rule the authors set:** worth including, absent from the submission, and not
+contradicting it. That filter admits these four and excludes s1_4 (the probe ceiling: 82%
+against the 0.95-0.99 reachable from the stimulus alone, and a by-row split that makes
+Section 3.3's "held-out preference trials" inaccurate) and s1_5 (per-judge orderings, already
+`PAPER_AUDIT` section 2.5). Both are recorded here as deferred, not resolved. s1_4 remains the
+finding with the most evidence behind it and the one a reviewer reading
+`Probes/experiments/_common.py` is most likely to reach independently.
+
+**Two things inside the four that are not purely additive, flagged rather than buried:**
+  - W11 reports the probe stacks' hyper-fair rejection rates (0.232 at Llama L48 target 60,
+    0.400 at Qwen L17 target 60) alongside the hosted 0.000. Reporting only the clean hosted
+    result would have been selective under rule 5. The excess-over-staircase column shows the
+    rejections follow from a calibrated threshold that has moved above half, which bounds what
+    high-target calibration can claim.
+  - W12's method sentence states that the 40 "agents" are i.i.d. samples of one prompt
+    (`agent.agent_instruction` empty in every logged row). That is a framing correction to
+    Section 3. It is included because rule 1 does not allow reporting an interval whose
+    definition depends on a population the logs show does not exist.
+
+**A number corrected in passing.** Earlier in session I quoted CoT's lottery switching point as
+140.0 from the interpolation column. `MANIFEST` registers the logistic fit, 175.7 with CI
+[160.1, 191.8]. W9 uses the registered value and names both estimators, since the curve is
+shallow and non-monotone there and the two disagree by 36 tokens.
+
+Checks run: all 34 `S1.*` ids cited across the four files resolve in `MANIFEST.csv`; CLAIMS.csv
+parses at 54 rows with no malformed fields; no em dashes in any of the four.
+
+Options not taken: write the S1 findings into `friday_session.txt` as a section 3.9 (the
+authors chose the patches instead, and it remains available); apply the patches to the paper
+source (there is no `paper_src/` in the repo, so this is blocked, not declined).
