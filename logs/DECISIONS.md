@@ -736,3 +736,49 @@ mine to do from here, but the evidence is in this entry if an author wants to.
 **What this cost.** Four failed attempts at `cvb_g5`, each dying within a minute, so under ten GPU
 minutes in total. The expensive part was not compute; it was that the first two failures reported
 COMPLETED (D64, D66) and so were not visible as failures at all.
+
+**D69. Credentials moved out of the working tree; X1 implemented.**
+`working_apis/` (a directory of nine key files) and `hf_token.txt` sat in the repository root.
+Both were untracked and appear in no commit on any branch — verified with `git log --all` on the
+paths and by listing the trees of the sampled history. They are now at `~/secrets/working_apis`
+and `~/secrets/hf_token`, directory mode 700 and files 600, and their names are in
+`.git/info/exclude`.
+
+`cv_bench/g1_download.py` read `ROOT / "hf_token.txt"` as a fallback. That fallback is **removed
+rather than re-pointed**: a loader that reads a credential from the working tree is how one gets
+committed. It now reads `~/secrets/hf_token` or `HF_TOKEN`, and logs the path it used, never the
+value. Five legacy scripts under `SAE/` and `Revised Prompting/` also reference the old paths; they
+are in the read-only directories (rule 2) and are not edited. They are not run by this session, and
+the path they name no longer exists, so they fail closed.
+
+**X1 is now implemented** (`cv_bench/x1_supplement.py`), having previously been only a specification.
+It builds from an allow-list and fails on a deny-list. Added per the authors: the filenames
+`working_apis` and `hf_token`, and the patterns `sk-[A-Za-z0-9_-]{20,}` and `AIza[0-9A-Za-z_-]{35}`,
+alongside the existing `hf_[A-Za-z0-9]{20,}`, the identifier terms, and AWS-key and private-key
+shapes. A credential match is reported as file, line and rule with the text **withheld** — a scanner
+that echoes the secret it found writes it into the build log.
+
+**First run of X1 on the allow-listed supplement: 0 credential matches, 1,160 anonymity matches.**
+387 `guna23`, 386 `gabrieli`, 373 `orcd`, almost all from the hard-coded lab-share default
+`/orcd/data/gabrieli/001/guna23/hf_cache` that every module carries. The supplement cannot be built
+until those defaults are parameterised. That is W1/X1 work, recorded here and not done tonight,
+because results come first until the cutoff.
+
+**D70. Three of the five judges are reachable; two have no key.**
+Verified with one minimal request each, reporting only a status and a reason class:
+
+    gpt-5              ok      http 200
+    claude-sonnet-4-6  ok      http 200
+    gemini-2.5-pro     ok      http 200
+    deepseek-v4-pro    fails   no key file
+    kimi-k2.6          fails   no key file
+
+Per the authors' instruction the judge phase runs with the three and records the gap. The
+consequence for the paper is worth stating: **the published five-judge mean cannot be reconstructed
+here**, only a three-judge one, and V2 already showed the five-judge passes carry no API response
+ids. Any G5b judge figure is a three-judge figure and will say so.
+
+`cv_bench/g5b.py --phase judge` imports the rubric and its length-control suffix from
+`Probes/judge.py` rather than retyping them, so the wording is the paper's own. Keys are read at the
+moment of use, held in local variables, and never printed; a provider error is reported as a class
+(`http 401`, `no json in reply`) and its body is never echoed.

@@ -40,9 +40,12 @@ SAE_REPO = "Goodfire/Llama-3.3-70B-Instruct-SAE-l50"
 SAE_REVISION = "128ee921ecd1b8b3a87d776cbcc357c0855da134"
 SAE_FILE = "Llama-3.3-70B-Instruct-SAE-l50.pt"
 
-# Amendment 5 (22 Sept): the token lives outside the repository. The in-repo copy
-# and HF_TOKEN remain as fallbacks so nothing breaks while the move happens.
-TOKEN_PATHS = [Path.home() / ".hf_token", ROOT / "hf_token.txt"]
+# The token lives outside the repository and nowhere else. The in-repo copy was
+# removed on 22 Sept and is deliberately NOT a fallback: a fallback that reads
+# from the working tree is how a key gets committed. `~/secrets` is mode 700 and
+# the file 600.
+SECRETS = Path.home() / "secrets"
+TOKEN_PATHS = [SECRETS / "hf_token"]
 
 # Weights, config, tokenizer. Not the duplicate consolidated copy.
 MODEL_ALLOW = ["*.safetensors", "*.safetensors.index.json", "config.json",
@@ -55,11 +58,13 @@ def token() -> str:
         if p.exists():
             t = p.read_text().strip()
             if t:
-                print(f"token source: {p}", flush=True)
+                print(f"token source: {p}  (value not logged)", flush=True)
                 return t
     t = os.environ.get("HF_TOKEN")
     if not t:
-        sys.exit("No token: expected ~/.hf_token, hf_token.txt, or HF_TOKEN")
+        sys.exit("No token: expected ~/secrets/hf_token or the HF_TOKEN "
+                 "environment variable. The in-repo copy was removed on "
+                 "22 Sept and is not read.")
     print("token source: HF_TOKEN environment variable", flush=True)
     return t
 

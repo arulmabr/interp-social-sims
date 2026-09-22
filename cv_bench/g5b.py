@@ -36,6 +36,8 @@ import time
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+import re
+
 import numpy as np
 
 os.environ.setdefault("HF_HOME", "/orcd/data/gabrieli/001/guna23/hf_cache")
@@ -204,15 +206,146 @@ def phase_measures(model_key: str) -> None:
     print(f"[g5b] {len(rows)} texts measured")
 
 
+def phase_judge(model_key: str, max_usd: float = 50.0) -> None:
+    """Score G5b's generations with the judges of V2, under the length-controlled
+    rubric of App. A.3.5.
+
+    The rubric and its length-control suffix are imported from `Probes/judge.py`
+    rather than retyped, so the wording is the paper's own and cannot drift.
+
+    Credentials are fetched at the moment of use and held only in local
+    variables. Nothing in this function prints, logs or stores a key, and a
+    provider's raw error body is never echoed -- only a class of failure.
+
+    Judges that have no key are skipped and named in the output, per the
+    authors' instruction to run the others and record the gap.
+    """
+    import sys as _sys
+    _sys.path.insert(0, str(ROOT))
+    from Probes.judge import (RUBRIC_TEMPLATE, LENGTH_CONTROLLED_SUFFIX,
+                              TASK_DESCRIPTIONS)
+    from cv_bench.judges import JUDGES, verify_one, _key
+
+    TASK_KIND = {"brick": "divergent_creativity",
+                 "stapler": "product_innovation"}
+
+    live, skipped = [], []
+    for judge in JUDGES:
+        r = verify_one(judge)
+        (live if r["status"] == "ok" else skipped).append((judge, r["reason"]))
+    print(f"[g5b] judges live: {', '.join(j for j, _ in live)}", flush=True)
+    for j, why in skipped:
+        print(f"[g5b] judge skipped: {j} ({why})", flush=True)
+    if not live:
+        print("[g5b] no judge is reachable; nothing scored", flush=True)
+        return
+
+    gens = []
+    for line in open(OUT / f"gen_{model_key}.jsonl"):
+        try:
+            gens.append(json.loads(line))
+        except json.JSONDecodeError:
+            continue
+    print(f"[g5b] {len(gens)} generations x {len(live)} judges = "
+          f"{len(gens) * len(live)} scoring calls", flush=True)
+
+    sink = JsonlSink(OUT / f"judged_{model_key}.jsonl",
+                     key=lambda r: f"{r['task']}|{r['arm']}|{r['agent']}|{r['judge']}")
+    units = [(g, j) for g in gens for j, _ in live]
+
+    def work(u):
+        g, judge = u
+        prompt = RUBRIC_TEMPLATE.format(
+            task_description=TASK_DESCRIPTIONS[TASK_KIND[g["task"]]],
+            response_text=g["response_text"]) + LENGTH_CONTROLLED_SUFFIX
+        ok, scores, why = _call_judge(judge, prompt)
+        return dict(model=model_key, task=g["task"], arm=g["arm"],
+                    agent=g["agent"], judge=judge,
+                    eval_prompt_version="torrance_four_dimension_length_controlled_v1",
+                    parse_status=("ok" if ok else "failed"), reason=why,
+                    **(scores or {}))
+
+    install_stop_handler()
+    run_units(units, sink, lambda u: f"{u[0]['task']}|{u[0]['arm']}|"
+                                     f"{u[0]['agent']}|{u[1]}", work, "g5b-judge", 25)
+    done = complete(units, sink, lambda u: f"{u[0]['task']}|{u[0]['arm']}|"
+                                           f"{u[0]['agent']}|{u[1]}")
+    sink.close()
+    if done:
+        mark_done(OUT / f"done_g5b_judge_{model_key}.json",
+                  judges_live=[j for j, _ in live],
+                  judges_skipped=[{"judge": j, "reason": w} for j, w in skipped],
+                  n_scored=len(units))
+
+
+def _call_judge(judge: str, prompt: str):
+    """One scoring call. Returns (ok, scores, reason_class). Never echoes a key."""
+    import urllib.error
+    import urllib.request
+    from cv_bench.judges import JUDGES, _key, _headers
+
+    filename, provider = JUDGES[judge]
+    key = _key(filename)
+    if key is None:
+        return False, None, "no key"
+    if provider == "anthropic":
+        url = "https://api.anthropic.com/v1/messages"
+        body = dict(model="claude-sonnet-4-5", max_tokens=200,
+                    messages=[{"role": "user", "content": prompt}])
+    elif provider == "google":
+        url = ("https://generativelanguage.googleapis.com/v1beta/models/"
+               "gemini-2.0-flash:generateContent")
+        body = dict(contents=[{"parts": [{"text": prompt}]}])
+    else:
+        url = {"openai": "https://api.openai.com/v1/chat/completions",
+               "deepseek": "https://api.deepseek.com/chat/completions",
+               "moonshot": "https://api.moonshot.cn/v1/chat/completions"}[provider]
+        body = dict(model={"openai": "gpt-4o-mini", "deepseek": "deepseek-chat",
+                           "moonshot": "moonshot-v1-8k"}[provider],
+                    max_tokens=200,
+                    messages=[{"role": "user", "content": prompt}])
+    req = urllib.request.Request(
+        url, data=json.dumps(body).encode(),
+        headers={**_headers(provider, key), "Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=60) as r:
+            payload = json.loads(r.read().decode())
+    except urllib.error.HTTPError as e:
+        return False, None, f"http {e.code}"
+    except Exception as e:
+        return False, None, type(e).__name__
+    text = json.dumps(payload)
+    m = re.search(r'\{[^{}]*"fluency"[^{}]*\}', text)
+    if not m:
+        return False, None, "no json in reply"
+    try:
+        raw = json.loads(m.group(0).replace('\\"', '"'))
+    except json.JSONDecodeError:
+        return False, None, "unparseable json"
+    out = {}
+    for k in ("fluency", "flexibility", "originality", "elaboration"):
+        v = raw.get(k)
+        if not isinstance(v, int):
+            return False, None, "missing field"
+        out[k] = max(1, min(10, v))
+    out["final_score"] = round(sum(out.values()) / 4.0, 4)
+    return True, out, "ok"
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default="llama", choices=list(MODELS))
-    ap.add_argument("--phase", default="gen", choices=["gen", "measures"])
+    ap.add_argument("--phase", default="gen",
+                    choices=["gen", "measures", "judge"])
+    ap.add_argument("--max-usd", type=float, default=50.0,
+                    help="standing approval; the phase stops rather than exceed it")
     a = ap.parse_args()
     OUT.mkdir(parents=True, exist_ok=True)
     t0 = time.time()
     if a.phase == "gen":
         phase_gen(a.model)
+    elif a.phase == "judge":
+        phase_judge(a.model, a.max_usd)
     else:
         phase_measures(a.model)
     print(f"[g5b] {a.phase} finished in {(time.time()-t0)/60:.1f} min", flush=True)
