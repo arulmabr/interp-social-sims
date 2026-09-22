@@ -204,8 +204,7 @@ def build():
     items = [
         ("A", "Does steering the probe change the choice?",
          "Not at layer 48, the layer the paper uses, with a\n"
-         "probe we rebuilt: its own direction was never saved.\n"
-         "At layer 50 it does, but reverses at high dose."),
+         "probe we rebuilt. At layer 50 it does, but reverses."),
         ("B", "Can the paper's own recipe produce a curve?",
          "No. Run with its published settings it almost never\n"
          "gets an answer out of the model. The rebuild does."),
