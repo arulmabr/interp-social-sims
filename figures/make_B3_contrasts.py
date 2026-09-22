@@ -35,9 +35,8 @@ ROWS = [("preference", "preference − reference"),
         ("bias", "bias − reference")]
 
 # column anchors, axes fraction
-X_LABEL, X_PLANTED, X_MEASURED = 0.020, 0.250, 0.365
-BAND_L, BAND_R = 0.425, 0.700
-X_VERDICT = 0.716
+X_LABEL, X_PLANTED, X_MEASURED = 0.030, 0.320, 0.470
+BAND_L, BAND_R = 0.545, 0.960
 ROW_Y = [0.660, 0.400]
 TICKS = [0.0, 0.2, 0.4, 0.6]
 
@@ -56,7 +55,7 @@ def main(argv=None) -> int:
     def to_x(v: float) -> float:
         return BAND_L + (v - vmin) / (vmax - vmin) * (BAND_R - BAND_L)
 
-    fig = plt.figure(figsize=(11.8, 3.5), dpi=200)
+    fig = plt.figure(figsize=(9.0, 3.5), dpi=200)
     fig.patch.set_facecolor(SURFACE)
     ax = fig.add_axes([0, 0, 1, 1])
     ax.set_xlim(0, 1); ax.set_ylim(0, 1); ax.axis("off")
@@ -75,8 +74,7 @@ def main(argv=None) -> int:
             va="bottom", ha="right", **T)
     ax.text((BAND_L + BAND_R) / 2, 0.830, "95% INTERVAL", fontsize=8.5,
             color=MUTED, va="bottom", ha="center", **T)
-    ax.text(X_VERDICT, 0.830, "VERDICT", fontsize=8.5, color=MUTED, va="bottom", **T)
-    ax.plot([X_LABEL, 0.985], [0.802, 0.802], color=AXIS, lw=1.0, **T)
+    ax.plot([X_LABEL, 0.965], [0.802, 0.802], color=AXIS, lw=1.0, **T)
 
     # zero reference, behind the marks
     ax.plot([to_x(0.0)] * 2, [0.175, 0.775], color=AXIS, lw=1.2, zorder=1, **T)
@@ -84,11 +82,11 @@ def main(argv=None) -> int:
     for i, (key, label) in enumerate(ROWS):
         c = C[key]
         y = ROW_Y[i]
-        crosses = c["ci_contains_zero"]
-        status = CRITICAL if crosses else SERIOUS
+        # neutral marks: the zero line, not hue, says which one resolves
+        status = INK_2
 
         if i:
-            ax.plot([X_LABEL, 0.985], [y + 0.140, y + 0.140],
+            ax.plot([X_LABEL, 0.965], [y + 0.140, y + 0.140],
                     color=HAIRLINE, lw=1.0, zorder=0, **T)
 
         ax.text(X_LABEL, y, label, fontsize=11.5, color=INK, va="center", **T)
@@ -108,13 +106,6 @@ def main(argv=None) -> int:
         ax.plot([to_x(c["truth"])], [y], marker="D", ms=7.5, color=SURFACE,
                 markeredgecolor=INK, markeredgewidth=1.6, zorder=6, **T)
 
-        verdict = ("interval includes zero" if crosses
-                   else "resolved, but under-recovers")
-        detail = (f"planted signal sits {c['buried_x']:.0f}× under the adapters' own noise"
-                  if crosses else
-                  f"interval excludes the planted value, {c['abs_err_in_mdc']:.1f} MDC low")
-        ax.text(X_VERDICT, y + 0.043, verdict, fontsize=10.5, color=INK, va="center", **T)
-        ax.text(X_VERDICT, y - 0.048, detail, fontsize=8.3, color=MUTED, va="center", **T)
 
     # value axis under the band
     ax.plot([to_x(vmin + 0.02), to_x(vmax - 0.02)], [0.175, 0.175],
