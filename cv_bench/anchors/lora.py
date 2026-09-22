@@ -162,7 +162,8 @@ def train_adapter(peft_model, tok, ro, name: str, trials: Sequence[core.Trial],
                   targets: np.ndarray, steps: int, lr: float, seed: int,
                   accum: int, out: Path, log_every: int = 25,
                   clone_every: int = 0, clone_trials: Optional[Sequence] = None,
-                  clone_agent: Optional[AgentParams] = None) -> Dict[str, object]:
+                  clone_agent: Optional[AgentParams] = None,
+                  train_probe: Optional[Sequence] = None) -> Dict[str, object]:
     """Train one adapter. Identical order and schedule for every adapter (A5)."""
     peft_model.set_adapter(name)
     params = [p for n, p in peft_model.named_parameters()
@@ -223,14 +224,31 @@ def train_adapter(peft_model, tok, ro, name: str, trials: Sequence[core.Trial],
         # time is how the last two attempts were spent.
         if clone_every and clone_trials is not None and (step + 1) % clone_every == 0:
             peft_model.eval()
-            with torch.inference_mode():
-                zs = np.array([ro.score(core.to_trial_spec(t, stem=core.stem_for(t))).logit_diff
-                               for t in clone_trials])
-            za = latent_z_packed(pack(list(clone_trials)), clone_agent)
-            chk = cloning_check(zs, za)
-            trace.append({"step": step + 1, **chk})
-            print(f"  {name} @ {step+1}: r={chk['correlation']:.4f} "
-                  f"slope={chk['slope']:.4f} z_sd={zs.std():.3f}", flush=True)
+
+            def probe(ts):
+                with torch.inference_mode():
+                    zs = np.array([ro.score(core.to_trial_spec(t, stem=core.stem_for(t))).logit_diff
+                                   for t in ts])
+                za = latent_z_packed(pack(list(ts)), clone_agent)
+                return cloning_check(zs, za), float(zs.std())
+
+            held, held_sd = probe(clone_trials)
+            row = {"step": step + 1, "heldout": held, "heldout_z_sd": held_sd}
+            msg = (f"  {name} @ {step+1}: held-out r={held['correlation']:.4f} "
+                   f"slope={held['slope']:.4f} z_sd={held_sd:.3f}")
+            if train_probe is not None:
+                # Author item 4: the train-set slope is what separates a
+                # generalisation failure from an objective that cannot reach
+                # the target scale at all. Train ~1 with held-out < 0.9 is
+                # generalisation; both below 0.9 indicts the loss.
+                tr, tr_sd = probe(train_probe)
+                row["train"] = tr
+                row["train_z_sd"] = tr_sd
+                msg += f" | train r={tr['correlation']:.4f} slope={tr['slope']:.4f}"
+                msg += ("  -> generalisation" if tr["slope"] >= 0.9 > held["slope"]
+                        else "  -> objective suspect" if tr["slope"] < 0.9 else "")
+            trace.append(row)
+            print(msg, flush=True)
             peft_model.train()
 
     peft_model.eval()
@@ -337,7 +355,8 @@ def main(argv=None) -> int:
                              args.steps, args.lr, args.seed, args.accum, args.out,
                              clone_every=args.clone_every,
                              clone_trials=clone[:args.clone_probe],
-                             clone_agent=agents[name])
+                             clone_agent=agents[name],
+                             train_probe=train[:args.clone_probe])
         results["adapters"][name].update(info)
         from peft import get_peft_model_state_dict
         torch.save(get_peft_model_state_dict(peft_model, adapter_name=name),
