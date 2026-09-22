@@ -361,6 +361,16 @@ def main(argv=None) -> int:
                     help="load adapter_<name>.pt from this run instead of training. "
                          "Used to re-probe cloning on more rows without retraining "
                          "(BD47: n=240 was the binding constraint, not the adapters).")
+    ap.add_argument("--retrain", default="",
+                    help="comma-separated adapters to retrain; the rest are "
+                         "loaded from --adapters-from unchanged")
+    ap.add_argument("--init-from-reference", action="store_true",
+                    help="start the retrained adapter from the REFERENCE adapter's "
+                         "weights instead of from scratch. The loss is unchanged; "
+                         "only the initialisation is. Two independently initialised "
+                         "adapters carry independent cloning residuals that add in "
+                         "quadrature, and that sum is the floor the planted shift has "
+                         "to clear (BD47). Sharing an initialisation correlates them.")
     ap.add_argument("--four-bit", action="store_true",
                     help="fallback if bf16 does not fit; recorded as a deviation")
     ap.add_argument("--out", type=Path, default=DEFAULT_OUT)
@@ -393,6 +403,7 @@ def main(argv=None) -> int:
         "n_train_rows": len(train), "n_clone_rows": len(clone),
         "theta0": {"alpha": ALPHA0, "gamma": GAMMA0, "lambda": LAMBDA0},
         "adapters": {}, "cloning": {}, "contrasts": {},
+        "retrained": retrain, "init_from_reference": bool(args.init_from_reference),
     }
 
     agents = {n: agent_for(n, args.tau, args.bias) for n in ADAPTERS}
@@ -401,6 +412,7 @@ def main(argv=None) -> int:
         results["adapters"][n] = {"params": agents[n].as_dict(),
                                   "target_mean_p_risky": float(targets[n].mean())}
 
+    retrain = [s for s in args.retrain.split(",") if s]
     if args.adapters_from is not None:
         # Re-probe an existing run's adapters. Nothing is trained, so the
         # adapters are bit-identical to the ones that produced the first result
@@ -416,6 +428,27 @@ def main(argv=None) -> int:
             results["adapters"][name]["sha256"] = _sha256(src)
             print(f"loaded adapter {name} from {src.name} "
                   f"({len(sd)} tensors)", flush=True)
+        for name in retrain:
+            from peft import get_peft_model_state_dict
+            if args.init_from_reference and name != "reference":
+                ref_sd = get_peft_model_state_dict(peft_model, adapter_name="reference")
+                peft_model.set_adapter(name)
+                set_peft_model_state_dict(peft_model, ref_sd, adapter_name=name)
+                print(f"--- retraining {name}, initialised FROM REFERENCE "
+                      f"({len(ref_sd)} tensors copied) ---", flush=True)
+            else:
+                print(f"--- retraining {name} from its loaded weights ---", flush=True)
+            info = train_adapter(peft_model, tok, ro, name, train, targets[name],
+                                 args.steps, args.lr, args.seed, args.accum, args.out,
+                                 clone_every=args.clone_every,
+                                 clone_trials=clone[:args.clone_probe],
+                                 clone_agent=agents[name],
+                                 train_probe=train[:args.clone_probe])
+            results["adapters"][name].update(info)
+            results["adapters"][name]["init_from_reference"] = bool(
+                args.init_from_reference and name != "reference")
+            torch.save(get_peft_model_state_dict(peft_model, adapter_name=name),
+                       args.out / f"adapter_{name}.pt")
     else:
         for name in ADAPTERS:
             print(f"--- training {name} ---", flush=True)
