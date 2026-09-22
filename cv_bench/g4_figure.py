@@ -131,26 +131,26 @@ def build():
     panel_c(axes[0]); panel_d(axes[1]); panel_e(axes[2])
 
     note = fig.add_subplot(gs[1, 1]); note.axis("off")
-    note.text(0.0, 1.0, "What each panel answers", color=INK, fontsize=10,
+    note.text(0.0, 1.0, "What each panel establishes", color=INK, fontsize=10,
               va="top", weight="bold")
 
-    # Each entry states what the panel found, not a restatement of the numbers
-    # already visible in it. Phrased as findings rather than as verdicts: a
-    # column of answers all beginning "No" reads as a rebuttal, which is not
-    # what these measurements are.
+    # Each entry leads with the claim the panel supports and follows with the
+    # evidence for it. Statements rather than questions, to match the heading;
+    # findings rather than verdicts, since a column of answers all beginning
+    # "No" reads as a rebuttal, which is not what these measurements are.
     items = [
-        ("A", "What drives legacy-strict disagreement?",
-         "The token budget. Agreement collapses where\n"
-         "responses are cut mid-sentence and returns once\n"
-         "they can finish, so it is truncation, not ambiguity."),
-        ("B", "Can the logit readout stand in for text?",
-         "The two locate the switch in different places, so\n"
-         "sampled generation stays the primary measure and\n"
-         "the readout serves as a check on it."),
-        ("C", "What kind of direction is the choice probe?",
-         "A contrastive one. It sits nearest difference-of-\n"
-         "means and far from the gradient of the answer\n"
-         "logit, which is a different object."),
+        ("A", "Legacy-strict disagreement is a truncation effect",
+         "Agreement collapses where responses are cut\n"
+         "mid-sentence and returns once they can finish,\n"
+         "so the token budget drives it, not real ambiguity."),
+        ("B", "Sampled generation stays the primary measure",
+         "The readout and free generation locate the switch\n"
+         "in different places, so the readout is a check on\n"
+         "text rather than a substitute for it."),
+        ("C", "The choice probe is a contrastive direction",
+         "It sits nearest difference-of-means and far from\n"
+         "the gradient of the answer logit, which is a\n"
+         "different object."),
     ]
     # Lay the block out by accumulating real line heights rather than guessing
     # a single step: the entries have different numbers of answer lines, and a
@@ -158,7 +158,7 @@ def build():
     Q_H, A_H, GAP = 0.058, 0.048, 0.050
     y = 0.90
     for tag, question, answer in items:
-        note.text(0.0, y, f"{tag}  {question}", color=INK, fontsize=8.5,
+        note.text(0.0, y, f"{tag}  {question}", color=INK, fontsize=8.0,
                   va="top", weight="bold")
         note.text(0.030, y - Q_H, answer, color=INK2, fontsize=8,
                   va="top", linespacing=1.45)
