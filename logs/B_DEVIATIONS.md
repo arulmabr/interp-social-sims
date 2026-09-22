@@ -84,5 +84,13 @@ rerun, and no threshold was relaxed to accommodate an outcome.
 - The checkpoint survived and was verified before resubmission: **resumes from step 25, 3360 adapter
   tensors**. Nothing was retrained from scratch and no seed, prompt, dose, threshold or metric changed
   -- this is CLAUDE.md rule 4's technical-reason case only.
-- At ~13 s/step, checkpoints every 25 steps cost ~5.4 min and a cold reload costs ~5.4 min, so an
-  11-minute mean uptime makes `mit_preemptable` net-zero for this job. Hence the move off it.
+- Step rate, measured from the job's own file timestamps rather than estimated: the `.out` file was
+  created 02:31:02, `loaded in 323s` puts the first training step at 02:36:25, and the
+  `reference step 25/500` line was written at 02:38:07 -- **102 s for 25 steps = 4.08 s/step**. A cold
+  reload costs 323-372 s, i.e. ~80 steps' worth, so an 11-minute mean uptime makes `mit_preemptable`
+  net-negative for this job. Hence the move off it. (An earlier note in this file put the rate at
+  ~13 s/step; that was arithmetic off total elapsed, which wrongly assumed preemption landed on step 25
+  rather than 64 s past it. 4.08 s/step is the measured figure and supersedes it.)
+- *Resolution:* no preemption was needed. Job 23460913 was placed by the scheduler on `ou_bcs_normal`
+  node3910, which had 2 idle a100s, and started at 2026-09-22T02:52 resuming from step 25. The four
+  `ou_bcs_low` array tasks that `sbatch --test-only` had listed as preemptable were left running.
