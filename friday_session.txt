@@ -19,6 +19,7 @@ CONTENTS
   4. What was corrected in my own work
   5. What is not done, and what blocks it
   6. Where everything lives
+  7. Paper patches W9-W12: the four additive S1 findings
 
 ================================================================================
 1. WHAT WAS DONE
@@ -234,10 +235,11 @@ environmental.
 
   reports/          24 files; G4_DECISION.md is the memo, REVIEW_CROSSREF.md
                     maps the review, G2_RESULTS.md the committed-code finding
-  paper_patches/    CLAIMS.csv (46 rows), appendix_prompts.md
+  paper_patches/    CLAIMS.csv (54 rows), appendix_prompts.md; the four
+                    patches W9-W12 are in section 7 of this file
   cv_bench/         35 modules; resume.py, monitor.py and mine.py are the
                     infrastructure, x1_supplement.py the anonymity gate
-  logs/             DECISIONS.md (D1–D77), DEVIATIONS.md (13), AI_USE_LOG.md
+  logs/             DECISIONS.md (D1-D82), DEVIATIONS.md (13), AI_USE_LOG.md
   results/S/s1/     the table view of every figure and analysis
   MANIFEST.csv      1,300 values, each with its script, inputs and git SHA
   run outputs       /orcd/data/gabrieli/001/guna23/iclr_risk_2027/
@@ -245,4 +247,312 @@ environmental.
 Nothing in cleaned/, Probes/, "Revised Prompting/" or SAE/ was modified, moved
 or deleted at any point. The test split was never touched; PREREG.md is not
 tagged, so rule 16's 24-hour veto window has not opened.
+================================================================================
+
+================================================================================
+7. PAPER PATCHES W9-W12: THE FOUR ADDITIVE S1 FINDINGS
+================================================================================
+
+Drafts for the authors under rule 12. Every number carries its MANIFEST.csv id.
+Registered as eight rows in paper_patches/CLAIMS.csv.
+
+None of this is new compute. Every row already existed in cleaned/ before the
+audit began; cv_bench/s1_behaviour.py and cv_bench/s1_ladder.py fit curves to
+it. The legacy directories were read and never written.
+
+The authors' filter was: worth including, absent from the submission, and not
+contradicting it. That admits these four. It excludes S1.4 (the probe ceiling)
+and S1.5 (per-judge orderings), which are recorded at the end of this section as
+deferred rather than resolved.
+
+Blocked on one thing: there is no paper_src/ in the repository, so none of this
+can be applied. It is drafted text waiting on the LaTeX.
+
+--------------------------------------------------------------------------------
+W9. THE PROMPTING LADDER AND THE RHO DOSE-RESPONSE          figures/s1_7_ladder
+--------------------------------------------------------------------------------
+
+Why. Section 3.1 defines a five-rung ladder and states: "we vary the fraction
+rho in {0.0, 0.25, 0.5, 0.75, 1.0} of the N demonstrations that take the target
+action." rho appears nowhere else in 32 pages. Figure 3 reports baseline,
+prompting (the persona rung), steering and high temperature. The four remaining
+rungs ran and are unreported: 2,080 rows each for cot, fewshot and each of the
+five fewshot_cot_dose* conditions, 14,560 rows for the preference tasks alone,
+plus 200 to 400 rows per condition on the capability side.
+
+A text error to fix regardless of whether the figure is added. Section 3.1 says
+N=6. With six exemplars only multiples of 1/6 are reachable, so rho = 0.25 and
+rho = 0.75 cannot exist. The conditions named dose025 and dose075 in fact use
+2 of 6 and 4 of 6:
+
+    dose000  0.0     dose025  0.3333 (2 of 6)   dose050  0.5
+    dose075  0.6667 (4 of 6)                    dose100  1.0
+    ids: S1.7.exemplars.{lottery,ultimatum}.fewshot_cot_dose*.fraction_positive
+
+  Suggested replacement for that sentence:
+    "we vary the fraction of the N = 6 demonstrations that take the target
+     action over the reachable values {0, 2/6, 3/6, 4/6, 1}, with the remainder
+     taking the opposite action, and use reasoning-bearing demonstrations
+     throughout."
+
+The result. Logistic switching points, local vLLM stack, cluster bootstrap 95%.
+
+    LOTTERY   flat; every interval overlaps every other
+      rho 0.0     not identified on the grid
+      rho 0.333   101.6  [98.3, 105.8]
+      rho 0.5      96.0  [87.9, 101.0]
+      rho 0.667    99.1  [93.6, 102.0]
+      rho 1.0     100.0  [92.9, 104.0]
+      ids: S1.7.vllm.lottery.fewshot_cot_dose*.switch
+
+    ULTIMATUM flat from 2/6 to 4/6, then a 27-token drop at 6 of 6
+      rho 0.0      48.1      rho 0.333  38.7     rho 0.5  37.1
+      rho 0.667    37.9      rho 1.0    10.5
+      ids: S1.7.vllm.ultimatum.fewshot_cot_dose*.switch
+
+    THE OTHER RUNGS (lottery)
+      baseline_rp  106.8  [99.8, 116.3]     S1.7.vllm.lottery.baseline_rp.switch
+      persona       94.3  [85.2, 101.2]     S1.7.vllm.lottery.persona.switch
+      cot          175.7  [160.1, 191.8]    S1.7.vllm.lottery.cot.switch
+      fewshot      100.6  [95.6, 105.2]     S1.7.vllm.lottery.fewshot.switch
+    On the ultimatum game only fewshot identifies a threshold, 12.6;
+    baseline_rp,
+    persona and cot never cross 0.5 and are reported as not identified.
+
+  Draft text (appendix):
+    "Varying the fraction of demonstrations that take the target action does not
+     produce a graded shift in either game. On the lottery the switching point
+     stays within [96.0, 101.6] across the reachable range, with overlapping
+     bootstrap intervals at every level. On the ultimatum game the acceptance
+     threshold sits near 38 for fractions of 2/6, 3/6 and 4/6 and falls to 10.5
+     only when all six demonstrations accept. The effect is a threshold at
+     unanimity rather than a dose. Chain-of-thought moves the lottery switching
+     point in the opposite direction from every other rung, from 106.8 unsteered
+     to 175.7, making the agent markedly more risk averse when asked to reason
+     before answering."
+
+  Caveats that must survive any edit.
+    1. Stack. These ran on local vLLM (bf16, tensor-parallel 2, temperature 0.7,
+       top-p 1.0), not the hosted Goodfire stack behind Figures 3 and 5. The
+       unsteered lottery switching points differ: 132.9 hosted against 106.8
+       vLLM. The figure plots Stack A's baseline as a labelled reference line
+       only and differences nothing across stacks. Any sentence must name the
+       stack.
+    2. Two estimators. MANIFEST registers the logistic fit. Legacy linear
+       interpolation gives 140.0 for cot where the logistic gives 175.7, because
+       the curve is shallow and non-monotone there. Report one and name it.
+    3. The rho = 0 lottery cell never crosses 0.5, so that panel has four usable
+       points, not five.
+
+--------------------------------------------------------------------------------
+W10. AN EFFECT SIZE AND AN INTERVAL FOR THE PERSONA RESULT  figures/s1_8_persona
+--------------------------------------------------------------------------------
+
+Why. Section 4.2.1 reports the persona result as bare numbers: baseline shifts
+"around 125", prompted agents "pivot when the reward is only 20"; ultimatum
+baseline "exceeds 30" against prompted "only 10 tokens". No interval, no n, no
+test. The logs support all three, and the measured values corroborate the
+published ones.
+
+    HOSTED STACK, logistic fits, primary CI holds levels fixed and resamples
+    responses within level; sensitivity resamples levels too. 2,000 draws.
+
+      lottery   baseline            132.9  [131.3, 134.5]   n=1400
+      lottery   slightly_prompting   20.0  [19.8, 20.2]     n=1400
+      ultimatum baseline             37.9  [36.9, 38.9]     n=680
+      ultimatum prompting            12.8  [11.5, 13.9]     n=680
+      sensitivity intervals, levels resampled, in the same order:
+        [127.8, 139.5]  [17.5, 25.0]  [35.0, 39.9]  [10.5, 14.9]
+      ids: S1.3.hosted.{lottery,ultimatum}.*.switch
+
+    SHIFTS, computed within stack so nothing is differenced across setups
+      lottery  slightly_prompting  -112.9 tokens  -22.6 grid steps  p = 0.0005
+      ultimatum prompting           -25.1 tokens   -5.0 grid steps  p = 0.0005
+      ids: S1.8.hosted.lottery.slightly_prompting.shift
+           S1.8.hosted.ultimatum.prompting.shift
+      p is a stratified permutation test.
+
+  Draft text (replacing the bare numbers in 4.2.1):
+    "Unsteered, the agents switch to the risky option at 132.9 tokens (95% CI
+     [131.3, 134.5], n = 1400). A persona that 'slightly likes to take risks'
+     moves that switching point to 20.0 ([19.8, 20.2]), a shift of 112.9 tokens,
+     or 22.6 levels of the reward grid (stratified permutation p = 0.0005). In
+     the ultimatum game the acceptance threshold moves from 37.9 ([36.9, 38.9])
+     to 12.8 ([11.5, 13.9]), a shift of 25.1 tokens (p = 0.0005, n = 680)."
+
+  Two hosted arms that ran and are not reported (rule 5).
+    barely_prompting (lottery, 1400 rows) never crosses 0.5, so no switching
+      point is identified; recorded as not available rather than extrapolated.
+      This is itself informative about persona dose: the weaker trait wording
+      produces no identifiable threshold while the stronger one moves it 113
+      tokens.  id S1.8.hosted.lottery.barely_prompting.shift
+    lite_steering (lottery, 2080 rows) gives 71.7, between baseline and the
+      reported steering arm.  id S1.3.hosted.lottery.lite_steering.switch
+
+  Deliberately excluded. The local vLLM persona row is in the figure but carries
+  no claim: it shifts -12.5 tokens (S1.8.vllm.lottery.persona.shift, -2.5 grid
+  steps) against the hosted -112.9. Three things differ between the stacks at
+  once, the persona text, the option labels and the temperature (0.5 vs 0.7), so
+  the comparison is confounded and the figure's subtitle says so. Do not write a
+  stack-dependence claim from it. The vLLM ultimatum persona cell never crosses
+  0.5 and is reported as not identified.
+
+--------------------------------------------------------------------------------
+W11. CATCH TRIALS FOR THE ULTIMATUM RESPONDER                figures/s1_2_catch
+--------------------------------------------------------------------------------
+
+Why. The submission contains no behavioural validity check. A reviewer asking
+how you know the agent is playing the game rather than pattern-matching the
+prompt has nothing to read. The grids already carry the standard check.
+
+The catch trial: offers of at least half the pie. A responder who rejects 60 out
+of 100 gives up a certain 60 to impose a loss of 40 on someone who treated them
+generously. Under Fehr-Schmidt inequity aversion with beta < 1 a responder never
+rejects an offer above half. It is the ultimatum counterpart of a dominated
+gamble. Every grid carries them: 9 levels x 40 agents = 360 trials per hosted
+condition, 11 x 40 = 440 per probe condition.
+
+Rates sit beside excess_over_staircase, which subtracts the rejection rate that
+a step at that curve's own fitted threshold already implies. A curve whose
+threshold has moved above 50 rejects some fair offers without extra
+irrationality; the excess column separates the two.
+
+    HOSTED STACK, the stack behind Figures 3 and 5
+      baseline    threshold 38.1   P(reject | >=50) 0.000  [0.000, 0.0106]
+      prompting   threshold 13.3   P(reject | >=50) 0.000  [0.000, 0.0106]
+      steering    threshold 32.9   P(reject | >=50) 0.000  [0.000, 0.0106]
+      Zero hyper-fair rejections in 1,080 trials across all three
+      published arms.
+      ids: S1.2.hosted.*.pReject_hyperfair
+
+    PROBE STACKS, which must be reported with it (rule 5)
+      Llama L48  target 30   0.000  [0.000, 0.0087]   excess  0.000
+      Llama L48  target 40   0.021  [0.011, 0.038]    excess  0.021
+      Llama L48  target 50   0.093  [0.069, 0.124]    excess  0.002
+      Llama L48  target 60   0.232  [0.195, 0.274]    excess -0.041
+      Llama L50  target 60   0.268  [0.229, 0.312]    excess -0.005
+      Qwen  L17  target 60   0.400  [0.335, 0.469]    excess  0.000
+      ids: S1.2.probe-*.target*.{pReject_hyperfair,excess_over_staircase}
+
+  The honest reading. At the highest targets the excess is near zero or
+  negative, so the rejections are what a step at the fitted threshold already
+  implies: steering has moved the threshold itself above half (59.6 at L48
+  target 60, 65.0 at Qwen target 60). This is not extra noise on a sensible
+  policy. It is that calibrating the responder to a target of 60 places it
+  outside the space of policies any standard fairness preference can generate.
+  That bounds what high-target calibration can claim, and it should be stated
+  rather than left for a reviewer to derive.
+
+  Draft text, one main-text sentence after the ultimatum baseline:
+    "The ultimatum grids include hyper-fair catch trials, offers of at
+     least half
+     of the pie, which no standard fairness preference rejects. Across
+     the baseline,
+     prompting and steering conditions the agents reject none of 1,080 such
+     offers (Appendix, Table W11)."
+
+  Draft text, appendix:
+    "Offers of at least half the pie are rejected at 0.000 (Wilson 95%
+     [0.000, 0.0106], n = 360 per condition) in every hosted condition, so the
+     responder is not rejecting indiscriminately. On the probe stacks the rate
+     rises with the calibration target, reaching 0.232 at a target of 60 on
+     Llama layer 48 and 0.400 on Qwen layer 17. At those targets the fitted
+     threshold has itself moved above half (59.6 and 65.0), so the
+     rejections are
+     consistent with a step at the calibrated threshold rather than with added
+     noise; the excess over that step is -0.041 and 0.000 respectively.
+     Calibrating the responder above an even split therefore produces behaviour
+     outside the range of standard inequity-averse policies, which bounds the
+     interpretation of high-target calibration."
+
+  Caveat. P(accept | offer <= 10) is computed in results/S/s1/ and
+  reports/S1_2.md
+  but is not registered in MANIFEST.csv, so under rule 1 it cannot go in the
+  paper until it is. The vLLM baseline_rp value of 0.775 is the one to look at
+  before deciding.
+
+--------------------------------------------------------------------------------
+W12. UNCERTAINTY ON EVERY SWITCHING POINT               figures/s1_3_switching_*
+--------------------------------------------------------------------------------
+
+Why. Every switching point and acceptance threshold in the submission is a bare
+point estimate. No figure or table carries an interval and no difference carries
+a test. This is the cheapest available change to the paper's defensibility: 68
+curves are already fitted and 121 within-stack contrasts already computed.
+
+Method. Each curve gets a two-parameter logistic, P = sigmoid(b0 + b1 x / 100),
+fitted by IRLS on the per-level binomial counts; the switching point is -b0/b1.
+The legacy linear interpolation (Probes/calibration.py) is reported beside it
+and the two agree to a few tokens on well-behaved curves.
+
+Two intervals, because the 40 "agents" are i.i.d. samples of one prompt at one
+temperature. They differ only in a subject_id string and agent.agent_instruction
+is empty in every logged row, so the spread across those 40 draws is the
+sampling noise of a single choice probability, not evidence about where the
+curve sits.
+    primary      levels fixed, responses resampled within level. "Where is the
+                 threshold of this prompt set at this temperature."
+    sensitivity  levels resampled too. "How much does the estimate depend on
+                 which reward levels were chosen."
+    Both 2,000 draws. All 68 are in MANIFEST under S1.3.*.switch with both
+    intervals in the note field.
+
+  Draft text (methods):
+    "Each psychometric curve is fitted with a two-parameter logistic on the
+     per-level binomial counts, and the switching point is the reward at which
+     the fitted probability reaches 0.5. We report two bootstrap intervals over
+     2,000 draws. The primary interval holds the stimulus levels fixed and
+  resamples responses within each level; the sensitivity interval
+  additionally
+     resamples levels. The 40 agents at each level differ only by an identifier
+     string and carry no distinct instruction, so the spread across them is the
+     sampling noise of one choice probability rather than variation across
+     individuals, and we do not treat them as a population."
+
+  What it enables. Any claim of the form "condition A switches later than
+  condition B" can be stated with a within-stack contrast from
+  s1_3_pairwise_differences.csv instead of by eye. It also makes negative
+  results
+  reportable: W9's rho sweep is flat precisely because its intervals
+  overlap, and
+  without intervals that panel says nothing.
+
+  What it costs. The method sentence changes how the word "agents" reads in
+  Section 3. The submission describes 40 agents per condition; this states they
+  are 40 samples of one prompt. That is a correction to the framing, not to any
+  number, and the authors may prefer different wording. It is here because
+  rule 1
+  does not permit reporting an interval whose definition depends on a population
+  the logs show does not exist.
+
+--------------------------------------------------------------------------------
+DEFERRED BY THE AUTHORS' FILTER, NOT RESOLVED
+--------------------------------------------------------------------------------
+
+S1.4, the probe ceiling. The preference probe is trained on 45 distinct
+activation vectors (lottery) and 19 (ultimatum); the capability probe on 2. The
+split is StratifiedKFold over rows, and each prompt contributes eight identical
+vectors, so every vector appears in the training fold and the validation fold of
+the same split. Section 3.3's "held-out preference trials" describes something
+the implementation does not do. Separately, a predictor knowing only n reaches
+0.95 to 0.99 on every logged lottery dataset, and a one-parameter threshold on n
+does as well as the unrestricted best function of n (gap 0.000 everywhere except
+one condition at 0.001). The paper's 82% sits below that bar.
+
+This is the finding with the most evidence behind it and the one a reviewer
+reading Probes/experiments/_common.py is most likely to reach independently. It
+is excluded here only because it lands on a claim already in print.
+
+S1.5, per-judge orderings. Contradicts App. A.3.5's consistency claim and l. 416
+directly; already PAPER_AUDIT section 2.5. A retraction, not an addition.
+
+S1.6 is split. The fluency ceiling is additive and cheap to fix: every response
+returns exactly ten ideas because the prompt caps at ten, yet fluency carries a
+quarter of the composite creativity score. The within-task correlations are
+additive too, but the same pooling argument implicates the published 0.77
+inter-judge Spearman, so half of it contradicts.
+
+S1.1 is weak. Its finding is that the dominated rate is arithmetically
+determined by the switching point and carries no independent information. Useful
+as a defence if a reviewer demands it; not worth a figure.
 ================================================================================

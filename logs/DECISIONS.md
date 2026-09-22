@@ -1107,3 +1107,21 @@ parses at 54 rows with no malformed fields; no em dashes in any of the four.
 Options not taken: write the S1 findings into `friday_session.txt` as a section 3.9 (the
 authors chose the patches instead, and it remains available); apply the patches to the paper
 source (there is no `paper_src/` in the repo, so this is blocked, not declined).
+
+## D83 — W9 to W12 folded into friday_session.txt; the separate files removed (22 Sept)
+
+At the authors' instruction everything lives in one .txt. The four patch files written under
+D82 are deleted and their content is now section 7 of `friday_session.txt`, which grows from
+248 to 556 lines. `paper_patches/` holds `CLAIMS.csv` (54 rows, unchanged by this) and
+`appendix_prompts.md` (pre-existing).
+
+Nothing was lost in the move. Section 7 carries all four patches in full, plus the deferred
+items (S1.4, S1.5, S1.6, S1.1) with the reason each is out. `CLAIMS.csv`'s `patch` column
+still names W9 to W12, which now resolve to section 7 rather than to files; section 6's
+inventory line says so.
+
+Checks: every explicit MANIFEST id in section 7 resolves; no em dashes; no line over 80
+columns in the new section (the four over-length lines at 95, 157, 161 and 222 predate this
+and are left alone).
+
+Recoverable: the four files are in git history at 8717d38.
