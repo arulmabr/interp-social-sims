@@ -8,6 +8,7 @@
 #SBATCH --mem=128G
 #SBATCH --time=06:00:00
 #SBATCH --nice=8000
+#SBATCH --exclude=node2119
 #SBATCH --requeue
 #SBATCH --open-mode=append
 #SBATCH --signal=B:TERM@180

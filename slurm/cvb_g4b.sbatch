@@ -7,6 +7,7 @@
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=128G
 #SBATCH --time=01:30:00
+#SBATCH --exclude=node2119
 #SBATCH --requeue
 #SBATCH --open-mode=append
 #SBATCH --output=/orcd/data/gabrieli/001/guna23/iclr_risk_2027/g4b/%x_%j.out

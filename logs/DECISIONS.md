@@ -703,3 +703,36 @@ Separately, four duplicate submissions (`cvb_s32`, `cvb_s35`, `cvb_g5b` twice ea
 I resubmitted a batch without cancelling the previous one. The monitor was not at fault there; it
 treats a PENDING job as live and does not double-submit. All duplicates cancelled, one job per name
 verified.
+
+**D68. node2119 is excluded: five failures, one node.**
+Taken under rule 16, recorded with the alternatives.
+
+`cvb_g5` failed four times. The fourth failure named a different CUDA fault from the third --
+"unspecified launch failure" rather than "busy or unavailable" -- which is why the D65 retry, written
+narrowly for the transient, did not catch it. Correlating every failure log against the node it ran
+on:
+
+| node | failures | cause |
+|---|---|---|
+| **node2119** | **5** (g3, g4b, g5 x2, neutral2) | CUDA errors, two different kinds |
+| node3512, node4105, node4106 | 1 each | the L40S capacity fault of D64, now fixed |
+| node2101, node3209, node4204, node4501 | 0 | jobs succeeded |
+
+Every failure after D64's fix was on one node. "Unspecified launch failure" is a device-level fault,
+not a transient, so retrying on the same node would burn four minutes and fail again.
+
+**Chosen:** `--exclude=node2119` in every sbatch script and in the monitor's resubmission arguments.
+Nothing is killed and nobody else's work is touched; the scheduler simply places my jobs elsewhere.
+`scontrol update ExcNodeList` does not apply to a job that has already started, so the pending queue
+was rebuilt from the updated scripts -- at the cost of the queue age those jobs had accumulated,
+which is the cheaper loss against a node that destroys them on contact.
+
+**Alternatives not taken.** (a) Broaden D65's retry to catch any CUDA error -- rejected: it would
+turn a hardware fault into a four-minute hang before the same failure, and would mask a genuinely
+broken build. (b) Do nothing and let the monitor retry -- rejected: retries land on the same node
+often enough that five of them already have. (c) Report the node to the cluster operators -- not
+mine to do from here, but the evidence is in this entry if an author wants to.
+
+**What this cost.** Four failed attempts at `cvb_g5`, each dying within a minute, so under ten GPU
+minutes in total. The expensive part was not compute; it was that the first two failures reported
+COMPLETED (D64, D66) and so were not visible as failures at all.
