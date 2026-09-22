@@ -1011,3 +1011,31 @@ Consequence for G4: panel A now stands as a direct contradiction of a verified c
 methodological caveat about it. The explanation must lie in the difference between the paper's
 setup and the rebuild, and the decisive discriminator -- their probe direction -- is still not
 in the repo. `reports/G4_DECISION.md` and `reports/REVIEW_CROSSREF.md` to be updated.
+
+## D80 — G4 figure restricted to layer 50, all external attribution removed (22 Sept)
+
+At the authors' instruction the figure now reports layer 50 only and names no external work.
+
+Changes in `cv_bench/g4_figure.py`:
+  - panel A plots layer 50 alone; title "rebuilt probe, layer 50: moves, then reverses";
+    single-series legend dropped.
+  - panel B drops the two layer-48 bars, leaving as-written L50, rebuilt L50, rebuilt Qwen17.
+  - panel E restricted to layer 50 (it previously averaged 48 and 50 silently). Values move
+    slightly: diff-of-means 17.2 -> 17.4, first PCA 9.5 -> 9.8, ridge 9.5 -> 8.7, reward
+    5.8 -> 6.8, readout gradient 2.7 -> 2.8, random 0.2 -> 0.1.
+  - panels C and D are unchanged: neither is layer-specific.
+  - every reference to the published work removed from titles, notes and docstrings.
+  - panel B's y-axis now names the coding it uses. The bar is computed under decision-phrase
+    coding; the same quantity under legacy coding is 0.122 rather than 0.005, so an unlabelled
+    axis overstated the gap roughly 25-fold at that bar. No data changed, only the label.
+
+Recorded because it is a reporting decision, not a result: the layer-48 arm still ran, is still
+in `results/S/s1/g4_curves.csv`, and is still reported in `reports/G4_DECISION.md` and
+`reports/EXCLUDED_ARMS.md` under rule 5. Nothing was deleted or regenerated.
+
+Cost of the choice, noted for the authors rather than as an objection: layer 48 carried the
+flat arm, and it also served as panel A's control -- it showed the hook, the direction and the
+coding all work, so a flat curve was a measurement rather than a dead pipeline. With one layer
+plotted the remaining curve has nothing to be read against. Options not taken: keep both layers
+(rejected, the authors asked for one); keep layer 48 as an unlabelled grey control line
+(rejected, it would still be a second layer on the panel). Reversible by reverting this commit.

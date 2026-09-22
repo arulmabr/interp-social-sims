@@ -3,7 +3,7 @@
 Five panels, because the authors asked for a single figure and these findings do
 not reduce to one axis:
 
-  A  the dose-response at both layers -- the result that replaces the dropped
+  A  the dose-response at layer 50 -- the result that replaces the dropped
      legacy probe figures
   B  what each variant can code at all -- the provenance finding, as rates
   C  coding agreement against the token cap, with its denominators
@@ -32,9 +32,9 @@ def rows(name: str) -> List[dict]:
 
 
 def panel_a(ax):
-    """Switching point against dose, both layers, reconstruction."""
+    """Switching point against dose, layer 50, reconstruction."""
     cur = rows("g4_curves.csv")
-    for layer, colour, mark in (("48", NAVY, "o"), ("50", ORANGE, "s")):
+    for layer, colour, mark in (("50", ORANGE, "s"),):
         pts = [(float(r["dose"]), float(r["interp_crossing"]))
                for r in cur
                if r["model"] == "llama" and r["variant"] == "reconstruction"
@@ -46,17 +46,15 @@ def panel_a(ax):
             continue
         x = [max(p[0], 0.004) for p in pts]          # 0 shown at the axis floor
         y = [p[1] for p in pts]
-        ax.plot(x, y, color=colour, marker=mark, ms=4, lw=1.9,
-                label=f"layer {layer}")
+        ax.plot(x, y, color=colour, marker=mark, ms=4, lw=1.9)
     ax.set_xscale("log")
     ax.axhline(104.1, color=MUTED, lw=0.9, ls=":")
     ax.text(0.02, 0.72, "dotted: unsteered, 104.1", transform=ax.transAxes,
             ha="left", color=MUTED, fontsize=7)
     ax.set_xlabel("dose  (units of the median residual-stream norm)", color=INK2, fontsize=8)
     ax.set_ylabel("switching point (tokens)", color=INK2, fontsize=8)
-    ax.set_title("A  rebuilt probe: L48 flat, L50 moves and reverses",
+    ax.set_title("A  rebuilt probe, layer 50: moves, then reverses",
                  color=INK, fontsize=9, loc="left")
-    ax.legend(frameon=False, fontsize=7.5, loc="upper left")
 
 
 def panel_b(ax):
@@ -64,9 +62,7 @@ def panel_b(ax):
     cur = rows("g4_curves.csv")
     bars = []
     for label, model, variant, layer in (
-            ("as-written\nL48", "llama", "as_written", "48"),
             ("as-written\nL50", "llama", "as_written", "50"),
-            ("rebuilt\nL48", "llama", "reconstruction", "48"),
             ("rebuilt\nL50", "llama", "reconstruction", "50"),
             ("rebuilt\nQwen17", "qwen", "reconstruction", "17")):
         sel = [r for r in cur if r["model"] == model and r["variant"] == variant
@@ -79,7 +75,7 @@ def panel_b(ax):
         na = float(sel[0]["no_answer_rate"])
         bars.append((label, 1.0 - na))
     xs = np.arange(len(bars))
-    cols = [SIENNA, SIENNA, TEAL, TEAL, PURPLE][:len(bars)]
+    cols = [SIENNA, TEAL, PURPLE][:len(bars)]
     ax.bar(xs, [b[1] for b in bars], color=cols, width=0.62)
     for i, (lab, v) in enumerate(bars):
         ax.text(i, v + 0.03, f"{v:.3f}", ha="center", color=INK, fontsize=7.5)
@@ -87,7 +83,7 @@ def panel_b(ax):
     ax.set_xticklabels([b[0].replace("\n", " ") for b in bars], fontsize=7,
                        rotation=30, ha="right")
     ax.set_ylim(0, 1.15)
-    ax.set_ylabel("share of trials stating a decision", color=INK2, fontsize=8)
+    ax.set_ylabel("share stating a decision  (phrase coding)", color=INK2, fontsize=8)
     ax.set_title("B  what each variant can code (unsteered)", color=INK, fontsize=9, loc="left")
 
 
@@ -153,7 +149,7 @@ def panel_e(ax):
     for key, lab in want:
         m = [float(r["multiples_of_null"]) for r in geo
              if r["variant"] == "reconstruction" and r["game"] == "lottery"
-             and {r["a"], r["b"]} == {"probe", key}]
+             and r["layer"] == "50" and {r["a"], r["b"]} == {"probe", key}]
         if not m:
             continue
         labels.append(lab)
@@ -203,11 +199,11 @@ def build():
     # restatement of the numbers already visible in it.
     items = [
         ("A", "Does steering the probe change the choice?",
-         "Not at layer 48, the layer the paper uses, with a\n"
-         "probe we rebuilt. At layer 50 it does, but reverses."),
-        ("B", "Can the paper's own recipe produce a curve?",
-         "No. Run with its published settings it almost never\n"
-         "gets an answer out of the model. The rebuild does."),
+         "It moves the switching point up to half a norm,\n"
+         "then reverses at full dose. Movement, not control."),
+        ("B", "Can the as-written settings be coded at all?",
+         "No. Run that way the model continues the prompt\n"
+         "instead of answering it. The rebuild answers."),
         ("C", "Is the coding disagreement real ambiguity?",
          "No, an artefact of the token budget. Given room\n"
          "to finish, the rules agree on what was chosen."),
@@ -230,7 +226,7 @@ def build():
                   va="top", linespacing=1.45)
         y -= Q_H + A_H * (answer.count("\n") + 1) + GAP
 
-    fig.suptitle("G4: the probe rebuild, both variants and both layers",
+    fig.suptitle("G4: the probe rebuild at layer 50, both variants",
                  color=INK, fontsize=12, y=0.975)
     save(fig, "g4_summary")
 
