@@ -60,11 +60,11 @@ for _d in ("000", "025", "050", "075", "100"):
     FAMILY[f"fewshot_cot_dose{_d}"] = GOLD
 
 STACK_TITLE = {
-    "hosted": "Stack A — hosted Goodfire/EDSL",
-    "vllm": "Stack B — local vLLM, bf16",
-    "probe-llama-l48": "Stack C — local HF probe, Llama layer 48",
-    "probe-llama-l50": "Stack C — local HF probe, Llama layer 50",
-    "probe-qwen-l17": "Stack C — local HF probe, Qwen layer 17",
+    "hosted": "Stack A: hosted Goodfire/EDSL",
+    "vllm": "Stack B: local vLLM, bf16",
+    "probe-llama-l48": "Stack C: local HF probe, Llama layer 48",
+    "probe-llama-l50": "Stack C: local HF probe, Llama layer 50",
+    "probe-qwen-l17": "Stack C: local HF probe, Qwen layer 17",
 }
 
 MARKERS = ["o", "s", "^", "D", "v", "P", "X", "*", "<"]
@@ -373,9 +373,9 @@ def s1_5_judges():
     # Fixed hue order over the five judges; navy is reserved for the mean.
     jcol = dict(zip(judges, [ORANGE, TEAL, PURPLE, GOLD, SIENNA]))
     jmark = dict(zip(judges, ["^", "s", "D", "v", "P"]))
-    titles = {"detailed_ways_to_use_a_brick": "Brick — divergent creativity",
+    titles = {"detailed_ways_to_use_a_brick": "Brick: divergent creativity",
               "improve_the_stapler_with_many_specific_enhancements":
-                  "Stapler — product innovation"}
+                  "Stapler: product innovation"}
     tasks = sorted({r["task"] for r in rows})
     fig, axes = plt.subplots(1, len(tasks), figsize=(12.8, 4.9), sharey=True)
     axes = np.atleast_1d(axes)
@@ -414,7 +414,7 @@ def s1_5_judges():
     axes[0].set_ylim(4.0, 7.1)
     axes[0].legend(loc="lower left", fontsize=7.4, ncol=2, frameon=False,
                    labelcolor=INK2)
-    fig.suptitle("S1.5  Five judges, one condition ordering each — repository data only "
+    fig.suptitle("S1.5  Five judges, one condition ordering each, repository data only "
                  "(the PDF's values differ; see reports/S1_5.md section 5)",
                  fontsize=11, color=INK, x=0.02, ha="left")
     fig.tight_layout(rect=(0, 0, 1, 0.92))
@@ -492,7 +492,7 @@ def s1_7_ladder():
                 color=MUTED, linewidth=1.6, zorder=2,
                 label="Stack A baseline (reference only,\nnot compared)")
     ax.axvline(50, color=INK2, linewidth=1.0, linestyle=":", zorder=1)
-    style(ax, "Stack B — the ladder on its own axes", "risky reward n (tokens)",
+    style(ax, "Stack B: the ladder on its own axes", "risky reward n (tokens)",
           "P(risky)")
     ax.set_ylim(-0.03, 1.03)
     ax.legend(fontsize=7.0, frameon=False, loc="upper left",
