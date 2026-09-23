@@ -1329,8 +1329,19 @@ patch or section of `friday_session.txt` referenced the panel, so nothing else n
 
 ## D90 — the Goodfire reference line removed from s1_7 (23 Sept)
 
-From the 22 Sept sync (`shrey/meeting.txt`): "we might just want to discard the Goodfire
-baseline", agreed in the call. The dashed grey line and its legend entry are gone from
+From the 22 Sept sync (`shrey/meeting.txt`), verbatim: "we might just want to discard the
+Goodfire baseline", answered "Goodfire. Yeah, sure. Yeah."
+
+Two things that phrasing does not settle, recorded so the basis for this change is not
+overstated. The request is hedged ("might just want to"), and the referent is ambiguous: the
+plots were on a screen share and the same passage points in turn at "these 2", at something
+"corresponding to the Figure 3 here", at one that is "for both lottery and ultimatum", and at
+the statistical-test plot. s1_7 was chosen because it is the only figure carrying an explicitly
+labelled Goodfire baseline reference line, but "discard the Goodfire baseline" could equally
+mean dropping the hosted panel from s1_1, s1_2 or s1_3, or the hosted rows from s1_8. That
+inference is mine and has not been confirmed.
+
+The dashed grey line and its legend entry are gone from
 `s1_7_ladder`'s left panel, which is now single-stack. Title becomes "S1.7  The prompting
 ladder, local vLLM stack".
 
