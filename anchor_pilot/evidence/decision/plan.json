@@ -1,0 +1,252 @@
+{
+  "declared_at_utc": "2026-09-18T22:58:49.411933+00:00",
+  "rows_sha256": "06a22c55e6a4143a7b6c387be4256436dfdab38bf80f582c597d55f7ea6a1912",
+  "source_hashes": {
+    "adapter/adapter.pt": "fb07e10b2c5ce134b88478bb77efa605bfa7debb084e65d94641197e74921ecb",
+    "adapter/adapter_config.json": "12d11629e5b8b8652af239f7806b7e19bfd0f803c03e0c5f5ffc665d2d05058f",
+    "footprint.pt": "c7ad741cd802972900b73698b8b226dd13832a3c672c22fb3eb68032e47607a6",
+    "sparse_geometry_diagnostic.json": "1422fa59079a8dd1873f7eef8c9c914a312a356180471c3aa2ddfd41774fc332"
+  },
+  "targets": {
+    "combined": {
+      "curvature": 0.8,
+      "weighting": 0.72,
+      "loss_aversion": 2.0,
+      "inverse_temperature": 3.0,
+      "label_bias": 0.0
+    },
+    "neutral": {
+      "curvature": 1.0,
+      "weighting": 1.0,
+      "loss_aversion": 1.0,
+      "inverse_temperature": 3.0,
+      "label_bias": 0.0
+    }
+  },
+  "checks": {
+    "discovery": {
+      "n": 216,
+      "identification": {
+        "rank": 5,
+        "parameter_count": 5,
+        "singular_values": [
+          14.905152102472702,
+          10.651551828890403,
+          5.731434177865302,
+          3.406183359706176,
+          1.5455380093982216
+        ],
+        "condition_number": 9.643989349880982
+      },
+      "recovery": {
+        "combined": {
+          "parameters": {
+            "curvature": 0.8000000789506275,
+            "weighting": 0.7200000878571562,
+            "loss_aversion": 2.000000255555883,
+            "inverse_temperature": 2.9999993967193905,
+            "label_bias": 6.874612778876969e-08
+          },
+          "cross_entropy": 0.4608006426410114,
+          "probability_rmse": 4.148785288696871e-08,
+          "converged": true,
+          "boundary_parameters": [],
+          "starts": 4
+        },
+        "neutral": {
+          "parameters": {
+            "curvature": 0.9999999991993868,
+            "weighting": 0.9999999697215315,
+            "loss_aversion": 1.0000000965533706,
+            "inverse_temperature": 2.9999997283187825,
+            "label_bias": -1.4175551167380215e-08
+          },
+          "cross_entropy": 0.4979770406074663,
+          "probability_rmse": 1.3489647996948998e-08,
+          "converged": true,
+          "boundary_parameters": [],
+          "starts": 4
+        }
+      }
+    },
+    "selection": {
+      "n": 96,
+      "identification": {
+        "rank": 5,
+        "parameter_count": 5,
+        "singular_values": [
+          11.927776054199489,
+          7.510450039488623,
+          3.910396554559521,
+          2.37912356372577,
+          1.0541680716146882
+        ],
+        "condition_number": 11.314871295551098
+      },
+      "recovery": {
+        "combined": {
+          "parameters": {
+            "curvature": 0.7999999961165117,
+            "weighting": 0.7199999991188666,
+            "loss_aversion": 1.9999999870243432,
+            "inverse_temperature": 2.9999998791677105,
+            "label_bias": -5.5531286412010935e-08
+          },
+          "cross_entropy": 0.48246250000139396,
+          "probability_rmse": 1.2494044586027333e-08,
+          "converged": true,
+          "boundary_parameters": [],
+          "starts": 4
+        },
+        "neutral": {
+          "parameters": {
+            "curvature": 1.000000062552067,
+            "weighting": 1.0000001231739555,
+            "loss_aversion": 1.000000062712472,
+            "inverse_temperature": 3.0000001048485,
+            "label_bias": 3.2901330953707046e-09
+          },
+          "cross_entropy": 0.5128230541425637,
+          "probability_rmse": 2.2392392742369677e-08,
+          "converged": true,
+          "boundary_parameters": [],
+          "starts": 4
+        }
+      }
+    },
+    "frozen": {
+      "n": 216,
+      "identification": {
+        "rank": 5,
+        "parameter_count": 5,
+        "singular_values": [
+          17.541260908283242,
+          10.58678072188164,
+          5.8111671099471955,
+          3.518356016772956,
+          1.591026138416192
+        ],
+        "condition_number": 11.025124279695946
+      },
+      "recovery": {
+        "combined": {
+          "parameters": {
+            "curvature": 0.8000000468420054,
+            "weighting": 0.7199999280063087,
+            "loss_aversion": 2.000000228824113,
+            "inverse_temperature": 3.0000000420564406,
+            "label_bias": -5.3291313704322e-08
+          },
+          "cross_entropy": 0.47265503115233426,
+          "probability_rmse": 3.314658012655782e-08,
+          "converged": true,
+          "boundary_parameters": [],
+          "starts": 4
+        },
+        "neutral": {
+          "parameters": {
+            "curvature": 1.0000001528281623,
+            "weighting": 1.0000002083306885,
+            "loss_aversion": 1.0000000906227802,
+            "inverse_temperature": 2.999999551377616,
+            "label_bias": 1.2397865641991698e-08
+          },
+          "cross_entropy": 0.4986896731803672,
+          "probability_rmse": 2.890259192631073e-08,
+          "converged": true,
+          "boundary_parameters": [],
+          "starts": 4
+        }
+      }
+    }
+  },
+  "candidate_features": [
+    11870,
+    47503,
+    15307,
+    62440,
+    39254,
+    33404,
+    60415,
+    55159,
+    30498,
+    7107,
+    18729,
+    54533,
+    17502,
+    19103,
+    58814,
+    52200,
+    13835,
+    55751,
+    4048,
+    33545,
+    38516,
+    18195,
+    19760,
+    23671,
+    1400,
+    41043,
+    29425,
+    6020,
+    17838,
+    23552,
+    184,
+    4237,
+    31935,
+    13142,
+    20117,
+    4992,
+    47380
+  ],
+  "response_format": {
+    "name": "system_letter",
+    "system": "Choose between the two options. Your answer must contain only the option letter A or B. Do not explain."
+  },
+  "layer": 50,
+  "scopes": [
+    "final",
+    "all"
+  ],
+  "doses": [
+    1.0,
+    4.0,
+    16.0
+  ],
+  "seeds": [
+    31,
+    73
+  ],
+  "sparse_k": 10,
+  "methods": [
+    "dense",
+    "sae10"
+  ],
+  "updates": 160,
+  "batch_size": 8,
+  "learning_rate": 0.2,
+  "screen": "Each feature, both signs, norm 16, final and all positions; rank by full-grid discovery expected answer CE for each planted target. No attribution ranking.",
+  "training": "Frozen base; learn one prompt-independent vector per target, scope, method and seed. Same norm-16 sphere and optimizer budget. SAE uses QR basis of ten causally ranked decoder columns. Base-model intervention; no adapted test states.",
+  "selection": "For each target jointly choose one shared scope and dose minimizing mean selection teacher RMSE across both methods and seeds; retain both independent fits for frozen evaluation. Dose grid 1,4,16. No frozen tuning.",
+  "controls": "Base; saved combined LoRA; raw mean discovery gradient at 50; SAE gradient approximation; three seeded random directions. All controls in both scopes at matched selected doses. Separate arithmetic/probability/dominance questions.",
+  "rule": {
+    "teacher_rmse": 0.06,
+    "heldout_cpt_rmse": 0.06,
+    "min_answer_mass": 0.99,
+    "max_mean_order_gap": 0.05,
+    "max_control_accuracy_drop": 0.05,
+    "max_dominance_rate": 0.05,
+    "min_shortcut_rmse_advantage": 0.01,
+    "max_mean_relative_norm_error": 0.05,
+    "max_preference_parameter_errors": {
+      "curvature": 0.12,
+      "weighting": 0.12,
+      "loss_aversion": 0.25
+    },
+    "repetitions": "Both seeds, both templates, and both targets must pass for a robust method-level positive.",
+    "interpretation": "Operational scope-specific decision, not the unavailable collaborator go/pivot rule; no proof of universal SAE inability."
+  },
+  "shortcut_models": "Nested risky/A-label offsets, temperature, frame offsets and frame temperatures fitted on selection, compared on frozen predictions; known synthetic action nulls and CPT alternatives calibrate the rule before GPU.",
+  "stopping": "No larger sweep. LoRA transfer failure or failed rule calibration => evaluation/generalization inconclusive. Dense passes and SAE fails => pivot tested sparse recipe. Both fail with LoRA passing => pivot constant-vector intervention. Both pass => proceed to confirmatory study.",
+  "limits": "One base model/SAE/layer and one LoRA training seed. Two planted vectors do not replace a neutral CPT LoRA. Negative results concern this candidate set, budget, optimization and constant-vector format."
+}

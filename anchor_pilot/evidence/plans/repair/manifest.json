@@ -1,0 +1,203 @@
+{
+  "declared_at_utc": "2026-09-17T06:02:36.587685+00:00",
+  "rows_sha256": "fab22aa57e418ca394e85a9d461e0d05fee06a5e662f1719d0eb2dc3130c12c7",
+  "target": {
+    "curvature": 0.8,
+    "weighting": 0.72,
+    "loss_aversion": 2.0,
+    "inverse_temperature": 3.0,
+    "label_bias": 0.0
+  },
+  "splits": {
+    "discovery": {
+      "rows": 2160,
+      "synthetic_recovery": {
+        "parameters": {
+          "curvature": 0.7999999861519409,
+          "weighting": 0.7200000032298176,
+          "loss_aversion": 1.999999942483621,
+          "inverse_temperature": 3.000000127863973,
+          "label_bias": -8.907952098674508e-09
+        },
+        "cross_entropy": 0.4495330923489865,
+        "probability_rmse": 7.969325738431024e-09,
+        "converged": true,
+        "boundary_parameters": [],
+        "starts": 6
+      },
+      "identifiability": {
+        "rank": 5,
+        "parameter_count": 5,
+        "singular_values": [
+          52.56897459589404,
+          35.49040052468854,
+          17.90839223251216,
+          9.901304614210078,
+          4.816856459258506
+        ],
+        "condition_number": 10.913543934831383
+      }
+    },
+    "selection": {
+      "rows": 540,
+      "synthetic_recovery": {
+        "parameters": {
+          "curvature": 0.7999999644523982,
+          "weighting": 0.7199999606311704,
+          "loss_aversion": 1.9999997614410228,
+          "inverse_temperature": 3.000000415087596,
+          "label_bias": -1.4951553326227266e-07
+        },
+        "cross_entropy": 0.4635142168715209,
+        "probability_rmse": 3.495859376288557e-08,
+        "converged": true,
+        "boundary_parameters": [],
+        "starts": 6
+      },
+      "identifiability": {
+        "rank": 5,
+        "parameter_count": 5,
+        "singular_values": [
+          23.29376514688129,
+          16.898495680197218,
+          9.09547986848962,
+          5.149660151536413,
+          2.4457496325825105
+        ],
+        "condition_number": 9.524182212504307
+      }
+    },
+    "frozen": {
+      "rows": 540,
+      "synthetic_recovery": {
+        "parameters": {
+          "curvature": 0.7999999914315213,
+          "weighting": 0.7200000116500566,
+          "loss_aversion": 2.000000062252583,
+          "inverse_temperature": 2.99999994539836,
+          "label_bias": 5.499907114267626e-08
+        },
+        "cross_entropy": 0.4578659414747541,
+        "probability_rmse": 1.2798076373093773e-08,
+        "converged": true,
+        "boundary_parameters": [],
+        "starts": 6
+      },
+      "identifiability": {
+        "rank": 5,
+        "parameter_count": 5,
+        "singular_values": [
+          24.725208879827523,
+          17.46129709125232,
+          9.042176845377071,
+          5.116656493877057,
+          2.435730337564024
+        ],
+        "condition_number": 10.151045252634669
+      }
+    }
+  },
+  "formats": [
+    {
+      "name": "original"
+    },
+    {
+      "name": "system_letter",
+      "system": "Choose between the two options. Your answer must contain only the option letter A or B. Do not explain."
+    },
+    {
+      "name": "answer_prefill",
+      "system": "Choose between the two options. Your answer must contain only the option letter A or B. Do not explain.",
+      "prefill": "Answer:",
+      "continuation_prefix": " "
+    },
+    {
+      "name": "option_prefill",
+      "system": "Choose between the two options. Your answer must contain only the option letter A or B. Do not explain.",
+      "prefill": "I choose option",
+      "continuation_prefix": " "
+    }
+  ],
+  "rho_grid_descending": [
+    1.0,
+    0.5,
+    0.25,
+    0.1
+  ],
+  "format_selection": "Training-only calibration subset; baseline min mass >= .99; edited min mass >= .95 and norm error <= .02 at both layers and both signs. Lock the first passing dose in descending order for the highest-ranked eligible format.",
+  "format_validation": "Validate the locked format and dose on the separate selection split. Fail closed before training if baseline/gradient validity does not generalize.",
+  "training": {
+    "layers": [
+      0,
+      50
+    ],
+    "modules": [
+      "q_proj",
+      "k_proj",
+      "v_proj",
+      "o_proj",
+      "gate_proj",
+      "up_proj",
+      "down_proj"
+    ],
+    "rank": 16,
+    "max_updates": 2400,
+    "micro_batch": 8,
+    "accumulation": 2,
+    "effective_batch": 16,
+    "paired_answer_orders": true,
+    "learning_rate_peak": 0.0001,
+    "learning_rate_floor": 1e-05,
+    "warmup_updates": 50,
+    "checkpoint_every": 100,
+    "minimum_updates": 400,
+    "consecutive_passing_validations_to_stop": 2
+  },
+  "checkpoint_selection": "Prefer checkpoints passing all operational targets, then lowest full-vocabulary selection cross entropy. Selection responses never enter optimizer updates.",
+  "operational_targets": {
+    "teacher_probability_rmse": 0.04,
+    "min_answer_mass": 0.99,
+    "absolute_parameter_errors": {
+      "curvature": 0.1,
+      "weighting": 0.1,
+      "loss_aversion": 0.2,
+      "inverse_temperature": 0.4,
+      "label_bias": 0.1
+    }
+  },
+  "scope": "These are newly declared repair targets, not the missing external scientific go/pivot rule.",
+  "frozen_policy": "Evaluate frozen model responses only after the selected adapter passes validation and all comparison directions are locked. A failed validation leaves the new frozen responses unopened.",
+  "previous_manifest_sha256": "b273edb73ccbf2de778190f770480e2e19c34251596491d3807190734a37d94c",
+  "amended_before_gpu_utc": "2026-09-17T06:17:26.094074+00:00",
+  "calibration_subset": {
+    "split": "discovery",
+    "ratios": [
+      0.4,
+      1.8,
+      3.6,
+      6.8
+    ],
+    "stakes": [
+      25,
+      75
+    ],
+    "all_probabilities_frames_and_orders": true,
+    "rows": 240
+  },
+  "posttraining_dose_selection": "On selection rows, choose the largest rho no greater than the pretraining rho at which every one of the 23 additive directions passes answer-mass and norm gates. Fail closed if none pass.",
+  "comparisons": {
+    "norm_matched_directions": 23,
+    "final_conditions": 29,
+    "original_magnitude_controls": 4,
+    "random_seeds_per_layer": 1,
+    "features": [
+      184,
+      4237,
+      31935,
+      13142,
+      20117,
+      4992
+    ],
+    "full_feature_sweep": false
+  }
+}

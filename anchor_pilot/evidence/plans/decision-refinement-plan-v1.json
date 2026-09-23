@@ -1,0 +1,14 @@
+{
+  "declared_at_utc": "2026-09-18T23:30:09.737200+00:00",
+  "reason": "Initial discovery/selection fit continued improving at 160 updates; strengthen the bounded negative test before inspecting any frozen responses.",
+  "extra_updates": 480,
+  "checkpoint_every": 80,
+  "learning_rate": ".2/sqrt(dimension), unchanged",
+  "scope_selection": "Keep the jointly selected stage-one scope for each target. Refine both methods and both seeds.",
+  "checkpoint_selection": "Include the initial selected vector as step 0; select minimum full-vocabulary selection CE. Then jointly select a shared dose 1,4,16 for both methods and seeds.",
+  "frozen_policy": "Stage-one frozen score files are sealed and unused. The refinement process reads only discovery/selection outputs, vectors and static prompt inputs. The same previously fixed test prompts are evaluated after the new selection lock.",
+  "added_controls": "Positive/negative raw readout gradients AND the sparse SAE-native readout approximation at norms 1 and 4 in both token scopes. These are fixed calibration comparisons, with matched native/raw doses and positions.",
+  "decision_rule": "All previously declared numeric thresholds remain unchanged. All training histories and initial-stage artifacts retained.",
+  "budget": "Same original two-hour deadline and $20 total session cap, including both stages.",
+  "control_scope_clarified_utc": "2026-09-18T23:47:09.120007+00:00"
+}

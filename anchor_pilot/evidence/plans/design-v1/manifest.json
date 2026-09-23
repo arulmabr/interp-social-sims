@@ -1,0 +1,1017 @@
+{
+  "version": 1,
+  "seed": 17,
+  "rows": 720,
+  "economic_groups": 360,
+  "split_counts": {
+    "selection": 180,
+    "discovery": 360,
+    "frozen": 180
+  },
+  "rows_sha256": "6fdae877a8dad3d77e0bf155ab21ee38aced016319e0ad5dd5aaa4b4f59de7cb",
+  "agents": {
+    "combined": {
+      "curvature": 0.8,
+      "weighting": 0.72,
+      "loss_aversion": 2.0,
+      "inverse_temperature": 3.0,
+      "label_bias": 0.0
+    },
+    "curvature_only": {
+      "curvature": 0.8,
+      "weighting": 1,
+      "loss_aversion": 1,
+      "inverse_temperature": 3.0,
+      "label_bias": 0.0
+    },
+    "weighting_only": {
+      "curvature": 1,
+      "weighting": 0.72,
+      "loss_aversion": 1,
+      "inverse_temperature": 3.0,
+      "label_bias": 0.0
+    },
+    "loss_aversion_only": {
+      "curvature": 1,
+      "weighting": 1,
+      "loss_aversion": 2,
+      "inverse_temperature": 3.0,
+      "label_bias": 0.0
+    }
+  },
+  "reference_point": 0,
+  "utility_scale_tokens": 100,
+  "choice_rule": "logistic",
+  "parameterization": "shared gain/loss curvature and weighting; separate loss multiplier; fitted temperature and A-label bias",
+  "scope": "provisional pilot; scientific go/pivot thresholds unset",
+  "synthetic_validation": {
+    "combined": {
+      "discovery": {
+        "exact_recovery": {
+          "parameters": {
+            "curvature": 0.8000000045952385,
+            "weighting": 0.7199999996010912,
+            "loss_aversion": 2.0000000603018515,
+            "inverse_temperature": 2.999999988534337,
+            "label_bias": 7.147162816012797e-09
+          },
+          "cross_entropy": 0.49736056757525776,
+          "probability_rmse": 4.860039432434723e-09,
+          "converged": true,
+          "boundary_parameters": [],
+          "starts": 6
+        },
+        "max_absolute_parameter_error": 6.030185151217893e-08,
+        "identifiability": {
+          "rank": 5,
+          "parameter_count": 5,
+          "singular_values": [
+            16.69352420224379,
+            12.2226191284118,
+            7.7292311023732125,
+            3.962274722352345,
+            1.9294787600352452
+          ],
+          "condition_number": 8.651831027120949
+        }
+      },
+      "selection": {
+        "exact_recovery": {
+          "parameters": {
+            "curvature": 0.8000000282335539,
+            "weighting": 0.7199999848175809,
+            "loss_aversion": 2.0000002088733737,
+            "inverse_temperature": 2.999999491170305,
+            "label_bias": -1.95487038192645e-08
+          },
+          "cross_entropy": 0.5022016320764088,
+          "probability_rmse": 2.650018385231546e-08,
+          "converged": true,
+          "boundary_parameters": [],
+          "starts": 6
+        },
+        "max_absolute_parameter_error": 5.088296948230209e-07,
+        "identifiability": {
+          "rank": 5,
+          "parameter_count": 5,
+          "singular_values": [
+            11.846487560591784,
+            8.409165592945497,
+            5.49343327090213,
+            2.7498306607283016,
+            1.3507912875517643
+          ],
+          "condition_number": 8.770035511602165
+        }
+      },
+      "frozen": {
+        "exact_recovery": {
+          "parameters": {
+            "curvature": 0.7999999639377464,
+            "weighting": 0.7200000294777644,
+            "loss_aversion": 1.9999997235020308,
+            "inverse_temperature": 3.0000001465878317,
+            "label_bias": -9.142976057901081e-08
+          },
+          "cross_entropy": 0.47916330592350725,
+          "probability_rmse": 2.8098852129673212e-08,
+          "converged": true,
+          "boundary_parameters": [],
+          "starts": 6
+        },
+        "max_absolute_parameter_error": 2.7649796918716163e-07,
+        "identifiability": {
+          "rank": 5,
+          "parameter_count": 5,
+          "singular_values": [
+            14.443843205802589,
+            10.384261510941508,
+            5.370311008362879,
+            2.8517229948615634,
+            1.3708005551809275
+          ],
+          "condition_number": 10.536794102695847
+        }
+      },
+      "finite_sample_recovery": {
+        "replicates": 20,
+        "independent_choices_per_prompt": 64,
+        "median_absolute_errors": {
+          "curvature": 0.0061374205454823305,
+          "weighting": 0.010574704397790124,
+          "loss_aversion": 0.03236403679403477,
+          "inverse_temperature": 0.0589598775756337,
+          "label_bias": 0.011458508742301716
+        },
+        "parameter_estimates": [
+          {
+            "curvature": 0.8085999801627196,
+            "weighting": 0.7113354572122234,
+            "loss_aversion": 2.0193819755355396,
+            "inverse_temperature": 3.0297770200491927,
+            "label_bias": -0.006525724064116793
+          },
+          {
+            "curvature": 0.8069352537700435,
+            "weighting": 0.7422544798368835,
+            "loss_aversion": 1.9863566375184718,
+            "inverse_temperature": 2.9790428138288623,
+            "label_bias": -0.013076316361302603
+          },
+          {
+            "curvature": 0.7856048683701735,
+            "weighting": 0.7113638140799641,
+            "loss_aversion": 1.909065188885702,
+            "inverse_temperature": 3.173178180843664,
+            "label_bias": -0.005470588826703781
+          },
+          {
+            "curvature": 0.8000756838899774,
+            "weighting": 0.7008138220134477,
+            "loss_aversion": 2.0302579849591096,
+            "inverse_temperature": 3.05896577224084,
+            "label_bias": -0.04025275441537013
+          },
+          {
+            "curvature": 0.8005866418038843,
+            "weighting": 0.7119331104950355,
+            "loss_aversion": 2.0180039660236484,
+            "inverse_temperature": 2.876383069448257,
+            "label_bias": 0.003713015668353924
+          },
+          {
+            "curvature": 0.8080515385270413,
+            "weighting": 0.7339300661359587,
+            "loss_aversion": 1.991412323024305,
+            "inverse_temperature": 3.0241958914679596,
+            "label_bias": 0.008206817349782815
+          },
+          {
+            "curvature": 0.8033453079480048,
+            "weighting": 0.724430001411119,
+            "loss_aversion": 1.942209709108784,
+            "inverse_temperature": 3.0099349959063257,
+            "label_bias": 0.025370937277189053
+          },
+          {
+            "curvature": 0.8110968847489852,
+            "weighting": 0.7393957420672543,
+            "loss_aversion": 2.0332127077198434,
+            "inverse_temperature": 2.856707973794753,
+            "label_bias": -0.03973323127382561
+          },
+          {
+            "curvature": 0.7953589050427584,
+            "weighting": 0.7308131192173165,
+            "loss_aversion": 1.9942050163310443,
+            "inverse_temperature": 3.0312277299762487,
+            "label_bias": 0.014759971480913589
+          },
+          {
+            "curvature": 0.7824356436037648,
+            "weighting": 0.7397311807648258,
+            "loss_aversion": 1.9574469593186985,
+            "inverse_temperature": 2.9607966953330798,
+            "label_bias": 0.0026981839736931208
+          },
+          {
+            "curvature": 0.8053395873209213,
+            "weighting": 0.7021475423466672,
+            "loss_aversion": 2.068309024800729,
+            "inverse_temperature": 2.9806173455491827,
+            "label_bias": 0.03242776988029645
+          },
+          {
+            "curvature": 0.8037480279591616,
+            "weighting": 0.7258324500773671,
+            "loss_aversion": 2.0722087984734383,
+            "inverse_temperature": 2.7672700542319144,
+            "label_bias": -0.01954184807117352
+          },
+          {
+            "curvature": 0.789619827183538,
+            "weighting": 0.7035424536658222,
+            "loss_aversion": 2.0252113734639843,
+            "inverse_temperature": 3.132550475100827,
+            "label_bias": -0.0038516102573895516
+          },
+          {
+            "curvature": 0.8145387593944802,
+            "weighting": 0.7259390969579488,
+            "loss_aversion": 2.0827874629915124,
+            "inverse_temperature": 3.0153687636872606,
+            "label_bias": -0.014328188903765816
+          },
+          {
+            "curvature": 0.7979545433639057,
+            "weighting": 0.729006377406976,
+            "loss_aversion": 2.036880173783113,
+            "inverse_temperature": 2.924754402210895,
+            "label_bias": -0.010260771634434366
+          },
+          {
+            "curvature": 0.8039392352071585,
+            "weighting": 0.7100394502900838,
+            "loss_aversion": 2.0023362925440886,
+            "inverse_temperature": 2.9928589592852815,
+            "label_bias": -0.007006097087092805
+          },
+          {
+            "curvature": 0.8015098672624461,
+            "weighting": 0.7068647716770757,
+            "loss_aversion": 2.031515365868226,
+            "inverse_temperature": 3.0589539829104275,
+            "label_bias": -0.012551268981059497
+          },
+          {
+            "curvature": 0.7891497598970133,
+            "weighting": 0.7037888274774586,
+            "loss_aversion": 2.0034264032054954,
+            "inverse_temperature": 3.149782599600936,
+            "label_bias": -0.009352872397411208
+          },
+          {
+            "curvature": 0.8007768338738286,
+            "weighting": 0.7303362895782637,
+            "loss_aversion": 2.0596108833151057,
+            "inverse_temperature": 2.7493817193826464,
+            "label_bias": 0.027389611387343294
+          },
+          {
+            "curvature": 0.7922837236355826,
+            "weighting": 0.7257402533234533,
+            "loss_aversion": 1.9432207787675506,
+            "inverse_temperature": 3.0780482267621347,
+            "label_bias": 0.010365748503543937
+          }
+        ]
+      }
+    },
+    "curvature_only": {
+      "discovery": {
+        "exact_recovery": {
+          "parameters": {
+            "curvature": 0.7999999414034078,
+            "weighting": 0.9999999207963928,
+            "loss_aversion": 0.9999999395286241,
+            "inverse_temperature": 3.0000004562275095,
+            "label_bias": 8.884064730723167e-08
+          },
+          "cross_entropy": 0.538985161497256,
+          "probability_rmse": 2.7831254396275716e-08,
+          "converged": true,
+          "boundary_parameters": [],
+          "starts": 6
+        },
+        "max_absolute_parameter_error": 4.562275095487678e-07,
+        "identifiability": {
+          "rank": 5,
+          "parameter_count": 5,
+          "singular_values": [
+            11.5279770021984,
+            8.099818743440087,
+            7.551914933828099,
+            3.8854746969905958,
+            1.8401076693122873
+          ],
+          "condition_number": 6.264838299656025
+        }
+      },
+      "selection": {
+        "exact_recovery": {
+          "parameters": {
+            "curvature": 0.7999999937942714,
+            "weighting": 0.9999998317860358,
+            "loss_aversion": 1.0000000408662824,
+            "inverse_temperature": 3.000000746411995,
+            "label_bias": 5.3458753802742276e-08
+          },
+          "cross_entropy": 0.5430886368834921,
+          "probability_rmse": 3.6421433157566996e-08,
+          "converged": true,
+          "boundary_parameters": [],
+          "starts": 6
+        },
+        "max_absolute_parameter_error": 7.464119948785708e-07,
+        "identifiability": {
+          "rank": 5,
+          "parameter_count": 5,
+          "singular_values": [
+            8.0008018896097,
+            5.750983185769099,
+            5.350779640214547,
+            2.7045297372237607,
+            1.2664840622299975
+          ],
+          "condition_number": 6.317333260019129
+        }
+      },
+      "frozen": {
+        "exact_recovery": {
+          "parameters": {
+            "curvature": 0.8000000022557273,
+            "weighting": 0.9999998339141738,
+            "loss_aversion": 1.000000055692966,
+            "inverse_temperature": 3.000000039685691,
+            "label_bias": -3.7130021785724443e-09
+          },
+          "cross_entropy": 0.5038328069173234,
+          "probability_rmse": 2.250699406193655e-08,
+          "converged": true,
+          "boundary_parameters": [],
+          "starts": 6
+        },
+        "max_absolute_parameter_error": 1.6608582620314394e-07,
+        "identifiability": {
+          "rank": 5,
+          "parameter_count": 5,
+          "singular_values": [
+            10.543459480409744,
+            5.6711808143358065,
+            5.53258215071975,
+            2.931987170988669,
+            1.2517889748968611
+          ],
+          "condition_number": 8.422713166393285
+        }
+      },
+      "finite_sample_recovery": {
+        "replicates": 20,
+        "independent_choices_per_prompt": 64,
+        "median_absolute_errors": {
+          "curvature": 0.008208578308679826,
+          "weighting": 0.032669156696492285,
+          "loss_aversion": 0.021557383983499434,
+          "inverse_temperature": 0.058679198011855505,
+          "label_bias": 0.0132391756440243
+        },
+        "parameter_estimates": [
+          {
+            "curvature": 0.8027480463571038,
+            "weighting": 1.0652962575902256,
+            "loss_aversion": 0.9787557211413729,
+            "inverse_temperature": 2.9990004344830914,
+            "label_bias": 0.02314968884008318
+          },
+          {
+            "curvature": 0.8207354906845412,
+            "weighting": 1.052795697992971,
+            "loss_aversion": 0.9437757567225096,
+            "inverse_temperature": 2.907183220085291,
+            "label_bias": -0.00555098938692147
+          },
+          {
+            "curvature": 0.7832061524078515,
+            "weighting": 1.0234620853482814,
+            "loss_aversion": 0.9943481017739166,
+            "inverse_temperature": 2.976654769277296,
+            "label_bias": -0.014269559373525361
+          },
+          {
+            "curvature": 0.8017705136751917,
+            "weighting": 0.9703316156455082,
+            "loss_aversion": 1.029861684301653,
+            "inverse_temperature": 3.136043779841061,
+            "label_bias": 0.018198287659778965
+          },
+          {
+            "curvature": 0.8036750579038656,
+            "weighting": 1.040705690162225,
+            "loss_aversion": 0.9480386839260861,
+            "inverse_temperature": 3.031065654859952,
+            "label_bias": -0.01177392428881174
+          },
+          {
+            "curvature": 0.7969205158300949,
+            "weighting": 0.9774861105191586,
+            "loss_aversion": 1.0366366710478607,
+            "inverse_temperature": 2.874178836464558,
+            "label_bias": -0.004017444953115926
+          },
+          {
+            "curvature": 0.7920370470131208,
+            "weighting": 1.0419953298177653,
+            "loss_aversion": 0.9997971083107243,
+            "inverse_temperature": 2.9286531299059546,
+            "label_bias": -0.012208791914523238
+          },
+          {
+            "curvature": 0.8084542036304805,
+            "weighting": 1.0199767455805009,
+            "loss_aversion": 0.9763924751599674,
+            "inverse_temperature": 3.0586749714574837,
+            "label_bias": 0.017505701056290825
+          },
+          {
+            "curvature": 0.7887246675637017,
+            "weighting": 0.9456343462256881,
+            "loss_aversion": 1.0045061123339594,
+            "inverse_temperature": 3.092000404620034,
+            "label_bias": 0.002044353883191275
+          },
+          {
+            "curvature": 0.8055596577255014,
+            "weighting": 1.0039605694973948,
+            "loss_aversion": 0.9994614609589455,
+            "inverse_temperature": 3.0486842638985427,
+            "label_bias": 0.02418585222865799
+          },
+          {
+            "curvature": 0.8146658946584705,
+            "weighting": 1.0648374073862747,
+            "loss_aversion": 0.9749161441274973,
+            "inverse_temperature": 3.0162054956923727,
+            "label_bias": -0.030435797505810675
+          },
+          {
+            "curvature": 0.8066154703815938,
+            "weighting": 0.9760441782531019,
+            "loss_aversion": 1.0152672670679268,
+            "inverse_temperature": 3.0611926848209507,
+            "label_bias": 0.0030847736154724246
+          },
+          {
+            "curvature": 0.7915058188015871,
+            "weighting": 0.9578622177990139,
+            "loss_aversion": 0.9747627664486919,
+            "inverse_temperature": 3.0495385002791955,
+            "label_bias": -0.00304245752218222
+          },
+          {
+            "curvature": 0.7900805658095003,
+            "weighting": 0.9800416115542863,
+            "loss_aversion": 1.0085639202379615,
+            "inverse_temperature": 2.9106536908540734,
+            "label_bias": 0.021601111063647024
+          },
+          {
+            "curvature": 0.8109805179324654,
+            "weighting": 1.0356699290384928,
+            "loss_aversion": 0.9781295108916283,
+            "inverse_temperature": 2.9186323118187802,
+            "label_bias": 0.011649940498028534
+          },
+          {
+            "curvature": 0.8065451374655929,
+            "weighting": 1.0192818998179978,
+            "loss_aversion": 0.9859406004589907,
+            "inverse_temperature": 2.9629918436337626,
+            "label_bias": -0.04527966204515992
+          },
+          {
+            "curvature": 0.8000687665629934,
+            "weighting": 1.0215423673507023,
+            "loss_aversion": 0.9859258400837426,
+            "inverse_temperature": 3.0586834245662273,
+            "label_bias": 0.0030927789894840867
+          },
+          {
+            "curvature": 0.7988582427651068,
+            "weighting": 1.0124243129996309,
+            "loss_aversion": 0.9627562278696763,
+            "inverse_temperature": 3.009650960184084,
+            "label_bias": -0.020868351552356695
+          },
+          {
+            "curvature": 0.7841204071303641,
+            "weighting": 0.9316572768585245,
+            "loss_aversion": 1.0256879893416624,
+            "inverse_temperature": 3.138647007456641,
+            "label_bias": -0.021087850026889662
+          },
+          {
+            "curvature": 0.8117557839126507,
+            "weighting": 1.045385863995728,
+            "loss_aversion": 0.9866035882278299,
+            "inverse_temperature": 3.0521075434698273,
+            "label_bias": 0.006731009376584113
+          }
+        ]
+      }
+    },
+    "weighting_only": {
+      "discovery": {
+        "exact_recovery": {
+          "parameters": {
+            "curvature": 0.9999999894820248,
+            "weighting": 0.7199998871653528,
+            "loss_aversion": 1.0000001176533337,
+            "inverse_temperature": 3.0000004653118113,
+            "label_bias": 5.769042698724643e-08
+          },
+          "cross_entropy": 0.5594622257265072,
+          "probability_rmse": 3.176622404240227e-08,
+          "converged": true,
+          "boundary_parameters": [],
+          "starts": 6
+        },
+        "max_absolute_parameter_error": 4.6531181130404775e-07,
+        "identifiability": {
+          "rank": 5,
+          "parameter_count": 5,
+          "singular_values": [
+            11.56918799395534,
+            10.008422343775418,
+            8.309350040622203,
+            5.109311921281107,
+            1.9096764575277891
+          ],
+          "condition_number": 6.058192710262801
+        }
+      },
+      "selection": {
+        "exact_recovery": {
+          "parameters": {
+            "curvature": 0.9999999645518431,
+            "weighting": 0.7200000364043178,
+            "loss_aversion": 0.9999998661721262,
+            "inverse_temperature": 3.0000004777547815,
+            "label_bias": 5.623829777931827e-09
+          },
+          "cross_entropy": 0.5648094572422311,
+          "probability_rmse": 2.4701862211286387e-08,
+          "converged": true,
+          "boundary_parameters": [],
+          "starts": 6
+        },
+        "max_absolute_parameter_error": 4.77754781513795e-07,
+        "identifiability": {
+          "rank": 5,
+          "parameter_count": 5,
+          "singular_values": [
+            8.248697833921657,
+            6.859138461570989,
+            5.906800679516636,
+            3.5396107586007513,
+            1.3349447124907703
+          ],
+          "condition_number": 6.1790557741758825
+        }
+      },
+      "frozen": {
+        "exact_recovery": {
+          "parameters": {
+            "curvature": 1.0000000367543744,
+            "weighting": 0.7199999940752821,
+            "loss_aversion": 1.0000000628659007,
+            "inverse_temperature": 2.999999741917956,
+            "label_bias": 1.8997274984798045e-08
+          },
+          "cross_entropy": 0.5119812127931275,
+          "probability_rmse": 1.40735586186435e-08,
+          "converged": true,
+          "boundary_parameters": [],
+          "starts": 6
+        },
+        "max_absolute_parameter_error": 2.580820441799858e-07,
+        "identifiability": {
+          "rank": 5,
+          "parameter_count": 5,
+          "singular_values": [
+            10.064002527540161,
+            8.566831246418623,
+            5.60879455455817,
+            3.5985926474802623,
+            1.2752334504239484
+          ],
+          "condition_number": 7.891890323449723
+        }
+      },
+      "finite_sample_recovery": {
+        "replicates": 20,
+        "independent_choices_per_prompt": 64,
+        "median_absolute_errors": {
+          "curvature": 0.012497481690841417,
+          "weighting": 0.009881910197788557,
+          "loss_aversion": 0.02855749845894373,
+          "inverse_temperature": 0.06501147615730907,
+          "label_bias": 0.013415907401162759
+        },
+        "parameter_estimates": [
+          {
+            "curvature": 1.0177107067215398,
+            "weighting": 0.7340779876962601,
+            "loss_aversion": 0.9716233567366144,
+            "inverse_temperature": 3.0369447502356586,
+            "label_bias": -0.030068910412424973
+          },
+          {
+            "curvature": 1.0000511601092843,
+            "weighting": 0.7075260628959311,
+            "loss_aversion": 0.9954378598281634,
+            "inverse_temperature": 3.120070505846217,
+            "label_bias": 0.010535699956264665
+          },
+          {
+            "curvature": 0.9738171866037524,
+            "weighting": 0.7287364326060867,
+            "loss_aversion": 0.9615470538325633,
+            "inverse_temperature": 3.05853409941882,
+            "label_bias": 0.002975900236999067
+          },
+          {
+            "curvature": 1.008373838877823,
+            "weighting": 0.7153410381958525,
+            "loss_aversion": 0.9854017814872224,
+            "inverse_temperature": 2.9308315724342697,
+            "label_bias": -0.007386141681807094
+          },
+          {
+            "curvature": 1.000372643092747,
+            "weighting": 0.6994420235815314,
+            "loss_aversion": 1.0014044363160721,
+            "inverse_temperature": 3.0246646014683174,
+            "label_bias": 0.013379780720624967
+          },
+          {
+            "curvature": 1.013508594822,
+            "weighting": 0.7582676322133549,
+            "loss_aversion": 1.036996385718457,
+            "inverse_temperature": 2.947536721545976,
+            "label_bias": 0.061232412494558894
+          },
+          {
+            "curvature": 0.9893149104879096,
+            "weighting": 0.7234428543263239,
+            "loss_aversion": 1.0137514111919559,
+            "inverse_temperature": 3.058501615293558,
+            "label_bias": -0.014499294189572293
+          },
+          {
+            "curvature": 0.9780579504876233,
+            "weighting": 0.7149462083830488,
+            "loss_aversion": 1.0147361259263235,
+            "inverse_temperature": 3.171885054575454,
+            "label_bias": 0.06958159567040083
+          },
+          {
+            "curvature": 0.9988764619304229,
+            "weighting": 0.7501296663172734,
+            "loss_aversion": 0.9335671881119391,
+            "inverse_temperature": 3.0285996876002876,
+            "label_bias": 0.01345203408170055
+          },
+          {
+            "curvature": 1.0031115145044185,
+            "weighting": 0.7194346240586136,
+            "loss_aversion": 1.0287383536545018,
+            "inverse_temperature": 3.0187969472968974,
+            "label_bias": 0.01798579992112496
+          },
+          {
+            "curvature": 0.9949522565876814,
+            "weighting": 0.7199081724613391,
+            "loss_aversion": 0.965361140999929,
+            "inverse_temperature": 3.1334510364999,
+            "label_bias": -0.0030108486902742622
+          },
+          {
+            "curvature": 1.0269545983444175,
+            "weighting": 0.7016037349866588,
+            "loss_aversion": 0.987402149170124,
+            "inverse_temperature": 2.853017922503549,
+            "label_bias": 0.017104322658100433
+          },
+          {
+            "curvature": 0.9972461557346846,
+            "weighting": 0.7023754001842258,
+            "loss_aversion": 1.0061198465649384,
+            "inverse_temperature": 3.194130449735061,
+            "label_bias": -0.010109355540371042
+          },
+          {
+            "curvature": 0.9831638012806575,
+            "weighting": 0.7092781114213899,
+            "loss_aversion": 1.0062366687764952,
+            "inverse_temperature": 3.0817096678008054,
+            "label_bias": -0.005481020477858557
+          },
+          {
+            "curvature": 1.0114863685596829,
+            "weighting": 0.7116110621002432,
+            "loss_aversion": 0.9622550940142808,
+            "inverse_temperature": 2.9711402199488886,
+            "label_bias": -0.012335940956957682
+          },
+          {
+            "curvature": 0.9863900674410959,
+            "weighting": 0.7199553842508694,
+            "loss_aversion": 0.9357405501593521,
+            "inverse_temperature": 3.232427389777308,
+            "label_bias": -0.03280799731836161
+          },
+          {
+            "curvature": 1.0145226516955945,
+            "weighting": 0.7034429989471717,
+            "loss_aversion": 0.9450775273748947,
+            "inverse_temperature": 3.027807891777601,
+            "label_bias": 0.02822238216244186
+          },
+          {
+            "curvature": 1.0017665611026554,
+            "weighting": 0.7086765444398715,
+            "loss_aversion": 1.0667119812339967,
+            "inverse_temperature": 2.8811876815762614,
+            "label_bias": -0.010331729250505121
+          },
+          {
+            "curvature": 1.0142167731575338,
+            "weighting": 0.729041931816967,
+            "loss_aversion": 1.0146716535928069,
+            "inverse_temperature": 2.876539998139338,
+            "label_bias": -0.008382814683803615
+          },
+          {
+            "curvature": 1.0249892674595282,
+            "weighting": 0.7234893560706304,
+            "loss_aversion": 0.9450405542714128,
+            "inverse_temperature": 2.939145475251112,
+            "label_bias": 0.020740474744316294
+          }
+        ]
+      }
+    },
+    "loss_aversion_only": {
+      "discovery": {
+        "exact_recovery": {
+          "parameters": {
+            "curvature": 0.9999999527806178,
+            "weighting": 0.9999999660010581,
+            "loss_aversion": 1.9999999083223812,
+            "inverse_temperature": 2.9999999824047268,
+            "label_bias": -4.025065788772104e-08
+          },
+          "cross_entropy": 0.46648346321903944,
+          "probability_rmse": 1.3055527313318403e-08,
+          "converged": true,
+          "boundary_parameters": [],
+          "starts": 6
+        },
+        "max_absolute_parameter_error": 9.167761882977743e-08,
+        "identifiability": {
+          "rank": 5,
+          "parameter_count": 5,
+          "singular_values": [
+            13.234932165322425,
+            7.481087835919858,
+            5.971740121109836,
+            3.8775355655539054,
+            1.7058074452178353
+          ],
+          "condition_number": 7.758749208432664
+        }
+      },
+      "selection": {
+        "exact_recovery": {
+          "parameters": {
+            "curvature": 0.9999999513377407,
+            "weighting": 0.999999921656264,
+            "loss_aversion": 1.9999998317701462,
+            "inverse_temperature": 3.000000250409853,
+            "label_bias": -2.744601114568933e-08
+          },
+          "cross_entropy": 0.4693385430936391,
+          "probability_rmse": 1.3437179973216637e-08,
+          "converged": true,
+          "boundary_parameters": [],
+          "starts": 6
+        },
+        "max_absolute_parameter_error": 2.50409852853295e-07,
+        "identifiability": {
+          "rank": 5,
+          "parameter_count": 5,
+          "singular_values": [
+            9.009353698199295,
+            5.3021547548866526,
+            4.306748926322816,
+            2.667847059516182,
+            1.1799893247764077
+          ],
+          "condition_number": 7.635114580300502
+        }
+      },
+      "frozen": {
+        "exact_recovery": {
+          "parameters": {
+            "curvature": 0.9999999059630588,
+            "weighting": 0.9999998046357141,
+            "loss_aversion": 1.9999997642607126,
+            "inverse_temperature": 3.0000004123909525,
+            "label_bias": -1.3229969642004506e-08
+          },
+          "cross_entropy": 0.43295687809283484,
+          "probability_rmse": 2.7146000279474918e-08,
+          "converged": true,
+          "boundary_parameters": [],
+          "starts": 6
+        },
+        "max_absolute_parameter_error": 4.1239095249778757e-07,
+        "identifiability": {
+          "rank": 5,
+          "parameter_count": 5,
+          "singular_values": [
+            12.330627346776433,
+            5.099306532300818,
+            4.586701114629517,
+            2.7268122555626824,
+            1.1854897588553377
+          ],
+          "condition_number": 10.401293857386337
+        }
+      },
+      "finite_sample_recovery": {
+        "replicates": 20,
+        "independent_choices_per_prompt": 64,
+        "median_absolute_errors": {
+          "curvature": 0.00983263721941946,
+          "weighting": 0.015115689212061745,
+          "loss_aversion": 0.028290686664268816,
+          "inverse_temperature": 0.048188846336981506,
+          "label_bias": 0.019549359130630946
+        },
+        "parameter_estimates": [
+          {
+            "curvature": 1.0050956832557472,
+            "weighting": 1.0022315740317218,
+            "loss_aversion": 1.9597502424359654,
+            "inverse_temperature": 3.035368831689277,
+            "label_bias": 0.004211457170564589
+          },
+          {
+            "curvature": 0.9775630932273514,
+            "weighting": 0.9391974757051397,
+            "loss_aversion": 1.942777136682417,
+            "inverse_temperature": 3.158241039949087,
+            "label_bias": 0.01808018467893123
+          },
+          {
+            "curvature": 0.9932998697489136,
+            "weighting": 0.9998718475995656,
+            "loss_aversion": 1.971505048818046,
+            "inverse_temperature": 3.0893086199470923,
+            "label_bias": -0.023073099406582857
+          },
+          {
+            "curvature": 0.9900856520153324,
+            "weighting": 0.9662068323618281,
+            "loss_aversion": 2.0125216503415198,
+            "inverse_temperature": 3.0154337678555323,
+            "label_bias": 0.06286753461626234
+          },
+          {
+            "curvature": 1.0227376680024842,
+            "weighting": 1.0061961798286259,
+            "loss_aversion": 1.989404331954936,
+            "inverse_temperature": 2.905797171314459,
+            "label_bias": -0.002961754374127889
+          },
+          {
+            "curvature": 1.0023021664119238,
+            "weighting": 0.9763410650443675,
+            "loss_aversion": 2.034572678819206,
+            "inverse_temperature": 2.9605083485742947,
+            "label_bias": 0.023269635077933396
+          },
+          {
+            "curvature": 1.018903732818078,
+            "weighting": 0.9917047289972272,
+            "loss_aversion": 2.004526047316714,
+            "inverse_temperature": 3.0067795121543917,
+            "label_bias": 0.04870525702235257
+          },
+          {
+            "curvature": 0.9874501231511112,
+            "weighting": 0.9806071639232073,
+            "loss_aversion": 1.9099212497443414,
+            "inverse_temperature": 3.0360705988851926,
+            "label_bias": -0.021412915754102934
+          },
+          {
+            "curvature": 1.0303264659141553,
+            "weighting": 1.060379345917966,
+            "loss_aversion": 1.9828964669010174,
+            "inverse_temperature": 2.9336440847294525,
+            "label_bias": -0.021018533582330662
+          },
+          {
+            "curvature": 1.0025944618336005,
+            "weighting": 1.0078234563833492,
+            "loss_aversion": 2.008018971281751,
+            "inverse_temperature": 3.003620235966701,
+            "label_bias": 0.0862319821791697
+          },
+          {
+            "curvature": 0.9984959298042695,
+            "weighting": 1.0279352914779056,
+            "loss_aversion": 1.9707861403154294,
+            "inverse_temperature": 3.0568860412482577,
+            "label_bias": 0.013971972847943237
+          },
+          {
+            "curvature": 0.9798402159673116,
+            "weighting": 0.9623991628036923,
+            "loss_aversion": 2.022969145283224,
+            "inverse_temperature": 3.129527775931206,
+            "label_bias": 0.006706075273238301
+          },
+          {
+            "curvature": 1.0020749751967932,
+            "weighting": 0.9887455407192896,
+            "loss_aversion": 2.02115754632715,
+            "inverse_temperature": 3.0828487985414887,
+            "label_bias": -0.01644510003175916
+          },
+          {
+            "curvature": 1.0097509264541713,
+            "weighting": 1.0016995809512697,
+            "loss_aversion": 1.9343043362178032,
+            "inverse_temperature": 3.0152071099829647,
+            "label_bias": -0.002989459753410641
+          },
+          {
+            "curvature": 0.9904454224682351,
+            "weighting": 0.9917547312541077,
+            "loss_aversion": 1.9823406131684733,
+            "inverse_temperature": 2.9040035174473107,
+            "label_bias": -0.004123769548451699
+          },
+          {
+            "curvature": 1.0040390492023081,
+            "weighting": 0.9977942824505637,
+            "loss_aversion": 2.1085576760153253,
+            "inverse_temperature": 2.847891323059099,
+            "label_bias": 0.014250997841169177
+          },
+          {
+            "curvature": 1.022547619304658,
+            "weighting": 1.0081190306416552,
+            "loss_aversion": 1.9739833111912364,
+            "inverse_temperature": 3.030332519641564,
+            "label_bias": -0.02111774805241925
+          },
+          {
+            "curvature": 1.0139061697490905,
+            "weighting": 1.0354101419079649,
+            "loss_aversion": 1.9302705776291231,
+            "inverse_temperature": 3.034432746738517,
+            "label_bias": 0.003016729385987877
+          },
+          {
+            "curvature": 0.9908958831030618,
+            "weighting": 1.018976919143413,
+            "loss_aversion": 1.9719135778534165,
+            "inverse_temperature": 2.8762060052062286,
+            "label_bias": 0.028265512478191413
+          },
+          {
+            "curvature": 1.0321809131826982,
+            "weighting": 1.0493463130272014,
+            "loss_aversion": 1.9573459737690002,
+            "inverse_temperature": 2.9648797762746337,
+            "label_bias": -0.024625475845460165
+          }
+        ]
+      }
+    }
+  }
+}

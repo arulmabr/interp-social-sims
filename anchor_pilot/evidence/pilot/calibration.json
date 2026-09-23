@@ -1,0 +1,45 @@
+{
+  "dose_calibration": [
+    {
+      "rho": 0.25,
+      "valid": false,
+      "min_answer_mass": 0.058712102472782135,
+      "max_relative_norm_error": 0.005606889724731445,
+      "answer_mass_failure_count": 47,
+      "norm_failure_count": 0
+    },
+    {
+      "rho": 1.0,
+      "valid": false,
+      "min_answer_mass": 1.3036147720413283e-05,
+      "max_relative_norm_error": 0.0016243457794189453,
+      "answer_mass_failure_count": 132,
+      "norm_failure_count": 0
+    },
+    {
+      "rho": 4.0,
+      "valid": false,
+      "min_answer_mass": 1.2764293788602998e-10,
+      "max_relative_norm_error": 0.00026297569274902344,
+      "answer_mass_failure_count": 314,
+      "norm_failure_count": 0
+    }
+  ],
+  "selected_common_rho": 1.0,
+  "dose_calibration_passed": false,
+  "dose_interpretation": "Calibration failed. Continue only as exploratory diagnostics at prespecified rho nearest 1; do not claim validated answer-format retention or norm precision.",
+  "batch_single_diagnostic": {
+    "single": {
+      "margin": -21.875,
+      "p_risky": 3.16088155649652e-10,
+      "answer_mass": 1.0
+    },
+    "batched": {
+      "margin": -21.5,
+      "p_risky": 4.5990553032559944e-10,
+      "answer_mass": 1.0
+    },
+    "probability_gap": 1.4381737467594746e-10,
+    "note": "bf16 batch kernels can round differently; all interventions and gradients use the same batching. CPU fp32 padding invariance is tested separately."
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "declared_at_utc": "2026-09-17T05:07:56.930850+00:00",
+  "rows_sha256": "98a88c5b6478ecc284dea2c606480c88dac3f2cd25cdb040f91ceb24848e8b39",
+  "rows": 300,
+  "new_reward_ratios": [
+    0.55,
+    1.25,
+    2.3,
+    3.3,
+    6.5
+  ],
+  "target": {
+    "curvature": 0.8,
+    "weighting": 0.72,
+    "loss_aversion": 2.0,
+    "inverse_temperature": 3.0,
+    "label_bias": 0.0
+  },
+  "training": "Original discovery and selection rows only; no original frozen rows.",
+  "additional_steps": 600,
+  "learning_rate": 5e-05,
+  "batch_size": 8,
+  "checkpoint_choice": "Lowest fixed training-audit cross entropy; no fresh evaluation before choice.",
+  "original_frozen_status": "Inspected development evidence; first-pass failure retained.",
+  "purpose": "Bounded attempt to repair combined positive anchor after first-pass parameter recovery failed.",
+  "controls": "Base, refined LoRA, raw mean delta and k=1,3,10 SAE reconstructions, at common norm 1 and original fitted magnitudes.",
+  "synthetic_recovery": {
+    "parameters": {
+      "curvature": 0.8000000310936148,
+      "weighting": 0.7200001196217032,
+      "loss_aversion": 2.000000263527893,
+      "inverse_temperature": 2.999999204144553,
+      "label_bias": 1.086745822068223e-07
+    },
+    "cross_entropy": 0.4780883815198151,
+    "probability_rmse": 4.612996903519626e-08,
+    "converged": true,
+    "boundary_parameters": [],
+    "starts": 6
+  },
+  "local_identifiability": {
+    "rank": 5,
+    "parameter_count": 5,
+    "singular_values": [
+      17.347711766800877,
+      12.705674702303266,
+      6.911116338403124,
+      3.7310429740871025,
+      1.792599821038119
+    ],
+    "condition_number": 9.677403491401991
+  }
+}

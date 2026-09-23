@@ -1,0 +1,146 @@
+{
+  "declared_at_utc": "2026-09-18T05:17:41.355406+00:00",
+  "source_run": "anchor_pilot/outputs/repair-backup-20260917/outputs/repair-20260917T062148Z",
+  "source_hashes": {
+    "adapter/adapter.pt": "fb07e10b2c5ce134b88478bb77efa605bfa7debb084e65d94641197e74921ecb",
+    "adapter/adapter_config.json": "12d11629e5b8b8652af239f7806b7e19bfd0f803c03e0c5f5ffc665d2d05058f",
+    "footprint.pt": "c7ad741cd802972900b73698b8b226dd13832a3c672c22fb3eb68032e47607a6",
+    "sparse_geometry_diagnostic.json": "1422fa59079a8dd1873f7eef8c9c914a312a356180471c3aa2ddfd41774fc332"
+  },
+  "development_rows": 36,
+  "frozen_rows": 540,
+  "rows_sha256": "4201fdeeeae099df3619ac09723fd617652204b812fa1243023d97f57586b2dc",
+  "frozen_ratios": [
+    0.47,
+    1.13,
+    1.93,
+    3.07,
+    4.93,
+    7.73
+  ],
+  "conditions": [
+    "baseline",
+    "lora",
+    "raw_all_replace",
+    "raw_all_add",
+    "raw_final_replace",
+    "raw_context_replace",
+    "mean_final",
+    "mean_final_norm1",
+    "sae_encoder_all",
+    "sae_encoder_final",
+    "sae_subspace10_all",
+    "sae_subspace10_final",
+    "sae_subspace30_all",
+    "sae_subspace30_final",
+    "sae_mean10_final",
+    "sae_mean30_final"
+  ],
+  "target": {
+    "curvature": 0.8,
+    "weighting": 0.72,
+    "loss_aversion": 2.0,
+    "inverse_temperature": 3.0,
+    "label_bias": 0.0
+  },
+  "response_format": {
+    "name": "system_letter",
+    "system": "Choose between the two options. Your answer must contain only the option letter A or B. Do not explain."
+  },
+  "layer": 50,
+  "layer_indexing": "zero-based block output",
+  "adapter": "saved repair checkpoint 700; rank16; blocks0-50 only; no retraining",
+  "sparse_indices": {
+    "10": [
+      11870,
+      47503,
+      15307,
+      62440,
+      39254,
+      33404,
+      60415,
+      55159,
+      30498,
+      7107
+    ],
+    "30": [
+      11870,
+      47503,
+      15307,
+      62440,
+      39254,
+      33404,
+      60415,
+      55159,
+      30498,
+      7107,
+      18729,
+      54533,
+      17502,
+      19103,
+      58814,
+      52200,
+      13835,
+      55751,
+      4048,
+      33545,
+      38516,
+      18195,
+      19760,
+      23671,
+      1400,
+      41043,
+      29425,
+      6020,
+      17838,
+      23552
+    ]
+  },
+  "feature_selection": "Previously saved OMP fit to discovery mean only; fixed before new responses. Not causal selection.",
+  "primary_metrics": [
+    "RMSE against full LoRA probabilities",
+    "RMSE against planted CPT probabilities",
+    "maximum absolute probability difference",
+    "answer mass",
+    "CPT parameter recovery"
+  ],
+  "engineering_gate": {
+    "all_replace_max_probability_error": 1e-06,
+    "all_add_max_probability_error": 1e-06
+  },
+  "provisional_reproduction_target": {
+    "rmse_against_lora": 0.01,
+    "min_answer_mass": 0.99
+  },
+  "threshold_scope": "New operational diagnostics, not the external scientific go/pivot rule.",
+  "oracle_warning": "All prompt-specific raw and SAE replays require adapted states for that same prompt; they are representation diagnostics, not stand-alone steering.",
+  "dose_policy": "Preserve original changes; mean norm1 is a separately named strength control. No amplitude tuning.",
+  "frozen_policy": "Lock all methods and targets before GPU work; validate engineering identity on 36 development prompts before opening 540 new frozen responses.",
+  "synthetic_recovery": {
+    "parameters": {
+      "curvature": 0.8000000121415343,
+      "weighting": 0.7200000262489654,
+      "loss_aversion": 1.999999805804696,
+      "inverse_temperature": 3.0000003022718853,
+      "label_bias": 2.537304449474103e-08
+    },
+    "cross_entropy": 0.45641841467617333,
+    "probability_rmse": 2.2254710021990272e-08,
+    "converged": true,
+    "boundary_parameters": [],
+    "starts": 6
+  },
+  "identifiability": {
+    "rank": 5,
+    "parameter_count": 5,
+    "singular_values": [
+      25.159636221542467,
+      17.63898115614966,
+      9.029599168992501,
+      5.093494473331236,
+      2.4309924803926184
+    ],
+    "condition_number": 10.34953272149943
+  },
+  "scientific_go_pivot": null
+}

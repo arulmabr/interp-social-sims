@@ -1,0 +1,317 @@
+{
+  "status": "completed_requires_diagnostic_review",
+  "scope": "provisional_engineering_smoke",
+  "go_pivot_thresholds": null,
+  "scientific_pass": null,
+  "rho": 1.0,
+  "seed": 17,
+  "token_scope": "last_prompt_token",
+  "layer_indexing": "zero_based_block_output",
+  "python": "3.12.3",
+  "versions": {
+    "torch": "2.8.0+cu128",
+    "transformers": "4.56.2",
+    "accelerate": "1.10.1",
+    "huggingface-hub": "0.35.3"
+  },
+  "mode": "bf16_real_model",
+  "model": "meta-llama/Llama-3.3-70B-Instruct",
+  "model_revision": "6f6073b423013f6a7d4d9f39144961bfbfbc386b",
+  "sae": "Goodfire/Llama-3.3-70B-Instruct-SAE-l50",
+  "sae_revision": "128ee921ecd1b8b3a87d776cbcc357c0855da134",
+  "decoder_shape": [
+    8192,
+    65536
+  ],
+  "device_map": {
+    "model.embed_tokens": "0",
+    "model.layers.0": "0",
+    "model.layers.1": "0",
+    "model.layers.2": "0",
+    "model.layers.3": "0",
+    "model.layers.4": "0",
+    "model.layers.5": "0",
+    "model.layers.6": "0",
+    "model.layers.7": "0",
+    "model.layers.8": "0",
+    "model.layers.9": "0",
+    "model.layers.10": "0",
+    "model.layers.11": "0",
+    "model.layers.12": "0",
+    "model.layers.13": "0",
+    "model.layers.14": "0",
+    "model.layers.15": "0",
+    "model.layers.16": "0",
+    "model.layers.17": "0",
+    "model.layers.18": "0",
+    "model.layers.19": "0",
+    "model.layers.20": "0",
+    "model.layers.21": "0",
+    "model.layers.22": "0",
+    "model.layers.23": "0",
+    "model.layers.24": "0",
+    "model.layers.25": "0",
+    "model.layers.26": "0",
+    "model.layers.27": "0",
+    "model.layers.28": "0",
+    "model.layers.29": "0",
+    "model.layers.30": "0",
+    "model.layers.31": "0",
+    "model.layers.32": "0",
+    "model.layers.33": "0",
+    "model.layers.34": "0",
+    "model.layers.35": "0",
+    "model.layers.36": "0",
+    "model.layers.37": "0",
+    "model.layers.38": "0",
+    "model.layers.39": "0",
+    "model.layers.40": "1",
+    "model.layers.41": "1",
+    "model.layers.42": "1",
+    "model.layers.43": "1",
+    "model.layers.44": "1",
+    "model.layers.45": "1",
+    "model.layers.46": "1",
+    "model.layers.47": "1",
+    "model.layers.48": "1",
+    "model.layers.49": "1",
+    "model.layers.50": "1",
+    "model.layers.51": "1",
+    "model.layers.52": "1",
+    "model.layers.53": "1",
+    "model.layers.54": "1",
+    "model.layers.55": "1",
+    "model.layers.56": "1",
+    "model.layers.57": "1",
+    "model.layers.58": "1",
+    "model.layers.59": "1",
+    "model.layers.60": "1",
+    "model.layers.61": "1",
+    "model.layers.62": "1",
+    "model.layers.63": "1",
+    "model.layers.64": "1",
+    "model.layers.65": "1",
+    "model.layers.66": "1",
+    "model.layers.67": "1",
+    "model.layers.68": "1",
+    "model.layers.69": "1",
+    "model.layers.70": "1",
+    "model.layers.71": "1",
+    "model.layers.72": "1",
+    "model.layers.73": "1",
+    "model.layers.74": "1",
+    "model.layers.75": "1",
+    "model.layers.76": "1",
+    "model.layers.77": "1",
+    "model.layers.78": "1",
+    "model.layers.79": "1",
+    "model.norm": "1",
+    "model.rotary_emb": "1",
+    "lm_head": "1"
+  },
+  "scientific_evidence": false,
+  "prompt_sha256": "fb2be45f099d92c001652bd7b1b4d50669d72aa1fe2a353a484c1eb5553d6e62",
+  "answer_token_ids": [
+    {
+      "prompt_id": "gain-original",
+      "risky": 33,
+      "safe": 32
+    },
+    {
+      "prompt_id": "gain-swapped",
+      "risky": 32,
+      "safe": 33
+    },
+    {
+      "prompt_id": "loss-original",
+      "risky": 33,
+      "safe": 32
+    },
+    {
+      "prompt_id": "loss-swapped",
+      "risky": 32,
+      "safe": 33
+    }
+  ],
+  "baselines": [
+    {
+      "margin": 5.0,
+      "p_risky_conditional_on_labels": 0.9933071732521057,
+      "answer_label_probability_mass": 0.9999990463256836
+    },
+    {
+      "margin": 0.75,
+      "p_risky_conditional_on_labels": 0.6791787147521973,
+      "answer_label_probability_mass": 0.9999999403953552
+    },
+    {
+      "margin": 6.25,
+      "p_risky_conditional_on_labels": 0.9980732202529907,
+      "answer_label_probability_mass": 0.9999999403953552
+    },
+    {
+      "margin": -13.25,
+      "p_risky_conditional_on_labels": 1.760343138812459e-06,
+      "answer_label_probability_mass": 1.0
+    }
+  ],
+  "layers": {
+    "48": {
+      "per_prompt_gradient_norms": [
+        39.430362701416016,
+        33.793487548828125,
+        33.22466278076172,
+        23.961669921875
+      ],
+      "mean_gradient_norm": 8.241016387939453,
+      "mean_alignment_per_prompt": [
+        0.698865532875061,
+        -0.2752431631088257,
+        0.6013213396072388,
+        -0.21992236375808716
+      ],
+      "baseline_residual_norms": [
+        15.244908332824707,
+        15.516583442687988,
+        15.229567527770996,
+        15.368642807006836
+      ],
+      "zero_dose_exact_identity": true,
+      "finite_difference": [
+        {
+          "epsilon": 0.25,
+          "autograd": 39.430423736572266,
+          "numerical": 36.25,
+          "relative_error": 0.08065913158377698
+        },
+        {
+          "epsilon": 0.5,
+          "autograd": 39.430423736572266,
+          "numerical": 30.5,
+          "relative_error": 0.2264856141601434
+        },
+        {
+          "epsilon": 1.0,
+          "autograd": 39.430423736572266,
+          "numerical": 19.6875,
+          "relative_error": 0.5007028042222237
+        }
+      ]
+    },
+    "50": {
+      "per_prompt_gradient_norms": [
+        36.70144271850586,
+        31.460664749145508,
+        31.080612182617188,
+        22.498083114624023
+      ],
+      "mean_gradient_norm": 7.619332790374756,
+      "mean_alignment_per_prompt": [
+        0.6982145309448242,
+        -0.2805187702178955,
+        0.6010864973068237,
+        -0.22246108949184418
+      ],
+      "baseline_residual_norms": [
+        16.119131088256836,
+        16.41541862487793,
+        16.114641189575195,
+        16.29541015625
+      ],
+      "zero_dose_exact_identity": true,
+      "finite_difference": [
+        {
+          "epsilon": 0.25,
+          "autograd": 36.701507568359375,
+          "numerical": 34.0,
+          "relative_error": 0.07360753678381221
+        },
+        {
+          "epsilon": 0.5,
+          "autograd": 36.701507568359375,
+          "numerical": 28.875,
+          "relative_error": 0.2132475771950758
+        },
+        {
+          "epsilon": 1.0,
+          "autograd": 36.701507568359375,
+          "numerical": 19.3125,
+          "relative_error": 0.47379545747462865
+        }
+      ]
+    }
+  },
+  "sae_readout_reconstruction": {
+    "k": 3,
+    "feature_indices": [
+      2450,
+      42445,
+      33657
+    ],
+    "coefficients": [
+      0.24307164549827576,
+      -0.20898567140102386,
+      -0.16840516030788422
+    ],
+    "relative_error_before_renormalization": 0.9616345167160034,
+    "decoded_norm_before_renormalization": 0.2743351459503174,
+    "signed_coefficients_allowed": true,
+    "highest_positive_cosine_feature": 2450,
+    "highest_positive_cosine": 0.19566896557807922
+  },
+  "feature_alignment": [
+    {
+      "feature": 184,
+      "cosine": 0.011393505148589611,
+      "decoder_norm": 1.2248064279556274,
+      "alpha_for_positive_rho": 0.8164555452808484
+    },
+    {
+      "feature": 4237,
+      "cosine": -0.005346340127289295,
+      "decoder_norm": 1.2961790561676025,
+      "alpha_for_positive_rho": 0.7714983475791442
+    },
+    {
+      "feature": 31935,
+      "cosine": 0.0032045894768089056,
+      "decoder_norm": 1.3593695163726807,
+      "alpha_for_positive_rho": 0.7356351514107684
+    },
+    {
+      "feature": 13142,
+      "cosine": 0.01136092934757471,
+      "decoder_norm": 1.0499851703643799,
+      "alpha_for_positive_rho": 0.9523944034875909
+    },
+    {
+      "feature": 20117,
+      "cosine": 0.012739826925098896,
+      "decoder_norm": 1.1164392232894897,
+      "alpha_for_positive_rho": 0.8957048257885353
+    },
+    {
+      "feature": 4992,
+      "cosine": 0.012713335454463959,
+      "decoder_norm": 1.10432767868042,
+      "alpha_for_positive_rho": 0.9055283312240413
+    }
+  ],
+  "engineering_execution_completed": true,
+  "intervention_rows": 48,
+  "elapsed_seconds": 104.5055601047352,
+  "gpu_memory": [
+    {
+      "device": 0,
+      "name": "NVIDIA H200",
+      "peak_allocated_gib": 65.82544803619385,
+      "peak_reserved_gib": 65.869140625
+    },
+    {
+      "device": 1,
+      "name": "NVIDIA H200",
+      "peak_allocated_gib": 66.51397848129272,
+      "peak_reserved_gib": 66.55078125
+    }
+  ]
+}
