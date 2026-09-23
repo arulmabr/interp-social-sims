@@ -354,7 +354,72 @@ until confirmed by sampled generation.
 
 ---
 
-## 5. A correction to something said in the meeting
+## 5. Two things from the meeting that need correcting
+
+### 5.1 The bias was not implanted as an embedding vector
+
+This is the most important correction, because the mental model it leaves behind is wrong
+in a way that changes what the result means.
+
+In the discussion the bias implant was described as fetching the encoding of some
+scenarios, building an embedding vector out of them, and adding that vector into the
+model's internal representations at layer 48 or 50. The follow-up question was what
+specific text was used to produce the encoding.
+
+**No text was encoded and no vector was added to the model's activations.** There is no
+scenario text behind the bias implant and no embedding built from one. The mechanism is
+the one in Sections 1 and 2 of this document:
+
+1. a synthetic agent is defined with one parameter changed, `action` moved from 0 to 0.6,
+   which adds a flat 0.6 to its choice log-odds on every trial;
+2. that agent's choice probabilities are computed on 1,872 training prompts;
+3. a LoRA adapter is trained with cross-entropy so the model's own answer-token
+   probabilities match those numbers.
+
+The bias lives in **trained weights**, not in an added activation vector. Nothing is
+injected at layer 48 or 50 at any point in building it.
+
+**Where the confusion comes from is understandable**, because the project does contain a
+vector of exactly the kind described, and it sits next to the bias adapter in the same
+tables. That is the **readout gradient anchor**. It genuinely is a direction in the
+model's activation space, it genuinely is computed at layers 48 and 50, and it genuinely
+is applied by adding a multiple of it to the activations while the model runs.
+
+So the two anchors work by completely different mechanisms:
+
+| anchor | what it is | how it is applied |
+|---|---|---|
+| **readout gradient anchor** | a vector in activation space, computed as the gradient of the choice log-odds with respect to the residual stream at a given layer | added to the activations at layer 48 or 50 during the forward pass |
+| **bias adapter** | a small set of trained weights | loaded as an adapter; nothing is added to activations |
+
+One consequence follows and is worth stating. A suggestion in the meeting was to evaluate
+how well the bias was implanted by testing how behaviour shifts after the vector is added.
+For the bias adapter there is no such step. The equivalent check is the **cloning** check
+in Section 2.2, which asks whether the adapter reproduces its target agent's choices on
+held-out prompts. It does, at a correlation of 0.9933.
+
+### 5.2 What preference was defined as, and what it was not
+
+The meeting raised the right question about what counts as preference, and proposed an
+extreme version: an agent that takes the gamble regardless of expected value, because it
+does not care what the expectation is.
+
+**That is not what was implanted, and the distinction is worth keeping.** The preference
+implant raises `alpha` from 0.88 to 0.98, which bends the value function. Its effect
+depends on how attractive the gamble is, and it changes sign, as the table in Section 1.4
+shows. It moves the switching point from 133.9 to 121.0, toward the rational 100 but not
+past it.
+
+The extreme version described in the meeting, take the gamble whatever the numbers say,
+is much closer to what the **bias** implant does. The bias adds the same push even to a
+gamble paying 30 against a sure 50, which no attitude to risk would find appealing. So the
+intuition offered for preference in fact describes the control.
+
+This matters because the two implants only work as a contrast if preference is the thing
+that bends with the payoff and bias is the thing that does not. Defining preference as
+indifference to expected value would collapse the distinction the whole design rests on.
+
+### 5.3 A correction to the step counts on the instrument figure
 
 This concerns the instrument figure rather than the anchors, but it came up in the same
 discussion and would otherwise propagate.
