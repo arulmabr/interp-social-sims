@@ -10,9 +10,17 @@ is accompanied by [corrections and interpretation limits](coauthor_explainer/ERR
 and [exact prompt/feature provenance](coauthor_explainer/COAUTHOR_CLARIFICATIONS.md).
 
 The evidence export includes the saved scientific readouts and execution-source
-snapshots, with checksums. Model checkpoints and operational account/deployment
-records are not included. Historical cost and stopped-pod statements below
+snapshots, with checksums. [Collaborator backup bundles](backup_release/README.md)
+add the adapter checkpoints, activation tensors, steering vectors and earlier
+research snapshots as downloadable assets on the repository's Releases page.
+Operational account/deployment records remain local. Historical cost and stopped-pod statements below
 refer to the recorded sessions, not a current billing inspection.
+
+To download and restore the research backups (no GPU required):
+
+```bash
+python -m anchor_pilot.restore_backups
+```
 
 With NumPy, SciPy, PyTorch and pytest installed, verify the published results
 and run the local software checks from the repository root:

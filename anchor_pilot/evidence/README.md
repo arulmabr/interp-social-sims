@@ -36,17 +36,20 @@ It does not refit the behavioral models or repeat their bootstrap intervals.
 The recorded fits, raw readouts and executed analysis source are included for
 that deeper review.
 
-## What is deliberately not included
+## Additional checkpoints and backups
 
-Model/adapter weights, activation tensors, vector checkpoints, account/billing
-and deployment records, virtual environments, caches, temporary logs and
-incomplete-run backups remain local. A fresh clone can inspect and verify the
-published numerical evidence; it cannot resume training from a saved adapter
-without obtaining the omitted checkpoints and gated base-model access.
+Adapter weights, activation tensors, vector checkpoints, and earlier research
+snapshots are now available in the [collaborator backup release](../backup_release/README.md).
+They remain outside Git history; the restore command downloads and verifies them.
+A fresh clone can inspect the numerical evidence immediately, while evaluating
+saved adapters additionally requires those downloads and separate model access.
+Full base-model/SAE weights, account/billing and deployment state, virtual
+environments, caches and operational logs are not distributed.
 
 Archived execution code may reference its original `outputs/...` locations.
-Historical transfer-audit scripts also require the complete local backup and
-provider records. Use the CPU verifier above for this published subset.
+Historical transfer-audit scripts also require the private provider records
+that are not in the release. Use the CPU verifier above for this evidence
+subset, and the backup restore tool for the released archive checksums.
 
 To recreate this export where the original local archives are available:
 

@@ -1,5 +1,7 @@
 # Keep saved evidence byte-identical across platforms for SHA-256 verification.
 evidence/** -text
+# Preserve the upstream license exactly, including its Markdown line breaks.
+backup_release/licenses/** -text whitespace=-blank-at-eol
 *.csv -text whitespace=cr-at-eol
 # Markdown uses trailing double spaces for intentional line breaks.
 *.md whitespace=-blank-at-eol
