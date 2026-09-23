@@ -230,8 +230,8 @@ longer contains zero.
 
 ### 3.2 Table 1, the anchor gate at two sizes
 
-This is the table in the screenshot. It reports the same anchors measured a **different
-way**, and the change of method is the important part.
+This table reports the same two anchors measured a **different way**, and the change of
+method is the important part.
 
 **Why the method changed.** As Section 1.4 shows, the planted preference change is a
 change of shape whose effect varies with the payoff and changes sign. Averaging it is
