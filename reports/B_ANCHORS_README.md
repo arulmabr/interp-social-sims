@@ -191,8 +191,6 @@ just a model that behaves like some agent.
 
 ### 3.1 `B3_contrasts_plain.png`
 
-![The two contrasts measured by averaging the change in z](../figures/B3_contrasts_plain.png)
-
 This table reports what happened when the two contrasts were measured by taking the
 **mean of the change in z**.
 
@@ -231,8 +229,6 @@ With both corrections the preference interval becomes **[+0.0054, +0.0522]**, wh
 longer contains zero.
 
 ### 3.2 Table 1, the anchor gate at two sizes
-
-![Table 1, the anchor gate at one times and three times the MDC](../figures/B3_table1_anchor_gate.png)
 
 This table reports the same two anchors measured a **different way**, and the change of
 method is the important part.
@@ -285,8 +281,6 @@ weight going to format at 0.509 and action at 0.491. The attribution step gives 
 preference change full weight and a known bias none at all.
 
 ### 3.3 Table 2, the probe placed against the anchors
-
-![Table 2, each direction placed against the bias anchor and the readout anchor](../figures/B3_table2_probe_placement.png)
 
 This table is the third step, and everything about it is **exploratory**. It sits on the
 selection split, it is not pre-registered, and no verdict from it is certified.
