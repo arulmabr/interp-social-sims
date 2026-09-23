@@ -90,6 +90,18 @@ def analyse(out: Path, trials: Sequence) -> int:
         if cond == "unmodified":
             continue
         zc = np.asarray(zc, dtype=float)
+        if not np.isfinite(zc).any():
+            # read at scale NaN because the dose solver could not reach the
+            # target for this direction; fitting it costs minutes and returns
+            # nothing. Recorded as unreadable rather than silently dropped.
+            rows[cond] = {"role": dirs.get(cond, {}).get("role", "?"),
+                          "layer": dirs.get(cond, {}).get("layer"),
+                          "matched": False, "scale": float("nan"),
+                          "note": "not dosed to target; read is all NaN "
+                                  "(ICLR_PLAN.md B5: a family that cannot reach "
+                                  "the target is recorded as such)"}
+            print(f"  {cond}: all NaN, skipped", flush=True)
+            continue
         dz = zc - base
         p_int = _p(zc)
         choice = (zc > 0).astype(int)
@@ -137,7 +149,8 @@ def analyse(out: Path, trials: Sequence) -> int:
         }
 
     # -- resemblance, with the random directions as the null band -----------
-    d2v = {c: _d2_vector(r["fingerprint"]["D2_variance"]) for c, r in rows.items()}
+    d2v = {c: _d2_vector(r["fingerprint"]["D2_variance"])
+           for c, r in rows.items() if "fingerprint" in r}
     res: Dict[str, Dict[str, float]] = {}
     for c, v in d2v.items():
         res[c] = {f"dist_to_{p}": float(np.linalg.norm(v - d2v[p]))
@@ -151,7 +164,7 @@ def analyse(out: Path, trials: Sequence) -> int:
 
     verdicts = {}
     for c in rows:
-        if c in POLES or c.startswith("random_"):
+        if c in POLES or c.startswith("random_") or c not in res:
             continue
         db = res[c].get(f"dist_to_{POLES[0]}", np.nan)
         dr = res[c].get(f"dist_to_{POLES[1]}", np.nan)
