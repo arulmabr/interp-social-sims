@@ -1,3 +1,120 @@
 Loading checkpoint shards:   0%|          | 0/30 [00:00<?, ?it/s]Loading checkpoint shards:   3%|▎         | 1/30 [00:34<16:29, 34.13s/it]Loading checkpoint shards:   7%|▋         | 2/30 [00:43<09:07, 19.54s/it]Loading checkpoint shards:  10%|█         | 3/30 [00:44<05:00, 11.14s/it]Loading checkpoint shards:  13%|█▎        | 4/30 [00:45<03:07,  7.22s/it]Loading checkpoint shards:  17%|█▋        | 5/30 [00:47<02:06,  5.05s/it]Loading checkpoint shards:  20%|██        | 6/30 [00:48<01:28,  3.68s/it]Loading checkpoint shards:  23%|██▎       | 7/30 [00:48<01:03,  2.75s/it]Loading checkpoint shards:  27%|██▋       | 8/30 [00:49<00:48,  2.23s/it]Loading checkpoint shards:  30%|███       | 9/30 [00:53<00:55,  2.62s/it]Loading checkpoint shards:  33%|███▎      | 10/30 [01:35<04:52, 14.64s/it]Loading checkpoint shards:  37%|███▋      | 11/30 [01:36<03:20, 10.57s/it]Loading checkpoint shards:  40%|████      | 12/30 [01:38<02:21,  7.86s/it]Loading checkpoint shards:  43%|████▎     | 13/30 [01:39<01:41,  5.97s/it]Loading checkpoint shards:  47%|████▋     | 14/30 [01:41<01:14,  4.68s/it]Loading checkpoint shards:  50%|█████     | 15/30 [01:43<00:56,  3.77s/it]Loading checkpoint shards:  53%|█████▎    | 16/30 [01:45<00:46,  3.31s/it]Loading checkpoint shards:  57%|█████▋    | 17/30 [01:47<00:38,  2.95s/it]Loading checkpoint shards:  60%|██████    | 18/30 [01:50<00:35,  2.92s/it]Loading checkpoint shards:  63%|██████▎   | 19/30 [02:04<01:08,  6.22s/it]Loading checkpoint shards:  67%|██████▋   | 20/30 [02:31<02:05, 12.53s/it]Loading checkpoint shards:  70%|███████   | 21/30 [02:51<02:12, 14.77s/it]Loading checkpoint shards:  73%|███████▎  | 22/30 [02:58<01:39, 12.40s/it]Loading checkpoint shards:  77%|███████▋  | 23/30 [03:28<02:04, 17.80s/it]Loading checkpoint shards:  80%|████████  | 24/30 [03:45<01:45, 17.62s/it]Loading checkpoint shards:  83%|████████▎ | 25/30 [03:47<01:03, 12.75s/it]Loading checkpoint shards:  87%|████████▋ | 26/30 [03:48<00:37,  9.35s/it]Loading checkpoint shards:  90%|█████████ | 27/30 [03:49<00:20,  6.96s/it]Loading checkpoint shards:  93%|█████████▎| 28/30 [03:51<00:10,  5.30s/it]Loading checkpoint shards:  97%|█████████▋| 29/30 [03:52<00:04,  4.13s/it]Loading checkpoint shards: 100%|██████████| 30/30 [03:53<00:00,  3.07s/it]Loading checkpoint shards: 100%|██████████| 30/30 [03:53<00:00,  7.78s/it]
 /orcd/home/002/guna23/shrey/risk-trackB/cv_bench/anchors/lora.py:447: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
   sd = torch.load(src, map_location="cpu")
+/home/guna23/.local/lib/python3.11/site-packages/peft/utils/other.py:689: UserWarning: Unable to fetch remote file due to the following error 403 Client Error. (Request ID: Root=1-6ab31ade-1e6d55c973ac889a2b85b329;2c3af696-395c-421e-a82a-b9e89d78a2b7)
+
+Cannot access gated repo for url https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct/resolve/main/config.json.
+Access to model meta-llama/Llama-3.3-70B-Instruct is restricted and you are not in the authorized list. Visit https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct to ask for access. - silently ignoring the lookup for the file config.json in meta-llama/Llama-3.3-70B-Instruct.
+  warnings.warn(
+/home/guna23/.local/lib/python3.11/site-packages/peft/utils/save_and_load.py:243: UserWarning: Could not find a config file in meta-llama/Llama-3.3-70B-Instruct - will assume that the vocabulary was not modified.
+  warnings.warn(
+/home/guna23/.local/lib/python3.11/site-packages/peft/utils/other.py:689: UserWarning: Unable to fetch remote file due to the following error 403 Client Error. (Request ID: Root=1-6ab31b30-045e40f36c9637c17f1e7ef7;5eebcc62-8448-4527-b577-11de486aa611)
+
+Cannot access gated repo for url https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct/resolve/main/config.json.
+Access to model meta-llama/Llama-3.3-70B-Instruct is restricted and you are not in the authorized list. Visit https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct to ask for access. - silently ignoring the lookup for the file config.json in meta-llama/Llama-3.3-70B-Instruct.
+  warnings.warn(
+/home/guna23/.local/lib/python3.11/site-packages/peft/utils/other.py:689: UserWarning: Unable to fetch remote file due to the following error 403 Client Error. (Request ID: Root=1-6ab31b82-1fab82d30aef296922ef0342;06c62ad9-efcd-4f91-ae8f-79ed9f816f8e)
+
+Cannot access gated repo for url https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct/resolve/main/config.json.
+Access to model meta-llama/Llama-3.3-70B-Instruct is restricted and you are not in the authorized list. Visit https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct to ask for access. - silently ignoring the lookup for the file config.json in meta-llama/Llama-3.3-70B-Instruct.
+  warnings.warn(
+/home/guna23/.local/lib/python3.11/site-packages/peft/utils/other.py:689: UserWarning: Unable to fetch remote file due to the following error 403 Client Error. (Request ID: Root=1-6ab31bd4-41474c966b3ba559115ed359;3c9a0700-2a20-4337-b16e-9d57cf8b5cba)
+
+Cannot access gated repo for url https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct/resolve/main/config.json.
+Access to model meta-llama/Llama-3.3-70B-Instruct is restricted and you are not in the authorized list. Visit https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct to ask for access. - silently ignoring the lookup for the file config.json in meta-llama/Llama-3.3-70B-Instruct.
+  warnings.warn(
+/home/guna23/.local/lib/python3.11/site-packages/peft/utils/other.py:689: UserWarning: Unable to fetch remote file due to the following error 403 Client Error. (Request ID: Root=1-6ab31c26-3c5f5d1a1475147c57b3fcac;8ca77a2b-eaf6-46c5-aa87-73e8eff0b603)
+
+Cannot access gated repo for url https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct/resolve/main/config.json.
+Access to model meta-llama/Llama-3.3-70B-Instruct is restricted and you are not in the authorized list. Visit https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct to ask for access. - silently ignoring the lookup for the file config.json in meta-llama/Llama-3.3-70B-Instruct.
+  warnings.warn(
+/home/guna23/.local/lib/python3.11/site-packages/peft/utils/other.py:689: UserWarning: Unable to fetch remote file due to the following error 403 Client Error. (Request ID: Root=1-6ab31c77-05e2ed8e7f651a9d01bd3a4e;69797bc7-6240-48db-a863-b3932e129697)
+
+Cannot access gated repo for url https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct/resolve/main/config.json.
+Access to model meta-llama/Llama-3.3-70B-Instruct is restricted and you are not in the authorized list. Visit https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct to ask for access. - silently ignoring the lookup for the file config.json in meta-llama/Llama-3.3-70B-Instruct.
+  warnings.warn(
+/home/guna23/.local/lib/python3.11/site-packages/peft/utils/other.py:689: UserWarning: Unable to fetch remote file due to the following error 403 Client Error. (Request ID: Root=1-6ab31cc8-4c51a81309981c0c616cb788;972ccc7b-b5aa-4115-9d3b-47a2d894e942)
+
+Cannot access gated repo for url https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct/resolve/main/config.json.
+Access to model meta-llama/Llama-3.3-70B-Instruct is restricted and you are not in the authorized list. Visit https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct to ask for access. - silently ignoring the lookup for the file config.json in meta-llama/Llama-3.3-70B-Instruct.
+  warnings.warn(
+/home/guna23/.local/lib/python3.11/site-packages/peft/utils/other.py:689: UserWarning: Unable to fetch remote file due to the following error 403 Client Error. (Request ID: Root=1-6ab31d1a-3922e56b0d8e8780029270c0;bf391244-2c74-4cf4-a351-efd6192ccc10)
+
+Cannot access gated repo for url https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct/resolve/main/config.json.
+Access to model meta-llama/Llama-3.3-70B-Instruct is restricted and you are not in the authorized list. Visit https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct to ask for access. - silently ignoring the lookup for the file config.json in meta-llama/Llama-3.3-70B-Instruct.
+  warnings.warn(
+/home/guna23/.local/lib/python3.11/site-packages/peft/utils/other.py:689: UserWarning: Unable to fetch remote file due to the following error 403 Client Error. (Request ID: Root=1-6ab31d6a-0d11219e40dc500655ceeb61;db5f7378-fda6-4bc7-bb29-06f6735f8501)
+
+Cannot access gated repo for url https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct/resolve/main/config.json.
+Access to model meta-llama/Llama-3.3-70B-Instruct is restricted and you are not in the authorized list. Visit https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct to ask for access. - silently ignoring the lookup for the file config.json in meta-llama/Llama-3.3-70B-Instruct.
+  warnings.warn(
+/home/guna23/.local/lib/python3.11/site-packages/peft/utils/other.py:689: UserWarning: Unable to fetch remote file due to the following error 403 Client Error. (Request ID: Root=1-6ab31dba-3e7974377879874d08bd77c2;196110ec-5b91-42c4-9c7d-907bd2631c90)
+
+Cannot access gated repo for url https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct/resolve/main/config.json.
+Access to model meta-llama/Llama-3.3-70B-Instruct is restricted and you are not in the authorized list. Visit https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct to ask for access. - silently ignoring the lookup for the file config.json in meta-llama/Llama-3.3-70B-Instruct.
+  warnings.warn(
+/home/guna23/.local/lib/python3.11/site-packages/peft/utils/other.py:689: UserWarning: Unable to fetch remote file due to the following error 403 Client Error. (Request ID: Root=1-6ab31dd1-040ec9db61ece94d4472287e;02795221-b79b-4e27-aacb-3701e9ce150a)
+
+Cannot access gated repo for url https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct/resolve/main/config.json.
+Access to model meta-llama/Llama-3.3-70B-Instruct is restricted and you are not in the authorized list. Visit https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct to ask for access. - silently ignoring the lookup for the file config.json in meta-llama/Llama-3.3-70B-Instruct.
+  warnings.warn(
+/home/guna23/.local/lib/python3.11/site-packages/peft/utils/other.py:689: UserWarning: Unable to fetch remote file due to the following error 403 Client Error. (Request ID: Root=1-6ab31e20-344769377a563a0464560c7b;b536e39b-5980-4092-bb4a-8f4f4f724fc6)
+
+Cannot access gated repo for url https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct/resolve/main/config.json.
+Access to model meta-llama/Llama-3.3-70B-Instruct is restricted and you are not in the authorized list. Visit https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct to ask for access. - silently ignoring the lookup for the file config.json in meta-llama/Llama-3.3-70B-Instruct.
+  warnings.warn(
+/home/guna23/.local/lib/python3.11/site-packages/peft/utils/other.py:689: UserWarning: Unable to fetch remote file due to the following error 403 Client Error. (Request ID: Root=1-6ab31e71-1a8f3d1719b47600567070ea;2ce38b7a-414f-4ca1-927b-819b566adc0c)
+
+Cannot access gated repo for url https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct/resolve/main/config.json.
+Access to model meta-llama/Llama-3.3-70B-Instruct is restricted and you are not in the authorized list. Visit https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct to ask for access. - silently ignoring the lookup for the file config.json in meta-llama/Llama-3.3-70B-Instruct.
+  warnings.warn(
+/home/guna23/.local/lib/python3.11/site-packages/peft/utils/other.py:689: UserWarning: Unable to fetch remote file due to the following error 403 Client Error. (Request ID: Root=1-6ab31ec1-0cdfc2365adba2046aeee9d6;357dba8f-abcd-44c7-8d98-66495905a7a8)
+
+Cannot access gated repo for url https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct/resolve/main/config.json.
+Access to model meta-llama/Llama-3.3-70B-Instruct is restricted and you are not in the authorized list. Visit https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct to ask for access. - silently ignoring the lookup for the file config.json in meta-llama/Llama-3.3-70B-Instruct.
+  warnings.warn(
+/home/guna23/.local/lib/python3.11/site-packages/peft/utils/other.py:689: UserWarning: Unable to fetch remote file due to the following error 403 Client Error. (Request ID: Root=1-6ab31f11-13a84f2a2b799ad8180e7bcc;f190cc47-8bbf-40ef-aa29-715214b074ab)
+
+Cannot access gated repo for url https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct/resolve/main/config.json.
+Access to model meta-llama/Llama-3.3-70B-Instruct is restricted and you are not in the authorized list. Visit https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct to ask for access. - silently ignoring the lookup for the file config.json in meta-llama/Llama-3.3-70B-Instruct.
+  warnings.warn(
+/home/guna23/.local/lib/python3.11/site-packages/peft/utils/other.py:689: UserWarning: Unable to fetch remote file due to the following error 403 Client Error. (Request ID: Root=1-6ab31f62-71b2ae4142d4885e7431e13d;8b048d9c-c10d-4d44-a085-f88dc01d40cd)
+
+Cannot access gated repo for url https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct/resolve/main/config.json.
+Access to model meta-llama/Llama-3.3-70B-Instruct is restricted and you are not in the authorized list. Visit https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct to ask for access. - silently ignoring the lookup for the file config.json in meta-llama/Llama-3.3-70B-Instruct.
+  warnings.warn(
+/home/guna23/.local/lib/python3.11/site-packages/peft/utils/other.py:689: UserWarning: Unable to fetch remote file due to the following error 403 Client Error. (Request ID: Root=1-6ab31fb3-546c285e5d78e3ef2b2d0608;da1011fc-9a8a-4cef-bb23-8da3cc0694fe)
+
+Cannot access gated repo for url https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct/resolve/main/config.json.
+Access to model meta-llama/Llama-3.3-70B-Instruct is restricted and you are not in the authorized list. Visit https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct to ask for access. - silently ignoring the lookup for the file config.json in meta-llama/Llama-3.3-70B-Instruct.
+  warnings.warn(
+/home/guna23/.local/lib/python3.11/site-packages/peft/utils/other.py:689: UserWarning: Unable to fetch remote file due to the following error 403 Client Error. (Request ID: Root=1-6ab32003-28aed1fb10df519055b4e4b3;f1c71429-3e62-43f6-98b0-647501706139)
+
+Cannot access gated repo for url https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct/resolve/main/config.json.
+Access to model meta-llama/Llama-3.3-70B-Instruct is restricted and you are not in the authorized list. Visit https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct to ask for access. - silently ignoring the lookup for the file config.json in meta-llama/Llama-3.3-70B-Instruct.
+  warnings.warn(
+/home/guna23/.local/lib/python3.11/site-packages/peft/utils/other.py:689: UserWarning: Unable to fetch remote file due to the following error 403 Client Error. (Request ID: Root=1-6ab32054-0c46ce1f777e63682dd509b1;77545c13-3c0b-43c8-ab13-6a16ad827e80)
+
+Cannot access gated repo for url https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct/resolve/main/config.json.
+Access to model meta-llama/Llama-3.3-70B-Instruct is restricted and you are not in the authorized list. Visit https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct to ask for access. - silently ignoring the lookup for the file config.json in meta-llama/Llama-3.3-70B-Instruct.
+  warnings.warn(
+/home/guna23/.local/lib/python3.11/site-packages/peft/utils/other.py:689: UserWarning: Unable to fetch remote file due to the following error 403 Client Error. (Request ID: Root=1-6ab320a4-622ae0b7098f000b0a19b12a;4ee2df25-bac5-43cc-be35-5b62b2ef8603)
+
+Cannot access gated repo for url https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct/resolve/main/config.json.
+Access to model meta-llama/Llama-3.3-70B-Instruct is restricted and you are not in the authorized list. Visit https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct to ask for access. - silently ignoring the lookup for the file config.json in meta-llama/Llama-3.3-70B-Instruct.
+  warnings.warn(
+/home/guna23/.local/lib/python3.11/site-packages/peft/utils/other.py:689: UserWarning: Unable to fetch remote file due to the following error 403 Client Error. (Request ID: Root=1-6ab320f5-7c9c6762302096e2257d0d11;bc2079bd-ef54-4533-8d93-a26158d8cb5f)
+
+Cannot access gated repo for url https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct/resolve/main/config.json.
+Access to model meta-llama/Llama-3.3-70B-Instruct is restricted and you are not in the authorized list. Visit https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct to ask for access. - silently ignoring the lookup for the file config.json in meta-llama/Llama-3.3-70B-Instruct.
+  warnings.warn(
+/home/guna23/.local/lib/python3.11/site-packages/peft/utils/other.py:689: UserWarning: Unable to fetch remote file due to the following error 403 Client Error. (Request ID: Root=1-6ab3210c-51cec3cf1935506d50d70d7b;e553d252-ccc1-447c-92c6-10a058fbb926)
+
+Cannot access gated repo for url https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct/resolve/main/config.json.
+Access to model meta-llama/Llama-3.3-70B-Instruct is restricted and you are not in the authorized list. Visit https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct to ask for access. - silently ignoring the lookup for the file config.json in meta-llama/Llama-3.3-70B-Instruct.
+  warnings.warn(
+/home/guna23/.local/lib/python3.11/site-packages/peft/utils/other.py:689: UserWarning: Unable to fetch remote file due to the following error 403 Client Error. (Request ID: Root=1-6ab3210d-2fd648b67c31208373b02e28;257ca916-7258-4367-b417-d259f51999a4)
+
+Cannot access gated repo for url https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct/resolve/main/config.json.
+Access to model meta-llama/Llama-3.3-70B-Instruct is restricted and you are not in the authorized list. Visit https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct to ask for access. - silently ignoring the lookup for the file config.json in meta-llama/Llama-3.3-70B-Instruct.
+  warnings.warn(

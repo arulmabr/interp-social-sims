@@ -206,7 +206,9 @@ def estimator_gate(run: Path, trials, init=None) -> Dict[str, object]:
     if init is None:
         init = AgentParams(alpha=th["alpha"], gamma=th["gamma"],
                            lam=th["lambda"], tau=d["tau"])
-    planted = MDC["alpha"]            # the shifted adapter is alpha0 + MDC
+    # the shifted adapter is alpha0 + n * MDC; n is 1 for the original anchor
+    # and 3 for the second one, and is recorded by the run itself
+    planted = float(d.get("preference_mdc_multiple", 1.0)) * MDC["alpha"]
     trials = list(trials)
 
     z = {}

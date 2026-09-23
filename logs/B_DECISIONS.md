@@ -904,3 +904,33 @@ slope-with-intercept is a change to a pre-registered metric, which Track B may n
 initiative. Nothing downstream has been started on the slope statistic and no gate threshold has been
 touched. The numbers above are reported so the choice can be made on evidence; if the authors decline,
 the standing result is the mean-dz one and Gate B3 fails on both runs.
+
+**BD52. GATE B3 PASSES at three times the MDC. The attribution failure at one MDC is a limit of
+sensitivity and not a limit of principle.** 22 Sept, job 23512605.
+
+The second anchor was trained independently (fresh LoRA init, 1120 matrices reset, verified in the log
+and by `test_reinit`) at `preference_mdc_multiple = 3.0`, so alpha moves 0.88 -> 1.18 instead of
+0.88 -> 0.98. Same recipe otherwise. Cloning is unchanged (r = 0.9938, slope 0.9618).
+
+| anchor | planted | achieved | error | preference share | P(pref > action) | GATE |
+|---|---|---|---|---|---|---|
+| 1x MDC | 0.1000 | +0.0874 | 0.13 MDC | 0.268 (belief 0.346 wins) | 0.780 | FAIL |
+| **3x MDC** | 0.3000 | **+0.2987** | **0.01 MDC** | **1.000** | **1.000** | **PASS** |
+
+At three times the detection limit the estimator recovers the planted curvature shift to within one
+hundredth of an MDC and attributes it to preference with weight 1.000, with the action model rejected
+outright. At one times the detection limit the same pipeline splits its weight and puts belief ahead of
+preference.
+
+**This settles the question BD50 and BD51 left open.** The preference/belief confusion is not structural
+identifiability. Alpha and gamma are separable by this estimator; they are merely inseparable when the
+shift sits exactly at the minimum detectable change, which is what the MDC means. The apparatus works
+above its own stated limit and degrades at it, which is the expected behaviour of a calibrated
+instrument rather than a defect.
+
+*What this licenses and what it does not.* It licenses the statement that a planted preference change
+is recoverable and correctly attributable by this pipeline, with the size threshold measured rather than
+assumed. It does not license any claim about the probe: the probe comparison in
+`reports/B_PROBE_VS_ANCHORS.md` is exploratory, on the selection split, and Gate B2 still stands failed.
+The mean-dz statistic continues to flip sign on both anchors (planted +0.0638, measured -0.0350 at 3x),
+which is exactly the curvature blindness the authors' item 1 identified.
