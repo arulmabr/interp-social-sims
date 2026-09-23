@@ -185,6 +185,53 @@ adapter and the reference adapter.** That difference is a change whose size was 
 deliberately, so it is the only thing with a known true value. An adapter on its own is
 just a model that behaves like some agent.
 
+### 2.4 A third anchor, which is not an adapter
+
+Steps one and two produce two anchors that live in **trained weights**. A third anchor
+stands beside them in the comparisons and is built by a completely different route, so it
+needs its own account.
+
+**What it is.** The readout gradient anchor is a **direction in the model's activation
+space**. A direction here is a list of 8,192 numbers, one for each dimension of the
+residual stream, which is the running internal state the model carries from one layer to
+the next. It is used by adding a multiple of it to that state while the model runs. No
+weight is changed.
+
+**How it is computed.** It is the **gradient** of the choice log-odds with respect to the
+residual stream at a chosen layer, averaged over prompts. A gradient is the direction in
+which a small change to the internal state raises a quantity fastest, so this is the
+direction that most directly pushes the written answer from safe toward risky. It was
+computed at **layer 48 and layer 50**.
+
+**Why it is computed twice at each layer.** A model can favour an answer. It can also
+separately favour whichever option is printed second. To hold those apart, the gradient
+was taken **once for each of the two orders the options can be listed in**, which gives
+one direction per order.
+
+**How far the two orders agree.** The agreement is reported as a **cosine**, a number
+between minus one and one, where one means the two directions point the same way, zero
+means they are unrelated, and minus one means they point opposite ways. The two orders
+agree at **+0.727 at layer 48** and **+0.739 at layer 50**. Agreement this far above zero
+means the direction is mostly about which answer is chosen rather than about where the
+answer sits on the page.
+
+**What is kept from the two.** The anchor is the **sum** of the two orders, which is the
+part they have in common and therefore does not depend on presentation order. Its length
+at layer 48 is 22.678. The **difference** of the two orders is the part that flips when
+the order flips, so it is kept separately as a position control. Its length at layer 48 is
+9.191. The order independent part is **2.4 times the size** of the position part, which is
+the right way round for a direction that is meant to be about the answer.
+
+**One further check.** Within a single order the gradients taken on individual prompts
+agree with their own average at 0.882 at layer 48. The direction is therefore not an
+average over prompts that disagree with each other.
+
+**A withdrawn value.** An earlier computation returned a cosine of minus 0.814 at layer 48
+and a position part 2.6 times the order independent part, which is the opposite conclusion.
+That run used prompts in which the word naming the gamble swapped between the two orders,
+so the direction that raises the log-odds swapped with it. The value is withdrawn in full
+rather than qualified, and the corrected figures above replace it.
+
 ---
 
 ## 3. What the figures show, term by term
@@ -287,17 +334,45 @@ selection split, it is not pre-registered, and no verdict from it is certified.
 
 | column | meaning |
 |---|---|
-| **Direction** | what was steered with. The choice probe is the paper's own direction. The others are controls. |
+| **Direction** | what was steered with. The **choice probe** is the paper's own direction, a linear direction trained to separate the two answers. The **difference of means** is the average activation on risky trials minus the average on safe trials, which is the simplest possible direction of that kind. The **reward probe** is trained to predict the reward on offer rather than the answer. The **readout anchor at layer 50** is the same gradient anchor built one layer higher, carried here as a check on itself. |
 | **Distance to the bias anchor** | how far that direction sits from the adapter built to be a pure push toward one answer. |
-| **Distance to the readout anchor** | how far it sits from the gradient that most directly drives the answer. |
+| **Distance to the readout anchor** | how far it sits from the gradient at layer 48 that most directly drives the answer. |
 | **Placed with** | whichever of the two preceding numbers is smaller. |
+
+**What the distance actually measures.** Each direction's effect is summarised by four
+numbers that add up to one. They are the shares of the variation it produces that are
+carried by a constant push, by the wording of the prompt, by the payoff on offer, and by a
+change in how sharply the agent acts on differences. The distance between two directions
+is the ordinary straight line distance between their two sets of four numbers. Zero means
+the two summaries are identical. The largest value reachable is about 1.41, which is what
+two summaries putting all their weight on different single terms would give.
 
 | Direction | Distance to the bias anchor | Distance to the readout anchor | Placed with |
 |---|---|---|---|
 | Choice probe at layer 48 | 0.540 | 0.679 | the bias anchor |
 | Choice probe at layer 50 | 0.440 | 0.778 | the bias anchor |
 | Difference of means at layer 48 | 1.211 | 0.045 | the readout anchor |
+| Difference of means at layer 50 | 1.027 | 0.187 | the readout anchor |
 | Reward probe at layer 48 | 1.172 | 0.043 | the readout anchor |
+| Reward probe at layer 50 | 0.346 | 0.878 | the bias anchor |
+| Readout anchor at layer 50 | 1.227 | 0.026 | the readout anchor |
+
+The first four rows are the ones shown in the figure. The last three are the remaining
+directions that were run, reported here because every direction that runs is reported.
+
+**Two of those additions change what the table says.** The reward probe lands with the
+readout anchor at layer 48 and with the **bias anchor** at layer 50, so where a direction
+is placed can depend on the layer it was read from. The readout anchor built at layer 50
+sits 0.026 from the one built at layer 48, which is close to identical, so the measurement
+recognises the same direction when it is handed to it twice.
+
+**The null band, which decides whether any of this counts.** Random directions were put
+through the identical procedure. The smallest distance any of them reached to a pole is
+**1.009**, and that number is the null band. A direction is only recorded as resembling a
+pole if it gets closer than a random direction managed, since anything a random direction
+achieves is available for free. All seven rows above are inside 1.009 of the pole they are
+placed with. The band itself rests on very few controls, which Section 4 states as a
+limitation.
 
 **The readout anchor** is the gradient anchor, the direction that most directly pushes the
 written answer from safe to risky. **The bias anchor** is the bias adapter from Step 2.
@@ -354,7 +429,7 @@ until confirmed by sampled generation.
 
 ---
 
-## 5. Three descriptions that need correcting
+## 5. Four descriptions that need correcting
 
 ### 5.1 The bias was not implanted as an embedding vector
 
@@ -419,7 +494,30 @@ This matters because the two implants only work as a contrast if preference is t
 that bends with the payoff and bias is the thing that does not. Defining preference as
 indifference to expected value would collapse the distinction the whole design rests on.
 
-### 5.3 A correction to the step counts on the instrument figure
+### 5.3 The distances between directions are not cosine distances
+
+The numbers in Table 2 are sometimes read as cosine distances, which would make them a
+measure of the angle between two directions in the model's activation space. They are not.
+
+**What they are.** As [Section 3.3](#33-table-2-the-probe-placed-against-the-anchors)
+sets out, each direction is first reduced to four numbers that add up to one, the shares
+of its effect carried by a constant push, by the wording, by the payoff, and by the
+sharpness of the response. The distance is the straight line distance between two such
+sets of four numbers, computed as `numpy.linalg.norm(v - w)` in
+`cv_bench/anchors/analysis_b33.py`.
+
+**Why the difference matters.** A cosine distance compares the directions themselves, so
+two directions that do quite different things to behaviour can still look close if they
+happen to point a similar way. The distance used here compares what each direction **does
+to the model's choices**. Two directions can point almost the same way and still sit far
+apart on this measure, which is the intended behaviour, because the question being asked
+is whether a direction acts like a bias or like a change in how the payoff is weighed.
+
+A cosine does appear elsewhere in this work. It is the agreement between the two option
+orders used to build the readout gradient anchor, in
+[Section 2.4](#24-a-third-anchor-which-is-not-an-adapter).
+
+### 5.4 A correction to the step counts on the instrument figure
 
 This concerns the instrument figure rather than the anchors, but the same reading of it
 would otherwise propagate.
