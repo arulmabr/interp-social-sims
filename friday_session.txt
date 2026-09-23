@@ -335,13 +335,14 @@ The result. Logistic switching points, local vLLM stack, cluster bootstrap 95%.
     1. Stack, and what publishing this exposes. These ran on local vLLM (bf16,
        tensor-parallel 2, temperature 0.7, top-p 1.0), not the hosted Goodfire
        stack behind Figures 3 and 5. The unsteered lottery switching points
-       differ: 132.9 hosted against 106.8 vLLM, a 26-token gap. The figure plots
-       the Goodfire baseline as a labelled reference line only and differences
-       nothing across stacks, but printing the panel puts that gap in front of a
-       reviewer. It is PAPER_AUDIT section 2.2, which states that until the gap
-       is settled no comparison between the probe results and the prompting or
-       SAE results is safe. This patch does not create the problem; it makes it
-       visible. Decide that deliberately rather than by accident.
+       differ: 132.9 hosted against 106.8 vLLM, a 26-token gap. The Goodfire
+       baseline was drawn as a labelled reference line and was removed from the
+       figure on 23 Sept at the authors' instruction, so the panel is now
+       single-stack and does not put that gap in front of a reviewer. The gap
+       itself is unchanged and is PAPER_AUDIT section 2.2, which states that
+       until it is settled no comparison between the probe results and the
+       prompting or SAE results is safe. Any sentence citing these numbers must
+       still name the stack, since the reader can no longer see it on the panel.
     1b. The phrase "prompting dose-response" in Section 3.1 presupposes a
        response. The lottery has none. If the panel goes in, the phrase should
        become "prompting dose series" or similar.

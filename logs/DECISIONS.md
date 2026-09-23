@@ -1326,3 +1326,29 @@ a larger n. Offered; not run.
 
 `panel_c` is deleted from `cv_bench/g4_figure.py` and recoverable at f2eafec. No report,
 patch or section of `friday_session.txt` referenced the panel, so nothing else needed changing.
+
+## D90 — the Goodfire reference line removed from s1_7 (23 Sept)
+
+From the 22 Sept sync (`shrey/meeting.txt`): "we might just want to discard the Goodfire
+baseline", agreed in the call. The dashed grey line and its legend entry are gone from
+`s1_7_ladder`'s left panel, which is now single-stack. Title becomes "S1.7  The prompting
+ladder, local vLLM stack".
+
+The opaque legend background added yesterday is reverted to `frameon=False`: it existed only
+because that dashed line ran through the label text, and with the line gone the upper-left
+region is clear.
+
+Consequence, and it cuts both ways. The line was the only place the 26-token cross-stack gap
+(132.9 Goodfire against 106.8 vLLM) was visible in any figure, and D82's W9 listed that
+exposure as a caveat of publishing the panel. Removing it removes the exposure but not the
+problem: PAPER_AUDIT section 2.2 still holds that until the gap is settled, no comparison
+between the probe results and the prompting or SAE results is safe. Section 7's W9 caveat 1 is
+rewritten to say the line is gone and that any sentence citing these numbers must still name
+the stack, because a reader can no longer see it on the panel.
+
+Still outstanding from the same meeting and not done here: the readout figure rework (drop the
+"steps" annotations, four columns, spell out legacy/strict/decision underneath, add intervals
+across agents), the font check against the paper, and the anchors README with the three-step
+write-up. Also unresolved: the meeting kept layer 48 in the main text with layer 50 in the
+appendix, while this session was instructed on 22 Sept to switch s1_2 to layer 50. Raised with
+the authors; s1_2 is left on layer 50 until they choose.
