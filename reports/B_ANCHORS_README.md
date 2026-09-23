@@ -191,6 +191,8 @@ just a model that behaves like some agent.
 
 ### 3.1 `B3_contrasts_plain.png`
 
+![The two contrasts measured by averaging the change in z](../figures/B3_contrasts_plain.png)
+
 This table reports what happened when the two contrasts were measured by taking the
 **mean of the change in z**.
 
@@ -203,10 +205,10 @@ This table reports what happened when the two contrasts were measured by taking 
 
 The values shown:
 
-```
-preference - reference    planted 0.0302    measured 0.0474    [-0.0291, +0.1239]
-bias - reference          planted 0.6000    measured 0.4968    [+0.4178, +0.5759]
-```
+| Contrast | Planted | Measured | 95% interval |
+|---|---|---|---|
+| preference − reference | 0.0302 | 0.0474 | [−0.0291, +0.1239] |
+| bias − reference | 0.6000 | 0.4968 | [+0.4178, +0.5759] |
 
 **What to look at is the sign of the lower end of each interval.** The preference interval
 begins below zero, so on this measurement the planted preference change could not be
@@ -230,6 +232,8 @@ longer contains zero.
 
 ### 3.2 Table 1, the anchor gate at two sizes
 
+![Table 1, the anchor gate at one times and three times the MDC](../figures/B3_table1_anchor_gate.png)
+
 This table reports the same two anchors measured a **different way**, and the change of
 method is the important part.
 
@@ -250,10 +254,10 @@ result was read**.
 | **Attributed to preference** | the second step of the analysis. Having measured that something changed, attribution asks what **kind** of change it was. Five competing explanations are fitted and each receives a share of the evidence between 0 and 1. This column is the share going to preference. The bar for passing is 0.8. |
 | **Gate** | the verdict of the decision rule fixed in the plan, which requires both an accurate recovery **and** a correct attribution. |
 
-```
-One times the MDC     planted 0.1000   recovered +0.0874   error 0.13 MDC   preference 0.268   FAIL
-Three times the MDC   planted 0.3000   recovered +0.2987   error 0.01 MDC   preference 1.000   PASS
-```
+| Anchor | Planted | Recovered | Error | Attributed to preference | Gate |
+|---|---|---|---|---|---|
+| One times the MDC | 0.1000 | +0.0874 | 0.13 MDC | 0.268 with belief ahead at 0.346 | FAIL |
+| Three times the MDC | 0.3000 | +0.2987 | 0.01 MDC | 1.000 with action rejected | PASS |
 
 **The five competing explanations** the attribution step chooses between are:
 
@@ -282,6 +286,8 @@ preference change full weight and a known bias none at all.
 
 ### 3.3 Table 2, the probe placed against the anchors
 
+![Table 2, each direction placed against the bias anchor and the readout anchor](../figures/B3_table2_probe_placement.png)
+
 This table is the third step, and everything about it is **exploratory**. It sits on the
 selection split, it is not pre-registered, and no verdict from it is certified.
 
@@ -292,12 +298,12 @@ selection split, it is not pre-registered, and no verdict from it is certified.
 | **Distance to the readout anchor** | how far it sits from the gradient that most directly drives the answer. |
 | **Placed with** | whichever of the two preceding numbers is smaller. |
 
-```
-Choice probe at layer 48        0.540   0.679   the bias anchor
-Choice probe at layer 50        0.440   0.778   the bias anchor
-Difference of means at layer 48 1.211   0.045   the readout anchor
-Reward probe at layer 48        1.172   0.043   the readout anchor
-```
+| Direction | Distance to the bias anchor | Distance to the readout anchor | Placed with |
+|---|---|---|---|
+| Choice probe at layer 48 | 0.540 | 0.679 | the bias anchor |
+| Choice probe at layer 50 | 0.440 | 0.778 | the bias anchor |
+| Difference of means at layer 48 | 1.211 | 0.045 | the readout anchor |
+| Reward probe at layer 48 | 1.172 | 0.043 | the readout anchor |
 
 **The readout anchor** is the gradient anchor, the direction that most directly pushes the
 written answer from safe to risky. **The bias anchor** is the bias adapter from Step 2.
