@@ -1396,3 +1396,31 @@ Note for whoever places this: at 16.6 inches wide it is built for an appendix pa
 need scaling to a text column. If that is too wide, the alternative is a 2x2 with the rho panel
 spanning the bottom; not done, since the authors asked for the ultimatum version rather than a
 relayout.
+
+## D92 — the few-shot family is separable by colour and dash, not marker alone (23 Sept)
+
+Reported by the authors: three lines in s1_7's ladder panels were the same yellow. They were.
+`FAMILY` gave every few-shot condition the single base gold #BD8A00, and the only difference
+between them was a small marker glyph, which does not read at panel size or in print.
+
+The family hue is kept, because the docstring's convention is that a reader tells the family
+from the colour across figures. Two channels added inside it:
+
+  GOLD_RAMP  000 #7A5A00, 025 #9C7300, 050 #BD8A00, 075 #D3A63A, 100 #E0BE6B
+             graded dark to light by dose; plain `fewshot` stays on the base gold
+  DASH_OF    a distinct dash pattern per member, applied in the ladder panels
+
+Colour, dash and marker now all differ, so the three lines separate at size, in greyscale and
+in print. s1_2's middle panel benefits from the same ramp: fs+cot 000, 025 and 075 were three
+identical gold points and are now dark, mid and light.
+
+One caveat on the ramp: #E0BE6B at the light end has low contrast against the #FCFCFB surface,
+around 1.7:1, below the usual 3:1 floor for graphical objects. It is legible here because the
+dash pattern and marker carry it, but if the palest member ever has to stand on colour alone it
+should be darkened.
+
+Knock-on fix in s1_2's probe panel. Switching that panel to layer 50 (D87) moved target30 and
+target40 close together, 0.061 against 0.073 at thresholds 31.8 and 36.3, and target30's label
+ran through target40's marker. The label placement now looks ahead at every marker in the panel,
+not only at labels already written, and flips to the left when another point sits where the text
+would go.

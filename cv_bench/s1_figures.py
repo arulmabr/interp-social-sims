@@ -56,8 +56,13 @@ FAMILY = {
     "cot": SIENNA, "high_temperature": SIENNA,
     "fewshot": GOLD,
 }
-for _d in ("000", "025", "050", "075", "100"):
-    FAMILY[f"fewshot_cot_dose{_d}"] = GOLD
+# The few-shot family shares a hue so it reads as one family across figures, but
+# five members at one colour are indistinguishable when several are on an axis.
+# Graded by dose, dark to light, with plain `fewshot` left on the base gold.
+GOLD_RAMP = {"000": "#7A5A00", "025": "#9C7300", "050": "#BD8A00",
+             "075": "#D3A63A", "100": "#E0BE6B"}
+for _d, _c in GOLD_RAMP.items():
+    FAMILY[f"fewshot_cot_dose{_d}"] = _c
 
 STACK_TITLE = {
     "hosted": "Goodfire hosted API",
@@ -90,6 +95,19 @@ MARKER_OF = {
 }
 for _d, _m in zip(("000", "025", "050", "075", "100"), ("<", ">", "*", "h", "p")):
     MARKER_OF[f"fewshot_cot_dose{_d}"] = _m
+
+
+DASH_OF = {"fewshot": "-",
+           "fewshot_cot_dose000": (0, (5, 2)),
+           "fewshot_cot_dose025": (0, (3, 1.5)),
+           "fewshot_cot_dose050": (0, (1.5, 1.5)),
+           "fewshot_cot_dose075": (0, (6, 1.5, 1.5, 1.5)),
+           "fewshot_cot_dose100": (0, (1, 1, 4, 1))}
+
+
+def dash(cond: str):
+    """Line style within a colour family; solid for everything else."""
+    return DASH_OF.get(cond, "-")
 
 
 def marker(cond: str) -> str:
@@ -227,6 +245,8 @@ def s1_2_catch():
         seen = {}
         unidentified = []            # collected, then laid out as one block
         placed = []                  # (x, y) of labels already written
+        pts = [(f(r["threshold_interp"]), f(r["p_reject_hyperfair"])) for r in sub
+               if np.isfinite(f(r["threshold_interp"]))]
         for r in sorted(sub, key=lambda r: f(r["threshold_interp"], 1e9)):
             x = f(r["threshold_interp"])
             y = f(r["p_reject_hyperfair"])
@@ -246,16 +266,21 @@ def s1_2_catch():
                         markersize=8, capsize=3, elinewidth=1.6,
                         markeredgecolor=SURFACE, markeredgewidth=1.4, zorder=4)
             if y > 0.005:
-                # drop the label below the marker when a previous one sits within
-                # 0.02 of it in y; a fixed offset stacked fs+cot 025 on 075
+                # Drop the label below the marker when a previous label sits within
+                # 0.02 of it in y (a fixed offset stacked fs+cot 025 on 075), and
+                # flip it to the left when another point's marker is where the text
+                # would go (target30's label ran through target40's marker).
                 dy = 5
                 if any(abs(y - py) < 0.02 and abs(x - px) < 12 for px, py in placed):
                     dy = -11
+                dx, ha = 8, "left"
+                if any(0 < px - x < 9 and abs(py - y) < 0.03 for px, py in pts):
+                    dx, ha = -8, "right"
                 # 3.5: above the dashed reference lines (3) so the box still masks
                 # them, below the markers (4) so a box never covers its own point
                 ax.annotate(r["condition"].replace("fewshot_cot_dose", "fs+cot "), (x, y),
-                            textcoords="offset points", xytext=(8, dy), fontsize=7.5,
-                            color=INK2, bbox=LBOX, zorder=3.5)
+                            textcoords="offset points", xytext=(dx, dy), fontsize=7.5,
+                            color=INK2, ha=ha, bbox=LBOX, zorder=3.5)
                 placed.append((x, y))
         if unidentified:
             names = ", ".join(n for n, _ in unidentified)
@@ -521,8 +546,9 @@ def s1_7_ladder():
             xs = np.array(list(bx), float)
             ys = np.array([np.mean(bx[x]) for x in bx], float)
             col = colour(cond)
-            ax.plot(xs, ys, "-", color=col, linewidth=1.9, marker=marker(cond),
-                    markersize=4.8, markeredgecolor=SURFACE, markeredgewidth=0.7,
+            ax.plot(xs, ys, linestyle=dash(cond), color=col, linewidth=1.9,
+                    marker=marker(cond), markersize=4.8,
+                    markeredgecolor=SURFACE, markeredgewidth=0.7,
                     label=cond, zorder=3)
         ax.axvline(50, color=INK2, linewidth=1.0, linestyle=":", zorder=1)
         ax.axhline(0.5, color=MUTED, linewidth=0.9, linestyle=(0, (2, 3)), zorder=1)
