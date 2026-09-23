@@ -233,7 +233,7 @@ longer contains zero.
 This table reports the same two anchors measured a **different way**, and the change of
 method is the important part.
 
-**Why the method changed.** As Section 1.4 shows, the planted preference change is a
+**Why the method changed.** As [Section 1.4](#14-why-these-two-are-different-in-kind-which-is-the-crux) shows, the planted preference change is a
 change of shape whose effect varies with the payoff and changes sign. Averaging it is
 close to meaningless, because a perfectly faithful adapter could average to nearly zero.
 So the gate now **fits the parametric model to each adapter separately and compares the
@@ -395,7 +395,7 @@ So the two anchors work by completely different mechanisms:
 One consequence follows and is worth stating. A suggestion in the meeting was to evaluate
 how well the bias was implanted by testing how behaviour shifts after the vector is added.
 For the bias adapter there is no such step. The equivalent check is the **cloning** check
-in Section 2.2, which asks whether the adapter reproduces its target agent's choices on
+in [Section 2.2](#22-cloning-and-whether-it-worked), which asks whether the adapter reproduces its target agent's choices on
 held-out prompts. It does, at a correlation of 0.9933.
 
 ### 5.2 What preference was defined as, and what it was not
@@ -406,7 +406,7 @@ does not care what the expectation is.
 
 **That is not what was implanted, and the distinction is worth keeping.** The preference
 implant raises `alpha` from 0.88 to 0.98, which bends the value function. Its effect
-depends on how attractive the gamble is, and it changes sign, as the table in Section 1.4
+depends on how attractive the gamble is, and it changes sign, as the table in [Section 1.4](#14-why-these-two-are-different-in-kind-which-is-the-crux)
 shows. It moves the switching point from 133.9 to 121.0, toward the rational 100 but not
 past it.
 
