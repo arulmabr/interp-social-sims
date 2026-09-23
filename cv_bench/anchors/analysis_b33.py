@@ -204,11 +204,12 @@ def write_report(out: Path, repo: Path) -> Path:
     probe_keys = [k for k in C if k.startswith("choice_probe")]
 
     def d2(c, k):
-        v = C[c]["fingerprint"]["D2_variance"]
+        # a condition that could not be dosed has no fingerprint at all
+        v = C[c].get("fingerprint", {}).get("D2_variance", {})
         return v.get(k, float("nan"))
 
     def top_share(c):
-        s = C[c]["shares"]
+        s = C[c].get("shares")
         if not isinstance(s, dict) or "error" in s:
             return "not available", float("nan")
         t = max(s, key=s.get)
