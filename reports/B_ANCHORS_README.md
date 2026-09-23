@@ -354,17 +354,17 @@ until confirmed by sampled generation.
 
 ---
 
-## 5. Two things from the meeting that need correcting
+## 5. Three descriptions that need correcting
 
 ### 5.1 The bias was not implanted as an embedding vector
 
 This is the most important correction, because the mental model it leaves behind is wrong
 in a way that changes what the result means.
 
-In the discussion the bias implant was described as fetching the encoding of some
-scenarios, building an embedding vector out of them, and adding that vector into the
-model's internal representations at layer 48 or 50. The follow-up question was what
-specific text was used to produce the encoding.
+The bias implant has been described as fetching the encoding of some scenarios, building
+an embedding vector out of them, and adding that vector into the model's internal
+representations at layer 48 or 50. That description invites the question of what specific
+text was used to produce the encoding.
 
 **No text was encoded and no vector was added to the model's activations.** There is no
 scenario text behind the bias implant and no embedding built from one. The mechanism is
@@ -392,17 +392,17 @@ So the two anchors work by completely different mechanisms:
 | **readout gradient anchor** | a vector in activation space, computed as the gradient of the choice log-odds with respect to the residual stream at a given layer | added to the activations at layer 48 or 50 during the forward pass |
 | **bias adapter** | a small set of trained weights | loaded as an adapter; nothing is added to activations |
 
-One consequence follows and is worth stating. A suggestion in the meeting was to evaluate
-how well the bias was implanted by testing how behaviour shifts after the vector is added.
+One consequence follows and is worth stating. It would be natural to evaluate how well the
+bias was implanted by testing how behaviour shifts after the vector is added.
 For the bias adapter there is no such step. The equivalent check is the **cloning** check
 in [Section 2.2](#22-cloning-and-whether-it-worked), which asks whether the adapter reproduces its target agent's choices on
 held-out prompts. It does, at a correlation of 0.9933.
 
 ### 5.2 What preference was defined as, and what it was not
 
-The meeting raised the right question about what counts as preference, and proposed an
-extreme version: an agent that takes the gamble regardless of expected value, because it
-does not care what the expectation is.
+What counts as preference is the right question to ask, and one extreme answer to it is an
+agent that takes the gamble regardless of expected value, because it does not care what
+the expectation is.
 
 **That is not what was implanted, and the distinction is worth keeping.** The preference
 implant raises `alpha` from 0.88 to 0.98, which bends the value function. Its effect
@@ -410,8 +410,8 @@ depends on how attractive the gamble is, and it changes sign, as the table in [S
 shows. It moves the switching point from 133.9 to 121.0, toward the rational 100 but not
 past it.
 
-The extreme version described in the meeting, take the gamble whatever the numbers say,
-is much closer to what the **bias** implant does. The bias adds the same push even to a
+That extreme version, take the gamble whatever the numbers say, is much closer to what the
+**bias** implant does. The bias adds the same push even to a
 gamble paying 30 against a sure 50, which no attitude to risk would find appealing. So the
 intuition offered for preference in fact describes the control.
 
@@ -421,12 +421,12 @@ indifference to expected value would collapse the distinction the whole design r
 
 ### 5.3 A correction to the step counts on the instrument figure
 
-This concerns the instrument figure rather than the anchors, but it came up in the same
-discussion and would otherwise propagate.
+This concerns the instrument figure rather than the anchors, but the same reading of it
+would otherwise propagate.
 
-Asked what the step counts on that figure mean, the answer given was that one step is five
-tokens and that 34 steps corresponds to the range 10 to 180, with 25 steps a shorter range
-chosen where the curve stabilises.
+The step counts on that figure are sometimes read as meaning that one step is five tokens
+and that 34 steps corresponds to the range 10 to 180, with 25 steps a shorter range chosen
+where the curve stabilises.
 
 That is not what those numbers are. **They are the gap between two crossing points, not a
 plotted range:**
