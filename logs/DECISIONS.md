@@ -1363,3 +1363,36 @@ across agents), the font check against the paper, and the anchors README with th
 write-up. Also unresolved: the meeting kept layer 48 in the main text with layer 50 in the
 appendix, while this session was instructed on 22 Sept to switch s1_2 to layer 50. Raised with
 the authors; s1_2 is left on layer 50 until they choose.
+
+## D91 — s1_7 gains the ultimatum ladder (23 Sept)
+
+The left panel was lottery only while the rho panel already carried both games, so a reader of
+the left panel would have taken the whole figure for lottery. It is now 1x3: lottery ladder,
+ultimatum ladder, rho dose-response. Suptitle "S1.7  The prompting ladder on both games, local
+vLLM stack".
+
+No new compute. All six ladder conditions already exist for ultimatum in
+`cleaned/behavioral_games_combined.csv`, 17 offer levels each, and `load_behavioural` already
+returned them; only the lottery ones were being plotted. Added a 0.5 rule to both ladder panels
+so the crossing is readable, and kept one legend, since both panels show the same six
+conditions.
+
+What the new panel shows, and it corroborates a finding already in `friday_session.txt`
+section 3.8 rather than adding a new one. On the local stack the responder accepts almost
+everything unless given few-shot demonstrations:
+
+    persona        P(accept) 1.00 at an offer of 10, 0.97 at 90
+    baseline_rp    0.78 -> 0.85
+    cot            0.57 -> 1.00
+    fewshot        0.30 -> 1.00
+    fewshot_cot_dose000  0.00 -> 0.72
+    fewshot_cot_dose100  0.45 -> 1.00
+
+The first three never fall below 0.5, which is why `S1.7.vllm.ultimatum.{baseline_rp,persona,
+cot}.switch` are registered as not identified. The panel makes that visible instead of leaving
+it as an empty cell in a table.
+
+Note for whoever places this: at 16.6 inches wide it is built for an appendix page and will
+need scaling to a text column. If that is too wide, the alternative is a 2x2 with the rho panel
+spanning the bottom; not done, since the authors asked for the ultimatum version rather than a
+relayout.

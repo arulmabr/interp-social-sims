@@ -502,31 +502,38 @@ def s1_7_ladder():
     from .s1_data import load_behavioural
     curves = {(c.stack, c.game, c.condition): c for c in load_behavioural()}
     rows = read("s1_7_ladder_behaviour.csv")
-    fig, axes = plt.subplots(1, 2, figsize=(12.6, 4.5))
+    fig, axes = plt.subplots(1, 3, figsize=(16.6, 4.5))
 
-    ax = axes[0]
     order = ["baseline_rp", "persona", "cot", "fewshot", "fewshot_cot_dose000",
              "fewshot_cot_dose100"]
-    for cond in order:
-        c = curves.get(("vllm", "lottery", cond))
-        if c is None:
-            continue
-        bx = c.by_x()
-        xs = np.array(list(bx), float)
-        ys = np.array([np.mean(bx[x]) for x in bx], float)
-        col = colour(cond)
-        ax.plot(xs, ys, "-", color=col, linewidth=1.9, marker=marker(cond),
-                markersize=4.8, markeredgecolor=SURFACE, markeredgewidth=0.7,
-                label=cond, zorder=3)
-    ax.axvline(50, color=INK2, linewidth=1.0, linestyle=":", zorder=1)
-    style(ax, "local vLLM: the ladder on its own axes", "risky reward n (tokens)",
-          "P(risky)")
-    ax.set_ylim(-0.03, 1.03)
-    ax.legend(fontsize=7.0, frameon=False, loc="upper left",
-              bbox_to_anchor=(0.0, 0.99), labelcolor=INK2, ncol=2,
-              columnspacing=0.8, handlelength=1.6)
+    # Both games on their own axes. The dotted rule is 50 in each, but it means
+    # different things: the lottery's utility floor, and the even split of the pie.
+    ladders = (("lottery", "risky reward n (tokens)", "P(risky)",
+                "lottery: the ladder"),
+               ("ultimatum", "offer (tokens)", "P(accept)",
+                "ultimatum: the ladder"))
+    for ax, (game, xlab, ylab, title) in zip(axes[:2], ladders):
+        for cond in order:
+            c = curves.get(("vllm", game, cond))
+            if c is None:
+                continue
+            bx = c.by_x()
+            xs = np.array(list(bx), float)
+            ys = np.array([np.mean(bx[x]) for x in bx], float)
+            col = colour(cond)
+            ax.plot(xs, ys, "-", color=col, linewidth=1.9, marker=marker(cond),
+                    markersize=4.8, markeredgecolor=SURFACE, markeredgewidth=0.7,
+                    label=cond, zorder=3)
+        ax.axvline(50, color=INK2, linewidth=1.0, linestyle=":", zorder=1)
+        ax.axhline(0.5, color=MUTED, linewidth=0.9, linestyle=(0, (2, 3)), zorder=1)
+        style(ax, title, xlab, ylab)
+        ax.set_ylim(-0.03, 1.03)
+    # one legend for both ladders: the conditions are the same set
+    axes[0].legend(fontsize=7.0, frameon=False, loc="upper left",
+                   bbox_to_anchor=(0.0, 0.99), labelcolor=INK2, ncol=2,
+                   columnspacing=0.8, handlelength=1.6)
 
-    ax = axes[1]
+    ax = axes[2]
     for game, col, mk in (("lottery", GOLD, "o"), ("ultimatum", PURPLE, "s")):
         sub = [r for r in rows if r["game"] == game and r["rho"] != ""]
         sub.sort(key=lambda r: f(r["rho"]))
@@ -553,7 +560,7 @@ def s1_7_ladder():
           "switching point (tokens)")
     ax.set_xlim(-0.06, 1.06)
     ax.legend(fontsize=7.8, frameon=False, loc="center right", labelcolor=INK2)
-    fig.suptitle("S1.7  The prompting ladder, local vLLM stack",
+    fig.suptitle("S1.7  The prompting ladder on both games, local vLLM stack",
                  fontsize=11.5, color=INK, x=0.02, ha="left")
     fig.tight_layout(rect=(0, 0, 1, 0.93))
     save(fig, "s1_7_ladder")
