@@ -226,6 +226,29 @@ splits with the catch trials removed, for the same reason dominated gambles are 
 the risk side. The calibration split alone leaves only 12 usable prompts once catch trials
 go, too few to average a direction over, so discovery was added. Discovery is not used by the
 cloning check, so no set that any later number depends on is touched, and the test split
-stays locked.
+stays locked. That gives 30 prompts per option order.
+
+**What it found, and it is cleaner here than on the lottery.**
+
+| quantity | ultimatum, layer 48 | ultimatum, layer 50 | lottery, layer 48 |
+|---|---|---|---|
+| agreement between the two option orders | **+0.953** | **+0.956** | +0.727 |
+| length of the order-invariant sum | 18.421 | 17.271 | 22.678 |
+| length of the position difference | 2.869 | 2.614 | 9.191 |
+| sum as a multiple of the difference | **6.4x** | **6.6x** | 2.4x |
+| coherence within one order | 0.851 and 0.844 | 0.853 and 0.847 | 0.882 |
+
+The agreement between the two option orders is reported as a **cosine**, a number between
+minus one and one where one means the two directions point the same way, zero means they are
+unrelated and minus one means they point opposite ways.
+
+At 0.953 the two orders are nearly the same direction, against 0.727 on the lottery, and the
+order-invariant part is 6.4 times the size of the position part rather than 2.4 times. **The
+accept-or-reject readout direction is almost entirely about which answer is given and barely
+about where the answer sits on the page.** Coherence within a single order, the agreement
+between the per-prompt gradients and their own average, is 0.84 to 0.85 on 30 prompts against
+0.88 on the lottery's 88, so the direction is well determined despite the smaller prompt set.
+
+This is the one place where the ultimatum task is the easier of the two.
 
 ---
