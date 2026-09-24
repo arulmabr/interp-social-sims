@@ -259,3 +259,83 @@ def estimator_gate(run: Path, trials, init=None) -> Dict[str, object]:
                            "planted_mean_dz": float(dza.mean())},
         "n": int(ok.sum()),
     }
+
+
+# ---------------------------------------------------------------------------
+# The social counterpart (B7, BD54/BD55).
+#
+# Same two criteria as `estimator_gate`, read against the Fehr-Schmidt
+# responder instead of the prospect-theory agent: the fitted `beta_adv`
+# difference is within one ultimatum MDC of the planted shift, and the contrast
+# is classified preference-like. The preference family is `beta_adv` alone,
+# which is what SOCIAL_FREE_SETS encodes.
+#
+# The synthetic check in reports/B7_RECOVERY.md predicts criterion (b) fails
+# here, because the planted effect never changes sign across the offer grid and
+# the region where it differs from a constant push is saturated. It is run
+# anyway and reported either way, which is rule 5.
+def estimator_gate_social(run: Path, trials, init=None) -> Dict[str, object]:
+    from cv_bench.estimator import fit as FIT
+    from cv_bench.estimator.agents import AgentParams, BETA0
+    from cv_bench.estimator.decision import PREFERENCE_SHARE_MIN
+    from cv_bench.estimator.social_mdc import social_mdc
+
+    d = json.loads((run / "b3_lora.json").read_text())
+    mdc = float(social_mdc()["mdc_beta_adv"])
+    if init is None:
+        init = AgentParams(tau=d["tau"], beta_adv=BETA0)
+    planted = float(d.get("preference_mdc_multiple", 1.0)) * mdc
+    trials = list(trials)
+
+    z = {a: np.load(run / f"residuals_{a}.npz", allow_pickle=False)["z_model"]
+         for a in ("reference", "preference")}
+    za = np.load(run / "residuals_preference.npz", allow_pickle=False)["z_agent"]
+    zar = np.load(run / "residuals_reference.npz", allow_pickle=False)["z_agent"]
+
+    fits_par, tpl = {}, None
+    for a in ("reference", "preference"):
+        par, _, _ = FIT.fit(trials, z[a], ("beta_adv", "tau"), init,
+                            observe="logit", free_templates=True)
+        fits_par[a] = par
+        if a == "reference":
+            tpl = dict(FIT.fit.last_template_offsets)
+
+    # A reduction in beta_adv is the planted preference change (BD54), so the
+    # achieved shift is reference minus preference, positive when it worked.
+    achieved = float(fits_par["reference"].beta_adv - fits_par["preference"].beta_adv)
+    within = bool(abs(achieved - planted) <= mdc)
+
+    fits = FIT.fit_all_models(trials, z["preference"], fits_par["reference"],
+                              observe="logit", template_offsets=tpl,
+                              free_sets=FIT.SOCIAL_FREE_SETS)
+    shares = FIT.model_shares(fits)
+    boot = FIT.cluster_bootstrap(trials, fits, "preference", "action",
+                                 n_boot=400, seed=0)
+    share_ok = bool(shares.get("preference", 0.0) >= PREFERENCE_SHARE_MIN)
+    action_rejected = bool(boot.get("p_a_better", float("nan")) >= 0.95)
+
+    ok = (np.isfinite(za) & np.isfinite(zar)
+          & np.isfinite(z["preference"]) & np.isfinite(z["reference"]))
+    dza, dzm = (za - zar)[ok], (z["preference"] - z["reference"])[ok]
+    slope, icpt = np.polyfit(dza, dzm, 1)
+
+    return {
+        "gate": "PASS" if (within and share_ok and action_rejected) else "FAIL",
+        "criteria": {"beta_adv_within_one_mdc": within,
+                     "preference_share_ge_0.8": share_ok,
+                     "action_model_rejected": action_rejected},
+        "mdc_beta_adv": mdc,
+        "planted_beta_shift": planted,
+        "achieved_beta_shift": achieved,
+        "beta_error_in_mdc": abs(achieved - planted) / mdc,
+        "fitted_beta_adv": {a: float(p.beta_adv) for a, p in fits_par.items()},
+        "fitted_tau": {a: float(p.tau) for a, p in fits_par.items()},
+        "preference_share": float(shares.get("preference", float("nan"))),
+        "shares": {k: float(v) for k, v in shares.items()},
+        "p_preference_beats_action": float(boot.get("p_a_better", float("nan"))),
+        "for_the_record": {"slope_measured_on_planted": float(slope),
+                           "slope_intercept": float(icpt),
+                           "mean_dz": float(dzm.mean()),
+                           "planted_mean_dz": float(dza.mean())},
+        "n": int(ok.sum()),
+    }
