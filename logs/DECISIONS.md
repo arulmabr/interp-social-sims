@@ -1553,3 +1553,30 @@ Second asymmetry, which no design choice can fix: panel B's reference is the cho
 panel C's is a probe fitted to the offer, because the ultimatum probe has one class. The two
 panels answer related but different questions and should not be read as a like-for-like
 comparison between games.
+
+## D98 — panel C coloured by the test, and why panel B has no ticks (23 Sept)
+
+Both at the authors' instruction, one a fix and one an answer.
+
+Colour. Panel C no longer uses panel B's magnitude ramp. Teal means the bar clears its own
+permutation null, grey means it does not, and the value label greys out with the bar. The ramp
+was painting diff-of-means at 34.9x and the ridge at 32.3x in the strongest colour while both
+sit inside their null, and first PCA, the only direction that clears, in the same colour at
+21.8x. Colour now carries the finding rather than the height. A three-entry legend names the
+tick and both colours. Bar geometry, label format and the dotted analytic-null rule are still
+panel B's exactly; only the fill rule changed.
+
+Why panel B has no ticks, which is not a design choice. The permutation null needs the
+activations, and only the ultimatum ones were kept: `g4u/ultimatum_activations.npz` exists and
+there is no lottery equivalent anywhere under the run root. G4b saved direction vectors and
+gradients, not the matrix they were fitted from, so the lottery null cannot be computed from
+what is on disk. Leaving one panel ticked and the other bare invites a reader to assume panel B
+passed a test it has not taken, so its title now says so: "no permutation null run; see C".
+
+This is the open item, and it is the same question panel C answers for the other game. Panel B
+has 45 levels in 8,192 dimensions and five directions all fitted from that one matrix, so its
+`multiples_of_null` axis rests on the same assumption that the ultimatum data just failed. The
+fix is a short collection job on the lottery prompts, both layers in one model load, of the same
+shape as the ultimatum one that cost 7m54s on two GPUs, so on the order of half a GPU-hour
+against 58.1 of 400 used. Not started: it is new compute two days from the deadline and the
+authors have been deciding each step, so it is theirs to call.

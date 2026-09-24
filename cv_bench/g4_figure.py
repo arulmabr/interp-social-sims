@@ -83,7 +83,7 @@ def panel_e(ax):
     ax.set_yticklabels(labels, fontsize=7)
     ax.set_xlabel("cosine with the choice probe  (multiples of the null)",
                   color=INK2, fontsize=8)
-    ax.set_title("B  the probe is not the readout direction", color=INK, fontsize=9, loc="left")
+    ax.set_title("B  the probe is not the readout direction\n     (no permutation null run; see C)", color=INK, fontsize=9, loc="left")
 
 
 
@@ -108,7 +108,7 @@ def panel_u(ax):
     want = [("readout_gradient", "readout gradient"), ("diffmean", "diff-of-means"),
             ("pca1", "first PCA"), ("ridge_logn", "ridge, log offer"),
             ("rand0", "random direction")]
-    labels, vals, p95 = [], [], []
+    labels, vals, p95, ok = [], [], [], []
     for key, lab in want:
         m = [r for r in rs if r["direction"] == key]
         if not m:
@@ -116,18 +116,24 @@ def panel_u(ax):
         labels.append(lab)
         vals.append(float(m[0]["multiples_of_null"]))
         p95.append(float(m[0]["perm_null_p95"]))
+        ok.append(str(m[0]["clears_perm_null"]).lower() == "true")
     order = np.argsort(vals)
     labels = [labels[i] for i in order]
     p95 = [p95[i] for i in order]
+    ok = [ok[i] for i in order]
     vals = [vals[i] for i in order]
     ys = np.arange(len(vals))
-    cols = [TEAL if v >= 10 else (NAVY if v >= 3 else MUTED) for v in vals]
+    # Colour by the test, not by height. Panel B colours by magnitude, but here
+    # the two tallest bars are inside their own null, so a magnitude ramp made
+    # the most prominent bars the ones that mean least.
+    cols = [TEAL if c else MUTED for c in ok]
     ax.barh(ys, vals, color=cols, height=0.62)
     for i, q in enumerate(p95):
         ax.plot([q, q], [i - 0.34, i + 0.34], color=INK, lw=1.8, zorder=6,
                 solid_capstyle="butt")
-    for i, v in enumerate(vals):
-        ax.text(v + 0.4, i, f"{v:.1f}x", va="center", color=INK, fontsize=7.5)
+    for i, (v, c) in enumerate(zip(vals, ok)):
+        ax.text(v + 0.4, i, f"{v:.1f}x", va="center",
+                color=INK if c else MUTED, fontsize=7.5)
     ax.set_xlim(0, max(vals + p95) * 1.18)
     ax.axvline(1.0, color=MUTED, lw=0.9, ls=":")
     ax.set_yticks(ys)
@@ -138,8 +144,11 @@ def panel_u(ax):
                  color=INK, fontsize=9, loc="left")
     from matplotlib.lines import Line2D
     ax.legend(handles=[Line2D([], [], color=INK, lw=1.8,
-                              label="permutation null, 95th pct")],
-              loc="lower right", frameon=False, fontsize=6.8, labelcolor=INK2)
+                              label="permutation null, 95th pct"),
+                       Line2D([], [], color=TEAL, lw=6, label="clears it"),
+                       Line2D([], [], color=MUTED, lw=6, label="does not")],
+              loc="lower right", frameon=False, fontsize=6.5, labelcolor=INK2,
+              handlelength=1.4, labelspacing=0.35)
 
 
 def build():
