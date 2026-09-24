@@ -934,3 +934,23 @@ assumed. It does not license any claim about the probe: the probe comparison in
 `reports/B_PROBE_VS_ANCHORS.md` is exploratory, on the selection split, and Gate B2 still stands failed.
 The mean-dz statistic continues to flip sign on both anchors (planted +0.0638, measured -0.0350 at 3x),
 which is exactly the curvature blindness the authors' item 1 identified.
+
+**BD53. G4u: the ultimatum direction panel uses the OFFER probe, because there is no choice to probe.**
+Job 23607904, 7:54 on 2 A100 80GB, 0.26 GPU-hours. The pre-registered grid (offers 10..100 step 5) was
+not changed. Result: **152 of 152 accept, 0 uncoded**, at every level including 10 tokens out of 100.
+This independently replicates G4's own `trained=false, classes=[1]` record for ultimatum, from a fresh
+run with its own seeds, and the zero uncoded count rules out a parsing cause.
+
+With one class there is no choice probe, so the panel's reference is a probe for whether the offer is
+above the grid median. Layer 50: diff-of-means 34.9x the null, ridge on log offer 32.3x, first PCA
+21.8x, random directions 0.7x and 1.3x, **readout gradient 0.5x**. Layer 48 is the same ordering.
+
+**The three high bars are not evidence and the figure says so.** They are fitted to the same 19
+activation vectors as the reference, so their agreement is largely shared fitting. The readout
+gradient, the only direction built by a different procedure, sits at the null alongside the random
+controls -- which is the direct evidence that the high bars are inflated by shared fitting rather than
+carrying an offer signal. A permutation null over the offer labels is the test that would settle it and
+**has not been run**; the same test applied to the lottery panel would say whether its 17.4x survives.
+
+Not pre-registered. No held-out split. The reference probe's 1.00 training accuracy is separable by
+construction at 19 points in 8,192 dimensions.

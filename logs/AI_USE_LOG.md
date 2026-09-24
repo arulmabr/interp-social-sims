@@ -98,3 +98,9 @@ line is empty.
 
 Unchanged from session 1: whether any paper text was LLM-generated, and whether `feedback.txt` is an
 automated review. Now added: the provenance of `GATE_S0_RESPONSE.md` above.
+
+- **23 Sept 2026.** Wrote `cv_bench/g4u.py`, `cv_bench/g4u_figure.py`, `cv_bench/g4u.sbatch` and
+  `cv_bench/tests/test_g4u.py` (141 tests pass). Adopted `cv_bench/instr.py` and `cv_bench/resume.py`
+  unchanged from `iclr-extension` so the ultimatum prompt matches the one G4 used. Ran job 23607904.
+  Produced `figures/g4u_summary.{png,pdf}` and the two CSVs under the run root. Drafted BD53, including
+  the argument that the panel's three high bars reflect shared fitting rather than signal.
