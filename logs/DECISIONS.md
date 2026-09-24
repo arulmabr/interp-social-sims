@@ -459,3 +459,28 @@ What changed in the code:
 Nothing was regenerated on a GPU and the pre-registered offer grid was not touched. The five
 existing tests still pass. Not done: the same null for the lottery panel in the main tree, where
 45 levels in 8,192 dimensions raise exactly the same question about `multiples_of_null`.
+
+## G4u: acceptance panel removed, geometry carried into the main figure (23 Sept)
+
+At the authors' instruction. `g4u_summary` drops the acceptance curve and is now the geometry
+panel plus its notes. The same geometry is added to the main tree's `g4_summary` as panel C,
+with the bar design matched to that figure's panel B exactly: same height, same colour rule,
+same label format, same dotted rule at the analytic null.
+
+The permutation-null ticks are carried across as an overlay, not as a change to the bars.
+
+One conflict the authors should see, created by matching the design rather than by the data.
+`g4_summary`'s colour rule is by magnitude: teal at or above 10x the analytic null, navy at or
+above 3x, grey below. On the ultimatum panel that paints diff-of-means (34.9x) and the ridge
+(32.3x) teal, the strongest colour, and both are INSIDE their own permutation null. First PCA,
+the only direction that clears, is teal as well at 21.8x. So colour now carries no information
+about which bar survives its null, and the tallest, most saturated bar is one that fails. Only
+the tick position distinguishes them.
+
+Options not taken, either of which fixes it: colour by `clears_perm_null` rather than by
+magnitude, which breaks visual consistency with panel B; or hollow the failing bars as this
+figure did before the design was matched, which also breaks it. Left as the authors asked,
+flagged here and to them.
+
+The acceptance curve is not lost. `g4u_acceptance.csv` holds all 19 levels, and the behaviour it
+showed is recorded in the main tree's D96 and in section 3.8 of friday_session.txt.

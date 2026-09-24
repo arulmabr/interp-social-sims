@@ -56,25 +56,11 @@ def make() -> Path:
     if not geo or not curve:
         raise SystemExit("g4u: no rows; run --stage build first")
 
-    fig, axes = plt.subplots(1, 3, figsize=(16.4, 4.4),
-                             gridspec_kw={"width_ratios": [1.05, 1.15, 0.9]})
+    fig, axes = plt.subplots(1, 2, figsize=(12.6, 4.4),
+                             gridspec_kw={"width_ratios": [1.2, 0.95]})
 
-    # --- A: the acceptance curve -------------------------------------------
+    # --- A: direction geometry ---------------------------------------------
     ax = axes[0]
-    x = [float(r["offer"]) for r in curve]
-    y = [float(r["p_accept"]) for r in curve]
-    ax.plot(x, y, marker="o", markersize=4.5, linewidth=1.8, color=NAVY,
-            markeredgecolor=SURFACE, markeredgewidth=1.1, zorder=3)
-    ax.axhline(0.5, color=MUTED, linewidth=0.9, linestyle=(0, (2, 3)), zorder=1)
-    ax.axvline(50, color=INK2, linewidth=1.0, linestyle=":", zorder=1)
-    ax.annotate("half the pie", (50, 0.06), fontsize=7.5, color=INK2,
-                ha="left", va="bottom", xytext=(3, 0), textcoords="offset points")
-    ax.set_ylim(-0.03, 1.03)
-    style(ax, "A  the model accepts every offer on the grid",
-          "offer (tokens out of 100)", "P(accept)")
-
-    # --- B: direction geometry ---------------------------------------------
-    ax = axes[1]
     geo = sorted(geo, key=lambda r: float(r["multiples_of_null"]))
     names = [r["direction"] for r in geo]
     vals = [float(r["multiples_of_null"]) for r in geo]
@@ -105,25 +91,25 @@ def make() -> Path:
     ax.legend(handles=[Line2D([], [], color=INK, lw=2.0,
                               label="permutation null, 95th percentile")],
               loc="lower right", frameon=False, fontsize=7.5, labelcolor=INK2)
-    style(ax, "B  only one direction clears its own null",
+    style(ax, "A  only one direction clears its own null",
           f"cosine with the offer probe  (multiples of the analytic null), "
           f"layer {PANEL_LAYER}")
 
-    # --- C: what the panels establish --------------------------------------
-    ax = axes[2]
+    # --- B: what the panel establishes -------------------------------------
+    ax = axes[1]
     ax.axis("off")
     n_lvl = len(curve)
     lo = min(float(r["p_accept"]) for r in curve)
     acc = float(geo[0]["offer_probe_train_accuracy"])
     perm_n = max((int(r.get("perm_n") or 0) for r in geo), default=0)
     blocks = [
-        ("What each panel establishes", None),
-        ("A  There is no choice to probe",
+        ("What this panel establishes", None),
+        ("Why the reference is the offer, not the choice",
          f"Acceptance never falls below {lo:.2f} across all {n_lvl} offers, "
          "including 10 tokens out of 100. With one class there is no "
          "accept-against-reject contrast, so the lottery panel's choice probe "
-         "has no counterpart here."),
-        ("B  The two tallest bars are shared fitting",
+         "has no counterpart here and a probe fitted to the offer stands in."),
+        ("The two tallest bars are shared fitting",
          "Every fitted direction here comes from the SAME "
          f"{n_lvl} activation vectors as the reference, so all of them lie in "
          "a subspace of at most 18 dimensions and are close before any offer "
