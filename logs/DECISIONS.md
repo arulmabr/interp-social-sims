@@ -1783,3 +1783,29 @@ Three cosmetic changes requested on the ladder figure, all applied and rendered.
      asked for it to come off.
 
 No data, fit or value changed. Figure regenerated.
+
+## D105 — g4_summary is two panels: the two games side by side (24 Sept)
+
+At the authors' instruction the readout-against-free-generation panel is removed, since they
+have not settled how to use it. `panel_d` is deleted from `cv_bench/g4_figure.py` and is
+recoverable at 665bc2c. The figure is now the lottery and ultimatum geometry side by side at
+10.0x4.4 inches, relabelled A and B.
+
+Titles are "A  Lottery Game" and "B  Ultimatum Game". The reference direction and the unit used
+to sit in the titles and now appear only in the x labels, which is where the authors pointed
+out they were already stated.
+
+The suptitle is corrected with them. It read "how it is read out, and which directions it is
+closest to"; the first half described the panel that has gone, so it now reads "The steering
+probe: which directions it is closest to".
+
+What leaves the record with the panel, listed because it was a finding rather than decoration:
+the logit readout puts the lottery crossing at 234.1 while free generation puts it at 62.6
+under the last-mention rule and 63.2 under the decision rule and 110.0 under the first-mention
+rule. That measurement stands in `results/S/s1/instr_agreement.csv` and in section 3.3 of
+friday_session.txt; it is only off this figure.
+
+One asymmetry the two remaining panels still carry, unchanged by this edit: panel A is
+referenced to the choice probe and panel B to a probe fitted on the offer, because the
+ultimatum arm has no choice probe on this stack. The panels are therefore not a like-for-like
+comparison between games, and nothing on the figure says so now that the notes block is gone.

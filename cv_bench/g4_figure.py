@@ -2,8 +2,7 @@
 
 Two panels, one per measurement property:
 
-  A  the readout against free generation, the instrument check
-  B  direction geometry at layer 50, cosines as multiples of the 1/sqrt(d) null
+  A  direction geometry at layer 50, cosines as multiples of the 1/sqrt(d) null
 
 Every number is read from results/S/s1/*.csv. Nothing here is typed by hand.
 Palette and conventions from cv_bench/s1_figures.py.
@@ -25,29 +24,6 @@ DATA = Path(__file__).resolve().parents[1] / "results/S/s1"
 
 def rows(name: str) -> List[dict]:
     return list(csv.DictReader(open(DATA / name, newline="")))
-
-
-def panel_d(ax):
-    """Readout crossing against free-generation crossing."""
-    ia = [r for r in rows("instr_agreement.csv")
-          if r["enough"] == "True" and r["template"] == "True"
-          and r["crossing_readout"] and r["crossing_free"]]
-    labels, rd, fr = [], [], []
-    for r in ia:
-        labels.append(r["coding"])
-        rd.append(float(r["crossing_readout"]))
-        fr.append(float(r["crossing_free"]))
-    xs = np.arange(len(labels))
-    ax.bar(xs - 0.19, rd, width=0.36, color=PURPLE, label="logit readout")
-    ax.bar(xs + 0.19, fr, width=0.36, color=GOLD, label="free generation")
-    ax.set_xticks(xs)
-    ax.set_xticklabels(labels, fontsize=7.5)
-    ax.set_ylabel("crossing (tokens)", color=INK2, fontsize=8)
-    ax.set_title("A  the readout does not track free generation",
-                 color=INK, fontsize=9, loc="left")
-    ax.set_ylim(0, 300)
-    ax.legend(frameon=False, fontsize=7, loc="upper center", ncol=2,
-              bbox_to_anchor=(0.5, 0.99), borderaxespad=0.2)
 
 
 def panel_e(ax):
@@ -79,8 +55,7 @@ def panel_e(ax):
     ax.set_yticklabels(labels, fontsize=7)
     ax.set_xlabel("cosine with the choice probe  (multiples of the null)",
                   color=INK2, fontsize=8)
-    ax.set_title("B  lottery: cosine with the choice probe",
-                 color=INK, fontsize=9, loc="left")
+    ax.set_title("A  Lottery Game", color=INK, fontsize=9, loc="left")
 
 
 
@@ -125,8 +100,7 @@ def panel_u(ax):
     ax.set_yticklabels(labels, fontsize=7)
     ax.set_xlabel("cosine with the offer probe  (multiples of the null)",
                   color=INK2, fontsize=8)
-    ax.set_title("C  ultimatum: cosine with the offer probe",
-                 color=INK, fontsize=9, loc="left")
+    ax.set_title("B  Ultimatum Game", color=INK, fontsize=9, loc="left")
 
 
 def build():
@@ -136,19 +110,18 @@ def build():
     from matplotlib.gridspec import GridSpec
 
     # one row, two panels
-    fig = plt.figure(figsize=(14.2, 4.4))
-    gs = GridSpec(1, 3, figure=fig, wspace=0.34)
-    axes = [fig.add_subplot(gs[0, 0]), fig.add_subplot(gs[0, 1]),
-            fig.add_subplot(gs[0, 2])]
+    fig = plt.figure(figsize=(10.0, 4.4))
+    gs = GridSpec(1, 2, figure=fig, wspace=0.32)
+    axes = [fig.add_subplot(gs[0, 0]), fig.add_subplot(gs[0, 1])]
     for ax in axes:
         ax.set_facecolor(SURFACE)
         ax.grid(False)
         ax.tick_params(labelsize=7.5, colors=INK2)
         for s_ in ax.spines.values():
             s_.set_color(GRID)
-    panel_d(axes[0]); panel_e(axes[1]); panel_u(axes[2])
+    panel_e(axes[0]); panel_u(axes[1])
 
-    fig.suptitle("The steering probe: how it is read out, and which directions it is closest to",
+    fig.suptitle("The steering probe: which directions it is closest to",
                  color=INK, fontsize=12, y=0.985)
     save(fig, "g4_summary")
 
