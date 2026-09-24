@@ -1,0 +1,108 @@
+{
+  "accum": 8,
+  "adapters": {
+    "bias": {
+      "adapter": "bias",
+      "final_loss": 0.7502637066692114,
+      "params": {
+        "action": 0.6,
+        "alpha": 0.88,
+        "gamma": 0.61,
+        "kappa": 1.0,
+        "label": 0.0,
+        "lambda": 2.25,
+        "position": 0.0,
+        "tau": 0.0873
+      },
+      "steps": 600,
+      "target_mean_p_risky": 0.5369954150943462
+    },
+    "preference": {
+      "adapter": "preference",
+      "final_loss": 0.7240258568525314,
+      "params": {
+        "action": 0.0,
+        "alpha": 0.98,
+        "gamma": 0.61,
+        "kappa": 1.0,
+        "label": 0.0,
+        "lambda": 2.25,
+        "position": 0.0,
+        "tau": 0.0873
+      },
+      "steps": 600,
+      "target_mean_p_risky": 0.48463253943130924
+    },
+    "reference": {
+      "adapter": "reference",
+      "final_loss": 0.7393607669323683,
+      "params": {
+        "action": 0.0,
+        "alpha": 0.88,
+        "gamma": 0.61,
+        "kappa": 1.0,
+        "label": 0.0,
+        "lambda": 2.25,
+        "position": 0.0,
+        "tau": 0.0873
+      },
+      "steps": 600,
+      "target_mean_p_risky": 0.4786339822268748
+    }
+  },
+  "all_cloning_pass": false,
+  "bias": 0.6,
+  "cloning": {
+    "bias": {
+      "PASS": false,
+      "correlation": -0.0026999660255803267,
+      "intercept": 0.0023236235296254034,
+      "n": 240,
+      "slope": -0.00020384341385599358
+    },
+    "preference": {
+      "PASS": false,
+      "correlation": 0.0015850595517062868,
+      "intercept": 0.0009837652779520606,
+      "n": 240,
+      "slope": 9.081729941488478e-05
+    },
+    "reference": {
+      "PASS": false,
+      "correlation": -0.00014480623639994417,
+      "intercept": 0.0005430747359709716,
+      "n": 240,
+      "slope": -3.9556245294432585e-05
+    }
+  },
+  "contrasts": {
+    "bias_minus_reference": {
+      "agent_mean_dz": 0.5999999999999998,
+      "correlation": 0.0006981255496057569,
+      "model_mean_dz": 0.0015619706939162443,
+      "recovery_ratio": 0.0026032844898604083
+    },
+    "preference_minus_reference": {
+      "agent_mean_dz": 0.036925377454937465,
+      "correlation": 0.0037373532983209397,
+      "model_mean_dz": 0.0005204427202335863,
+      "recovery_ratio": 0.014094445503467574
+    }
+  },
+  "four_bit": false,
+  "lr": 0.0003,
+  "model": "meta-llama/Llama-3.1-8B-Instruct",
+  "n_clone_rows": 240,
+  "n_train_rows": 1880,
+  "rank": 16,
+  "seed": 0,
+  "steps": 600,
+  "tau": 0.0873,
+  "tau_is_provisional": true,
+  "theta0": {
+    "alpha": 0.88,
+    "gamma": 0.61,
+    "lambda": 2.25
+  },
+  "utc": "2026-09-21T21:09:40+00:00"
+}

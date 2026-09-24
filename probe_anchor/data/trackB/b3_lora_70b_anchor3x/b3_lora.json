@@ -1,0 +1,166 @@
+{
+  "accum": 8,
+  "adapters": {
+    "bias": {
+      "init_from_reference": false,
+      "loaded_from": "adapter_bias.pt",
+      "params": {
+        "action": 0.6,
+        "alpha": 0.88,
+        "gamma": 0.61,
+        "kappa": 1.0,
+        "label": 0.0,
+        "lambda": 2.25,
+        "position": 0.0,
+        "tau": 0.1186
+      },
+      "sha256": "1ad5eb21c9bb78995b96a165714fd5c3084135ab80d5d7ea8ddbd085040d0ee9",
+      "target_mean_p_risky": 0.5546838038847058
+    },
+    "preference": {
+      "adapter": "preference",
+      "final_loss": 0.36255589986452835,
+      "init_from_reference": false,
+      "loaded_from": "adapter_preference.pt",
+      "params": {
+        "action": 0.0,
+        "alpha": 1.1800000000000002,
+        "gamma": 0.61,
+        "kappa": 1.0,
+        "label": 0.0,
+        "lambda": 2.25,
+        "position": 0.0,
+        "tau": 0.1186
+      },
+      "selected_heldout": {
+        "PASS": true,
+        "correlation": 0.9930860856075393,
+        "intercept": -0.11476687191601231,
+        "n": 60,
+        "slope": 0.9683918459818414
+      },
+      "selected_step": 500,
+      "sha256": "f494f114ba13e2cc7299f2a61178447744da5f84820d21e5ccabae64ed540c6a",
+      "steps": 500,
+      "target_mean_p_risky": 0.49897750608442054,
+      "trace": [
+        {
+          "heldout": {
+            "PASS": true,
+            "correlation": 0.9911962414411747,
+            "intercept": -0.1260409253578817,
+            "n": 60,
+            "slope": 0.9287573606524446
+          },
+          "heldout_z_sd": 3.162598448982638,
+          "step": 250,
+          "train": {
+            "PASS": true,
+            "correlation": 0.9956735200019615,
+            "intercept": 0.0013499757372908926,
+            "n": 60,
+            "slope": 0.9554738892011103
+          },
+          "train_z_sd": 3.50315754010456
+        },
+        {
+          "heldout": {
+            "PASS": true,
+            "correlation": 0.9930860856075393,
+            "intercept": -0.11476687191601231,
+            "n": 60,
+            "slope": 0.9683918459818414
+          },
+          "heldout_z_sd": 3.291286273375045,
+          "step": 500,
+          "train": {
+            "PASS": true,
+            "correlation": 0.997756056608945,
+            "intercept": 0.03774499386554527,
+            "n": 60,
+            "slope": 0.9957839341739687
+          },
+          "train_z_sd": 3.6433302916266963
+        }
+      ]
+    },
+    "reference": {
+      "init_from_reference": false,
+      "loaded_from": "adapter_reference.pt",
+      "params": {
+        "action": 0.0,
+        "alpha": 0.88,
+        "gamma": 0.61,
+        "kappa": 1.0,
+        "label": 0.0,
+        "lambda": 2.25,
+        "position": 0.0,
+        "tau": 0.1186
+      },
+      "sha256": "4e99a1c8fa79605c21e831307fffe0733da8763e14fdc61fc52ff5c3470579e5",
+      "target_mean_p_risky": 0.4838688243455488
+    }
+  },
+  "adapters_from": "${ICLR_RUNROOT}/trackB/b3_lora_70b",
+  "all_cloning_pass": true,
+  "bias": 0.6,
+  "cloning": {
+    "bias": {
+      "PASS": true,
+      "correlation": 0.9933467298792111,
+      "intercept": -0.04728713074859861,
+      "n": 1016,
+      "slope": 0.9359402692288632
+    },
+    "preference": {
+      "PASS": true,
+      "correlation": 0.9938457238628684,
+      "intercept": -0.10909506290602068,
+      "n": 1016,
+      "slope": 0.9617596584288444
+    },
+    "reference": {
+      "PASS": true,
+      "correlation": 0.9915206992004307,
+      "intercept": -0.012988158606038826,
+      "n": 1016,
+      "slope": 0.956678147729405
+    }
+  },
+  "contrasts": {
+    "bias_minus_reference": {
+      "agent_mean_dz": 0.5999999999999999,
+      "correlation": 0.1143564533800169,
+      "model_mean_dz": 0.5283670853523168,
+      "recovery_ratio": 0.8806118089205281
+    },
+    "preference_minus_reference": {
+      "agent_mean_dz": 0.06380929312123386,
+      "correlation": 0.8027775646403356,
+      "model_mean_dz": -0.0350077036656778,
+      "recovery_ratio": -0.548630175218604
+    }
+  },
+  "four_bit": false,
+  "init_from_reference": false,
+  "lr": 0.0001,
+  "model": "meta-llama/Llama-3.3-70B-Instruct",
+  "n_clone_rows": 1016,
+  "n_train_rows": 1872,
+  "preference_mdc_multiple": 3.0,
+  "rank": 16,
+  "reinit": true,
+  "retrained": [
+    "preference"
+  ],
+  "seed": 0,
+  "steps": 500,
+  "tau": 0.1186,
+  "tau_is_provisional": false,
+  "theta0": {
+    "alpha": 0.88,
+    "gamma": 0.61,
+    "lambda": 2.25
+  },
+  "utc": "2026-09-23T00:12:27+00:00"
+}

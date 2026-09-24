@@ -1,0 +1,209 @@
+{
+  "all_formats_caveat": "includes neutral A/B labels, where the Friday session found the unsteered readout ignores the payoff; prefer the legacy versions until that work lands",
+  "cosines": {
+    "L48_legacy_diff|L48_legacy_one_format": 0.07561475708221661,
+    "L48_legacy_diff|L48_legacy_order0": 0.03090770186590863,
+    "L48_legacy_diff|L48_legacy_order1": -0.2723415084784361,
+    "L48_legacy_diff|L48_legacy_sum": -0.1250690745946636,
+    "L48_legacy_diff|L50_legacy_diff": 0.9001637566564444,
+    "L48_legacy_diff|L50_legacy_one_format": 0.0738689315657466,
+    "L48_legacy_diff|L50_legacy_order0": 0.036473420101118634,
+    "L48_legacy_diff|L50_legacy_order1": -0.22956632304817992,
+    "L48_legacy_diff|L50_legacy_sum": -0.09999214491150138,
+    "L48_legacy_one_format|L48_legacy_order0": 0.9692198875369291,
+    "L48_legacy_one_format|L48_legacy_order1": 0.9101869232020072,
+    "L48_legacy_one_format|L48_legacy_sum": 0.9502923402048328,
+    "L48_legacy_one_format|L50_legacy_diff": 0.07314946687103063,
+    "L48_legacy_one_format|L50_legacy_one_format": 0.9271056648802544,
+    "L48_legacy_one_format|L50_legacy_order0": 0.9003174089398316,
+    "L48_legacy_one_format|L50_legacy_order1": 0.847735647099689,
+    "L48_legacy_one_format|L50_legacy_sum": 0.883375772910831,
+    "L48_legacy_order0|L48_legacy_order1": 0.9533235077968564,
+    "L48_legacy_order0|L48_legacy_sum": 0.9878084331437147,
+    "L48_legacy_order0|L50_legacy_diff": 0.03120570798267697,
+    "L48_legacy_order0|L50_legacy_one_format": 0.895243375838196,
+    "L48_legacy_order0|L50_legacy_order0": 0.9236180986058073,
+    "L48_legacy_order0|L50_legacy_order1": 0.8825700251819181,
+    "L48_legacy_order0|L50_legacy_sum": 0.9128721313924759,
+    "L48_legacy_order1|L48_legacy_sum": 0.9887069923112985,
+    "L48_legacy_order1|L50_legacy_diff": -0.24189458637789168,
+    "L48_legacy_order1|L50_legacy_one_format": 0.8395000573707658,
+    "L48_legacy_order1|L50_legacy_order0": 0.8781122863472482,
+    "L48_legacy_order1|L50_legacy_order1": 0.9189662364069343,
+    "L48_legacy_order1|L50_legacy_sum": 0.9089931505972941,
+    "L48_legacy_sum|L50_legacy_diff": -0.10922389720598291,
+    "L48_legacy_sum|L50_legacy_one_format": 0.8771335174473296,
+    "L48_legacy_sum|L50_legacy_order0": 0.9111232032254157,
+    "L48_legacy_sum|L50_legacy_order1": 0.911813328292481,
+    "L48_legacy_sum|L50_legacy_sum": 0.921710857729248,
+    "L50_legacy_diff|L50_legacy_one_format": 0.07713945935344897,
+    "L50_legacy_diff|L50_legacy_order0": 0.03293068352083771,
+    "L50_legacy_diff|L50_legacy_order1": -0.262353436972911,
+    "L50_legacy_diff|L50_legacy_sum": -0.11862065285800662,
+    "L50_legacy_one_format|L50_legacy_order0": 0.9703923043944047,
+    "L50_legacy_one_format|L50_legacy_order1": 0.914218995528637,
+    "L50_legacy_one_format|L50_legacy_sum": 0.9523898410987236,
+    "L50_legacy_order0|L50_legacy_order1": 0.9558090093567174,
+    "L50_legacy_order0|L50_legacy_sum": 0.9884948541116617,
+    "L50_legacy_order1|L50_legacy_sum": 0.9892793446179029
+  },
+  "domain": "social",
+  "frame_role": "core",
+  "gradient_wrt": "output of model.model.layers[L], the tensor SteeringHook adds to",
+  "how_to_load": {
+    "apply": "cv_bench.steer.Intervention(layer=L, vectors=vec, scale=s, positions='last', mode='add', norm_unit=median_residual_norm(...))",
+    "note": "the vector is the gradient of z with respect to the OUTPUT of model.model.layers[L], which is the tensor SteeringHook adds to; Intervention normalises it, so only its direction is used",
+    "numpy": "vec = np.load('grad_L50_legacy_sum.npy')       # Track B's anchor\nvec = np.load('grad_L50_legacy_one_format.npy')  # what G4b loads",
+    "prefer": "the legacy_* versions until the neutral-label readout work lands",
+    "roles": {
+      "legacy_diff": "position-bias direction by construction; a control, not an anchor",
+      "legacy_one_format": "what the Friday session loads for G4b",
+      "legacy_order0/1": "the per-order gradients g1 and g2 the others derive from",
+      "legacy_sum": "order-invariant anchor; what Track B uses as the B3.1 anchor"
+    },
+    "verify": "sha256 of each .npy is in versions[<key>]['sha256']"
+  },
+  "model": "meta-llama/Llama-3.3-70B-Instruct",
+  "position": "last",
+  "split": "cal",
+  "stem": "Answer:",
+  "utc": "2026-09-24T04:44:04+00:00",
+  "versions": {
+    "L48_cos_g1_g2": 0.9533235077968564,
+    "L48_legacy_diff": {
+      "derived_from": [
+        "grad_L48_legacy_order0.npy",
+        "grad_L48_legacy_order1.npy"
+      ],
+      "dtype": "float64",
+      "file": "grad_L48_legacy_diff.npy",
+      "norm": 2.8691032611786556,
+      "role": "position-bias direction (g1 - g2), a control",
+      "sha256": "380ccd85cf6a607696fb1665d67cf3157af872521f959d3f577e4a3f7cb97c1e",
+      "shape": [
+        8192
+      ]
+    },
+    "L48_legacy_one_format": {
+      "coherence": 0.9936073373881152,
+      "dtype": "float64",
+      "file": "grad_L48_legacy_one_format.npy",
+      "items_key": "6:b5078c2d15d9:549a5f6cae2d",
+      "mean_of_norms": 9.978063742319742,
+      "n": 6,
+      "norm_of_mean": 9.914277347295211,
+      "sha256": "d9f9ae4604449f23c0d9ef11029950b6a485053bc85c276b148fc89aece05ec2",
+      "shape": [
+        8192
+      ]
+    },
+    "L48_legacy_order0": {
+      "coherence": 0.8505434857375072,
+      "dtype": "float64",
+      "file": "grad_L48_legacy_order0.npy",
+      "items_key": "30:95658fa58c27:150aa41accfa",
+      "mean_of_norms": 10.749273459116617,
+      "n": 30,
+      "norm_of_mean": 9.14272451706272,
+      "sha256": "06855416204069b0691d43b2103511d96d96cc1b9c67b5d76e02188431dad53f",
+      "shape": [
+        8192
+      ]
+    },
+    "L48_legacy_order1": {
+      "coherence": 0.844247557852506,
+      "dtype": "float64",
+      "file": "grad_L48_legacy_order1.npy",
+      "items_key": "30:d3d16be7080f:be78e97ec3e0",
+      "mean_of_norms": 11.249484856923422,
+      "n": 30,
+      "norm_of_mean": 9.497350117556348,
+      "sha256": "e965046ab7eec49211c6158a899b61600fa4208f069da38e6683a2480cb689aa",
+      "shape": [
+        8192
+      ]
+    },
+    "L48_legacy_sum": {
+      "derived_from": [
+        "grad_L48_legacy_order0.npy",
+        "grad_L48_legacy_order1.npy"
+      ],
+      "dtype": "float64",
+      "file": "grad_L48_legacy_sum.npy",
+      "norm": 18.421356849520844,
+      "role": "order-invariant anchor (g1 + g2)",
+      "sha256": "8c39570fe626aa95184e0e3a16a66377198d4a3de41c58bb0d809445c25c8ff0",
+      "shape": [
+        8192
+      ]
+    },
+    "L50_cos_g1_g2": 0.9558090093567174,
+    "L50_legacy_diff": {
+      "derived_from": [
+        "grad_L50_legacy_order0.npy",
+        "grad_L50_legacy_order1.npy"
+      ],
+      "dtype": "float64",
+      "file": "grad_L50_legacy_diff.npy",
+      "norm": 2.613687362363246,
+      "role": "position-bias direction (g1 - g2), a control",
+      "sha256": "9fa55eac6442621b5719527d4656368608eeab8e28fb4d73196b5a43e647f902",
+      "shape": [
+        8192
+      ]
+    },
+    "L50_legacy_one_format": {
+      "coherence": 0.9941190984351759,
+      "dtype": "float64",
+      "file": "grad_L50_legacy_one_format.npy",
+      "items_key": "6:b5078c2d15d9:549a5f6cae2d",
+      "mean_of_norms": 9.387955029805502,
+      "n": 6,
+      "norm_of_mean": 9.33274539038022,
+      "sha256": "fdf3e53056714c39f8cb5d93e460c2793b83c2db47c9c6a362fa357d2f5f3f05",
+      "shape": [
+        8192
+      ]
+    },
+    "L50_legacy_order0": {
+      "coherence": 0.8531073784018163,
+      "dtype": "float64",
+      "file": "grad_L50_legacy_order0.npy",
+      "items_key": "30:95658fa58c27:150aa41accfa",
+      "mean_of_norms": 10.056213728586833,
+      "n": 30,
+      "norm_of_mean": 8.579030130643067,
+      "sha256": "ba20e8aaa29447a3ca62e999284ad4d832ba96cea1d91c3a5c53b7e680510b96",
+      "shape": [
+        8192
+      ]
+    },
+    "L50_legacy_order1": {
+      "coherence": 0.8472096757292223,
+      "dtype": "float64",
+      "file": "grad_L50_legacy_order1.npy",
+      "items_key": "30:d3d16be7080f:be78e97ec3e0",
+      "mean_of_norms": 10.488105138142904,
+      "n": 30,
+      "norm_of_mean": 8.885624153100041,
+      "sha256": "74c4597f99fe66883ad6e51a0895fc19ea6f6a9ffd33c2e27311adec0b9fc0c1",
+      "shape": [
+        8192
+      ]
+    },
+    "L50_legacy_sum": {
+      "derived_from": [
+        "grad_L50_legacy_order0.npy",
+        "grad_L50_legacy_order1.npy"
+      ],
+      "dtype": "float64",
+      "file": "grad_L50_legacy_sum.npy",
+      "norm": 17.270691576109378,
+      "role": "order-invariant anchor (g1 + g2)",
+      "sha256": "286175f4560062bf1e409000fee9ee021fcd827a9bbbe65c223cb252aa0aba31",
+      "shape": [
+        8192
+      ]
+    }
+  }
+}

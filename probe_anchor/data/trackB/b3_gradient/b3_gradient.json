@@ -1,0 +1,221 @@
+{
+  "all_formats_caveat": "includes neutral A/B labels, where the Friday session found the unsteered readout ignores the payoff; prefer the legacy versions until that work lands",
+  "cosines": {
+    "L48_legacy_diff|L48_legacy_one_format": 0.531418718925761,
+    "L48_legacy_diff|L48_legacy_order0": 0.5478783725983578,
+    "L48_legacy_diff|L48_legacy_order1": -0.17560236555936254,
+    "L48_legacy_diff|L48_legacy_sum": 0.23178402080638927,
+    "L48_legacy_diff|L50_legacy_diff": 0.9300674234860378,
+    "L48_legacy_diff|L50_legacy_one_format": 0.48820606865764077,
+    "L48_legacy_diff|L50_legacy_order0": 0.5030826914017035,
+    "L48_legacy_diff|L50_legacy_order1": -0.15576511839334495,
+    "L48_legacy_diff|L50_legacy_sum": 0.21560724814905932,
+    "L48_legacy_one_format|L48_legacy_order0": 0.993751726854961,
+    "L48_legacy_one_format|L48_legacy_order1": 0.7334997722661714,
+    "L48_legacy_one_format|L48_legacy_sum": 0.9401711795800306,
+    "L48_legacy_one_format|L50_legacy_diff": 0.5026386026864684,
+    "L48_legacy_one_format|L50_legacy_one_format": 0.9326041611483282,
+    "L48_legacy_one_format|L50_legacy_order0": 0.9266334840290721,
+    "L48_legacy_one_format|L50_legacy_order1": 0.6897144387745114,
+    "L48_legacy_one_format|L50_legacy_sum": 0.876929628315292,
+    "L48_legacy_order0|L48_legacy_order1": 0.7273501359901686,
+    "L48_legacy_order0|L48_legacy_sum": 0.9407656974575613,
+    "L48_legacy_order0|L50_legacy_diff": 0.516664092391515,
+    "L48_legacy_order0|L50_legacy_one_format": 0.9254168702799219,
+    "L48_legacy_order0|L50_legacy_order0": 0.9299824302075305,
+    "L48_legacy_order0|L50_legacy_order1": 0.6823568049371658,
+    "L48_legacy_order0|L50_legacy_sum": 0.8752596040327607,
+    "L48_legacy_order1|L48_legacy_sum": 0.9169497924070966,
+    "L48_legacy_order1|L50_legacy_diff": -0.15496644902129983,
+    "L48_legacy_order1|L50_legacy_one_format": 0.6885326369076176,
+    "L48_legacy_order1|L50_legacy_order0": 0.6817014165000412,
+    "L48_legacy_order1|L50_legacy_order1": 0.9307784674914278,
+    "L48_legacy_order1|L50_legacy_sum": 0.8531327853398721,
+    "L48_legacy_sum|L50_legacy_diff": 0.2238311059793344,
+    "L48_legacy_sum|L50_legacy_one_format": 0.8782240768841709,
+    "L48_legacy_sum|L50_legacy_order0": 0.87750350359273,
+    "L48_legacy_sum|L50_legacy_order1": 0.8565905527305429,
+    "L48_legacy_sum|L50_legacy_sum": 0.9303845880790785,
+    "L50_legacy_diff|L50_legacy_one_format": 0.5337070830281412,
+    "L50_legacy_diff|L50_legacy_order0": 0.5494789499718286,
+    "L50_legacy_diff|L50_legacy_order1": -0.15734890950170144,
+    "L50_legacy_diff|L50_legacy_sum": 0.24177076361545816,
+    "L50_legacy_one_format|L50_legacy_order0": 0.994452660997214,
+    "L50_legacy_one_format|L50_legacy_order1": 0.7448079982074987,
+    "L50_legacy_one_format|L50_legacy_sum": 0.9433779348272694,
+    "L50_legacy_order0|L50_legacy_order1": 0.738639790022089,
+    "L50_legacy_order0|L50_legacy_sum": 0.9435688331626777,
+    "L50_legacy_order1|L50_legacy_sum": 0.9202036567636812
+  },
+  "frame_role": "core",
+  "gradient_wrt": "output of model.model.layers[L], the tensor SteeringHook adds to",
+  "how_to_load": {
+    "apply": "cv_bench.steer.Intervention(layer=L, vectors=vec, scale=s, positions='last', mode='add', norm_unit=median_residual_norm(...))",
+    "available_files": [
+      "grad_L48_legacy_diff.npy",
+      "grad_L48_legacy_one_format.npy",
+      "grad_L48_legacy_order0.npy",
+      "grad_L48_legacy_order1.npy",
+      "grad_L48_legacy_sum.npy",
+      "grad_L50_legacy_diff.npy",
+      "grad_L50_legacy_one_format.npy",
+      "grad_L50_legacy_order0.npy",
+      "grad_L50_legacy_order1.npy",
+      "grad_L50_legacy_sum.npy"
+    ],
+    "corrected_prompts": "these were computed on the rebuilt grid whose legacy cell reproduces Probes/tasks/prompts.py verbatim; the earlier set under the same filenames was computed on prompts with the option-order relabelling bug and was deleted",
+    "note": "the vector is the gradient of z with respect to the OUTPUT of model.model.layers[L], which is the tensor SteeringHook adds to; Intervention normalises it, so only its direction is used",
+    "numpy": "vec = np.load('grad_L50_legacy_sum.npy')       # Track B's anchor\nvec = np.load('grad_L50_legacy_one_format.npy')  # what G4b loads",
+    "prefer": "the legacy_* versions until the neutral-label readout work lands",
+    "roles": {
+      "legacy_diff": "position-bias direction by construction; a control, not an anchor",
+      "legacy_one_format": "what the Friday session loads for G4b",
+      "legacy_order0/1": "the per-order gradients g1 and g2 the others derive from",
+      "legacy_sum": "order-invariant anchor; what Track B uses as the B3.1 anchor"
+    },
+    "verify": "sha256 of each .npy is in versions[<key>]['sha256']"
+  },
+  "model": "meta-llama/Llama-3.3-70B-Instruct",
+  "position": "last",
+  "split": "cal",
+  "stem": "Answer:",
+  "utc": "2026-09-22T00:21:01+00:00",
+  "versions": {
+    "L48_cos_g1_g2": 0.7273501359901686,
+    "L48_legacy_diff": {
+      "derived_from": [
+        "grad_L48_legacy_order0.npy",
+        "grad_L48_legacy_order1.npy"
+      ],
+      "dtype": "float64",
+      "file": "grad_L48_legacy_diff.npy",
+      "norm": 9.19148002087075,
+      "role": "position-bias direction (g1 - g2), a control",
+      "sha256": "0593a09a995c14f46b0c0fc1b274241cab617eb7a2d98e92cdb16be384358399",
+      "shape": [
+        8192
+      ]
+    },
+    "L48_legacy_one_format": {
+      "coherence": 0.8887131563845662,
+      "dtype": "float64",
+      "file": "grad_L48_legacy_one_format.npy",
+      "items_key": "44:8e322561d5af:95b66b3d0b7c",
+      "mean_of_norms": 13.408574906262485,
+      "n": 44,
+      "norm_of_mean": 11.916376927563421,
+      "sha256": "e04cf20e695afefdf96a0a782751831668ecec982bd2893d33e64d19cb5d968c",
+      "shape": [
+        8192
+      ]
+    },
+    "L48_legacy_order0": {
+      "coherence": 0.881513190384394,
+      "dtype": "float64",
+      "file": "grad_L48_legacy_order0.npy",
+      "items_key": "88:33c961808328:e2b2b123a660",
+      "mean_of_norms": 14.957616513425654,
+      "n": 88,
+      "norm_of_mean": 13.185336253296144,
+      "sha256": "22e57346813bffdfa49c7c08aa34d92b82827b8738dd922f356e8dca61302664",
+      "shape": [
+        8192
+      ]
+    },
+    "L48_legacy_order1": {
+      "coherence": 0.9265087976572113,
+      "dtype": "float64",
+      "file": "grad_L48_legacy_order1.npy",
+      "items_key": "88:c83edce4818b:bafd597a9537",
+      "mean_of_norms": 12.093141241507096,
+      "n": 88,
+      "norm_of_mean": 11.204401751567575,
+      "sha256": "491f5e369d89fa75f8a609f44513517d4005c26f9a030e57e6e1e2cea8c4e09e",
+      "shape": [
+        8192
+      ]
+    },
+    "L48_legacy_sum": {
+      "derived_from": [
+        "grad_L48_legacy_order0.npy",
+        "grad_L48_legacy_order1.npy"
+      ],
+      "dtype": "float64",
+      "file": "grad_L48_legacy_sum.npy",
+      "norm": 22.678185916690207,
+      "role": "order-invariant anchor (g1 + g2)",
+      "sha256": "ef2532fd98fb9b32b06660f1b0a15ada2cfc331cafb0a32540ced2b1b1aeef04",
+      "shape": [
+        8192
+      ]
+    },
+    "L50_cos_g1_g2": 0.738639790022089,
+    "L50_legacy_diff": {
+      "derived_from": [
+        "grad_L50_legacy_order0.npy",
+        "grad_L50_legacy_order1.npy"
+      ],
+      "dtype": "float64",
+      "file": "grad_L50_legacy_diff.npy",
+      "norm": 8.589805244015446,
+      "role": "position-bias direction (g1 - g2), a control",
+      "sha256": "9e5f6a54b8bd7693c4e47b26377eda1f843e06acfe26cc5cb6588388d87e1395",
+      "shape": [
+        8192
+      ]
+    },
+    "L50_legacy_one_format": {
+      "coherence": 0.8948115543437005,
+      "dtype": "float64",
+      "file": "grad_L50_legacy_one_format.npy",
+      "items_key": "44:8e322561d5af:95b66b3d0b7c",
+      "mean_of_norms": 12.713601437481968,
+      "n": 44,
+      "norm_of_mean": 11.376277463579545,
+      "sha256": "ae1ae5899f10970da32e30e2ad468313b8a3004374f17249a926a369c006df7c",
+      "shape": [
+        8192
+      ]
+    },
+    "L50_legacy_order0": {
+      "coherence": 0.888399239725562,
+      "dtype": "float64",
+      "file": "grad_L50_legacy_order0.npy",
+      "items_key": "88:33c961808328:e2b2b123a660",
+      "mean_of_norms": 14.164675951004028,
+      "n": 88,
+      "norm_of_mean": 12.58388734583093,
+      "sha256": "10e70872f16dec596ec39417d66725977b1ccd40cc45727591292ef9cc96cfa2",
+      "shape": [
+        8192
+      ]
+    },
+    "L50_legacy_order1": {
+      "coherence": 0.9307384346256956,
+      "dtype": "float64",
+      "file": "grad_L50_legacy_order1.npy",
+      "items_key": "88:c83edce4818b:bafd597a9537",
+      "mean_of_norms": 11.43882749297402,
+      "n": 88,
+      "norm_of_mean": 10.64655639476401,
+      "sha256": "1696aabe24286ab63f0fd74c0e8920f56d782795fb87ac91927571e3d914a5a0",
+      "shape": [
+        8192
+      ]
+    },
+    "L50_legacy_sum": {
+      "derived_from": [
+        "grad_L50_legacy_order0.npy",
+        "grad_L50_legacy_order1.npy"
+      ],
+      "dtype": "float64",
+      "file": "grad_L50_legacy_sum.npy",
+      "norm": 21.670764025958874,
+      "role": "order-invariant anchor (g1 + g2)",
+      "sha256": "bb46e0e0988cd981f3207155518e4ce8efbe71e106a3a6bd7c294576ea8890e5",
+      "shape": [
+        8192
+      ]
+    }
+  }
+}

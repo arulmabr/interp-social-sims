@@ -1,0 +1,108 @@
+{
+  "all_formats_caveat": "includes neutral A/B labels, where the Friday session found the unsteered readout ignores the payoff; prefer the legacy versions until that work lands",
+  "cosines": {
+    "L14_all_formats|L14_legacy_both_orders": 1.0,
+    "L14_all_formats|L14_legacy_one_format": 0.8265680219103192,
+    "L14_all_formats|L16_all_formats": 0.4782012388497842,
+    "L14_all_formats|L16_legacy_both_orders": 0.4782012388497842,
+    "L14_all_formats|L16_legacy_one_format": 0.30338951692520694,
+    "L14_legacy_both_orders|L14_legacy_one_format": 0.8265680219103192,
+    "L14_legacy_both_orders|L16_all_formats": 0.4782012388497842,
+    "L14_legacy_both_orders|L16_legacy_both_orders": 0.4782012388497842,
+    "L14_legacy_both_orders|L16_legacy_one_format": 0.30338951692520694,
+    "L14_legacy_one_format|L16_all_formats": 0.30449969889425377,
+    "L14_legacy_one_format|L16_legacy_both_orders": 0.30449969889425377,
+    "L14_legacy_one_format|L16_legacy_one_format": 0.46313396408414576,
+    "L16_all_formats|L16_legacy_both_orders": 0.9999999999999999,
+    "L16_all_formats|L16_legacy_one_format": 0.6029448123098271,
+    "L16_legacy_both_orders|L16_legacy_one_format": 0.6029448123098271
+  },
+  "frame_role": "core",
+  "gradient_wrt": "output of model.model.layers[L], the tensor SteeringHook adds to",
+  "how_to_load": {
+    "apply": "cv_bench.steer.Intervention(layer=L, vectors=vec, scale=s, positions='last', mode='add', norm_unit=median_residual_norm(...))",
+    "note": "the vector is the gradient of z with respect to the OUTPUT of model.model.layers[L], which is the tensor SteeringHook adds to; Intervention normalises it, so only its direction is used",
+    "numpy": "vec = np.load('grad_L50_legacy_both_orders.npy')",
+    "prefer": "the legacy_* versions until the neutral-label readout work lands",
+    "verify": "sha256 of each .npy is in versions[<key>]['sha256']"
+  },
+  "model": "meta-llama/Llama-3.1-8B-Instruct",
+  "position": "last",
+  "split": "cal",
+  "stem": "Answer:",
+  "utc": "2026-09-21T20:53:34+00:00",
+  "versions": {
+    "L14_all_formats": {
+      "coherence": 0.6637328448595433,
+      "dtype": "float64",
+      "file": "grad_L14_all_formats.npy",
+      "mean_of_norms": 3.2373021761576335,
+      "n": 360,
+      "norm_of_mean": 2.1487037830510967,
+      "sha256": "5d45d8b9fd407a29b46ccf1929f8ac00a1aa156d2288350274dc87b2567d3216",
+      "shape": [
+        4096
+      ]
+    },
+    "L14_legacy_both_orders": {
+      "coherence": 0.6637328448595433,
+      "dtype": "float64",
+      "file": "grad_L14_legacy_both_orders.npy",
+      "mean_of_norms": 6.474604352315267,
+      "n": 180,
+      "norm_of_mean": 4.297407566102193,
+      "sha256": "c0ef923797b7c156d0c22c14b3ba570cf88b2976ba7a3ed5c2d6f0a1fa0bad92",
+      "shape": [
+        4096
+      ]
+    },
+    "L14_legacy_one_format": {
+      "coherence": 0.9947529785509269,
+      "dtype": "float64",
+      "file": "grad_L14_legacy_one_format.npy",
+      "mean_of_norms": 7.742499648200141,
+      "n": 45,
+      "norm_of_mean": 7.7018745864765945,
+      "sha256": "3ba601275d26f674ac64a511a2cc6e6bd61a79127ba6bca775874082c95eeb13",
+      "shape": [
+        4096
+      ]
+    },
+    "L16_all_formats": {
+      "coherence": 0.528386688770571,
+      "dtype": "float64",
+      "file": "grad_L16_all_formats.npy",
+      "mean_of_norms": 2.5890442464086743,
+      "n": 360,
+      "norm_of_mean": 1.368016516440378,
+      "sha256": "2af2ba889bd38d383d7aba1e01a5726e310ffd2fd1cd52727e455b818f458f7f",
+      "shape": [
+        4096
+      ]
+    },
+    "L16_legacy_both_orders": {
+      "coherence": 0.528386688770571,
+      "dtype": "float64",
+      "file": "grad_L16_legacy_both_orders.npy",
+      "mean_of_norms": 5.1780884928173485,
+      "n": 180,
+      "norm_of_mean": 2.736033032880756,
+      "sha256": "bc215b2789ae8947f9e1866fcd7a00c716df86757bc97fd302434fdeec7125bb",
+      "shape": [
+        4096
+      ]
+    },
+    "L16_legacy_one_format": {
+      "coherence": 0.9944805781392607,
+      "dtype": "float64",
+      "file": "grad_L16_legacy_one_format.npy",
+      "mean_of_norms": 5.19596480263604,
+      "n": 45,
+      "norm_of_mean": 5.167286080916739,
+      "sha256": "805e3581d1d85fb9ecfb9bf6a8840c20423e69b51138c3e0aed2d123e36e7816",
+      "shape": [
+        4096
+      ]
+    }
+  }
+}
