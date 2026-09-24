@@ -1763,3 +1763,23 @@ readout" and "free generation" (panel A's legend), "diff-of-means", "first PCA",
 "readout gradient". The three coding names on panel A's x axis, legacy, strict and decision,
 are the one place where a caption is still needed: nothing on the figure says they are three
 rules for reading a choice out of generated text.
+
+## D104 — s1_7 plotting changes from the 23 Sept review (24 Sept)
+
+Three cosmetic changes requested on the ladder figure, all applied and rendered.
+
+  1. The legend shows "baseline" where it showed "baseline_rp". Display only, via a SHOWN map
+     in `s1_7_ladder`. The condition name in `cleaned/behavioral_games_combined.csv`, in
+     `MANIFEST.csv` and in every report is unchanged, so `S1.7.vllm.lottery.baseline_rp.switch`
+     and the rest still resolve.
+  2. Panel titles are "Lottery Game" and "Ultimatum Game". The phrase "the ladder" is gone from
+     both, and with it the stack name that used to sit in the lottery title. The suptitle still
+     carries "local vLLM stack", which is now the only place on the figure that says which
+     stack the curves come from. Worth keeping if the panels are ever cropped apart.
+  3. The parenthetical "(2, 3 and 4 of 6)" is removed from panel 3's x label. That text was the
+     only thing on the figure recording that the realised fractions are sixths rather than the
+     quarters the condition names imply, so the N=6 point now lives only in the caption text of
+     section 7's W9 and in `reports/S1_7.md`. Flagged rather than reinstated, since the authors
+     asked for it to come off.
+
+No data, fit or value changed. Figure regenerated.

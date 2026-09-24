@@ -533,10 +533,13 @@ def s1_7_ladder():
              "fewshot_cot_dose100"]
     # Both games on their own axes. The dotted rule is 50 in each, but it means
     # different things: the lottery's utility floor, and the even split of the pie.
+    # `baseline_rp` is the condition name in the logs; the legend shows the
+    # plain word, since the suffix means nothing to a reader.
+    SHOWN = {"baseline_rp": "baseline"}
     ladders = (("lottery", "risky reward n (tokens)", "P(risky)",
-                "lottery: the ladder"),
+                "Lottery Game"),
                ("ultimatum", "offer (tokens)", "P(accept)",
-                "ultimatum: the ladder"))
+                "Ultimatum Game"))
     for ax, (game, xlab, ylab, title) in zip(axes[:2], ladders):
         for cond in order:
             c = curves.get(("vllm", game, cond))
@@ -549,7 +552,7 @@ def s1_7_ladder():
             ax.plot(xs, ys, linestyle=dash(cond), color=col, linewidth=1.9,
                     marker=marker(cond), markersize=4.8,
                     markeredgecolor=SURFACE, markeredgewidth=0.7,
-                    label=cond, zorder=3)
+                    label=SHOWN.get(cond, cond), zorder=3)
         ax.axvline(50, color=INK2, linewidth=1.0, linestyle=":", zorder=1)
         ax.axhline(0.5, color=MUTED, linewidth=0.9, linestyle=(0, (2, 3)), zorder=1)
         style(ax, title, xlab, ylab)
@@ -582,7 +585,7 @@ def s1_7_ladder():
             ax.annotate(f"{game} baseline {base:.0f}", (0.97, base), fontsize=7.5,
                         color=col, ha="right", va="bottom")
     style(ax, "Few-shot + CoT: the $\\rho$ dose-response",
-          "realised fraction of risky / accept demonstrations  (2, 3 and 4 of 6)",
+          "realised fraction of risky / accept demonstrations",
           "switching point (tokens)")
     ax.set_xlim(-0.06, 1.06)
     ax.legend(fontsize=7.8, frameon=False, loc="center right", labelcolor=INK2)
