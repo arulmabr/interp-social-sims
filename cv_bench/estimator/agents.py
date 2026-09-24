@@ -29,6 +29,9 @@ MDC: Dict[str, float] = {"alpha": 0.10, "gamma": 0.10, "lambda": 0.30}
 #: Choice-rule defaults. These are simulation settings for B2; the thresholds
 #: that use them are AUTHOR DECISIONS and are frozen at B6.
 TAU0 = 0.25
+#: Weight on disadvantageous inequity for the social responder (BD54). The
+#: responder's threshold is beta_adv / (1 + 2*beta_adv) as a share of the pie.
+BETA0 = 0.60
 ACTION0 = 0.0
 POSITION0 = 0.0
 LABEL0 = 0.0
@@ -48,11 +51,13 @@ class AgentParams:
     kind: str = "cpt"                # "cpt" | "mean_variance" | "monotone"
     mv_b: float = 0.35               # mean-SD risk penalty (dimensionless)
     mono_scale: float = 120.0        # scale of the arbitrary monotone curve
+    beta_adv: float = BETA0          # social: weight on being worse off than the proposer
 
     def as_dict(self) -> Dict[str, float]:
         return {"alpha": self.alpha, "gamma": self.gamma, "lambda": self.lam,
                 "tau": self.tau, "action": self.action, "position": self.position,
-                "label": self.label, "kappa": self.kappa}
+                "label": self.label, "kappa": self.kappa,
+                "beta_adv": self.beta_adv}
 
 
 # --------------------------------------------------------------------------
@@ -182,6 +187,45 @@ def _to_utility_scale(amounts: np.ndarray, par: AgentParams) -> np.ndarray:
     return np.asarray(amounts, dtype=float)      # mean-variance is in amount units
 
 
+# --------------------------------------------------------------------------
+# the social responder (BD54)
+# --------------------------------------------------------------------------
+# Prospect theory cannot express this choice. `social.py` renders the responder
+# as two degenerate lotteries, so a risk agent sees a sure `offer` against a
+# sure 0 and accepts every positive offer. What makes a low offer rejectable is
+# the split, which lives in the trial's params and never reaches the Lottery.
+
+def social_split(trial: Trial) -> Optional[Tuple[float, float]]:
+    """(pie, offer) for a responder trial, else None."""
+    if trial.domain != "social" or not trial.family.endswith("responder"):
+        return None
+    d = trial.param_dict
+    if "pie" not in d or "offer" not in d:
+        return None
+    return float(d["pie"]), float(d["offer"])
+
+
+def fehr_schmidt_z(pie: np.ndarray, offer: np.ndarray,
+                   par: AgentParams) -> np.ndarray:
+    """Accept-minus-reject logit for an inequity-averse responder.
+
+    Accepting leaves the responder with `offer` and the proposer with
+    `pie - offer`, so the responder is behind by `pie - 2*offer` whenever the
+    offer is under half. Rejecting gives both nothing, which is equal but
+    worthless. Dividing by the pie is the social counterpart of contextual
+    utility and makes the agent scale invariant across pies.
+    """
+    behind = np.maximum(pie - 2.0 * offer, 0.0)
+    u_accept = offer - par.beta_adv * behind
+    return u_accept / np.where(pie > 1e-9, pie, 1.0) / max(par.tau, 1e-9)
+
+
+def social_threshold(par: AgentParams) -> float:
+    """The offer share at which the responder is indifferent, ignoring biases."""
+    b = par.beta_adv
+    return float(b / (1.0 + 2.0 * b))
+
+
 def utility_range(trial: Trial, par: AgentParams) -> float:
     """Contextual utility: the spread of value across everything on offer."""
     amounts = [a for lot in trial.canonical for _, a in _amounts(lot, par)]
@@ -200,9 +244,14 @@ def latent_z(trial: Trial, par: AgentParams) -> float:
     Positive means a pull toward the risky (canonical index 1) option, whatever
     order the options were presented in.
     """
-    safe, risky = trial.canonical
-    diff = utility(risky, par) - utility(safe, par)
-    z = diff / utility_range(trial, par) / max(par.tau, 1e-9)
+    split = social_split(trial)
+    if split is not None:
+        pie, offer = split
+        z = float(fehr_schmidt_z(np.array(pie), np.array(offer), par))
+    else:
+        safe, risky = trial.canonical
+        diff = utility(risky, par) - utility(safe, par)
+        z = diff / utility_range(trial, par) / max(par.tau, 1e-9)
     z += par.action
     # Position bias pulls toward whatever is shown second; under option_order 1
     # the risky option is shown first, so the pull is away from it.
@@ -391,6 +440,11 @@ class Packed:
     order_sign: np.ndarray
     legacy: np.ndarray
     n: int
+    #: Social responder trials carry the split, which the option pair loses.
+    #: `pie` is 0 and `is_social` False on every risk trial (BD54).
+    pie: np.ndarray = None           # type: ignore[assignment]
+    offer: np.ndarray = None         # type: ignore[assignment]
+    is_social: np.ndarray = None     # type: ignore[assignment]
 
 
 def _pack_option(lot: Lottery) -> Tuple[float, float, float, bool]:
@@ -406,6 +460,7 @@ def pack(trials: Sequence[Trial]) -> Packed:
     s_hi, s_lo, s_p, s_sure = [], [], [], []
     r_hi, r_lo, r_p, r_sure = [], [], [], []
     order, legacy = [], []
+    pie, offer, social = [], [], []
     for t in trials:
         safe, risky = t.canonical
         a, b, p, sure = _pack_option(safe)
@@ -414,10 +469,15 @@ def pack(trials: Sequence[Trial]) -> Packed:
         r_hi.append(a); r_lo.append(b); r_p.append(p); r_sure.append(sure)
         order.append(1.0 if t.fmt.option_order == 0 else -1.0)
         legacy.append(1.0 if t.fmt.label_set == "legacy" else 0.0)
+        sp = social_split(t)
+        social.append(sp is not None)
+        pie.append(sp[0] if sp else 0.0)
+        offer.append(sp[1] if sp else 0.0)
     f = lambda v: np.asarray(v, dtype=float)
     return Packed(f(s_hi), f(s_lo), f(s_p), np.asarray(s_sure, dtype=bool),
                   f(r_hi), f(r_lo), f(r_p), np.asarray(r_sure, dtype=bool),
-                  f(order), f(legacy), len(trials))
+                  f(order), f(legacy), len(trials),
+                  f(pie), f(offer), np.asarray(social, dtype=bool))
 
 
 def _utility_vec(hi: np.ndarray, lo: np.ndarray, phi: np.ndarray,
@@ -460,6 +520,8 @@ def latent_z_packed(pk: Packed, par: AgentParams) -> np.ndarray:
     spread = np.where(spread > 1e-9, spread, 1.0)
 
     z = (u_risky - u_safe) / spread / max(par.tau, 1e-9)
+    if pk.is_social is not None and pk.is_social.any():
+        z = np.where(pk.is_social, fehr_schmidt_z(pk.pie, pk.offer, par), z)
     z = z + par.action + par.position * pk.order_sign + par.label * pk.legacy
     return z
 
@@ -475,6 +537,9 @@ def latent_z_packed(pk: Packed, par: AgentParams) -> np.ndarray:
 # diagnostics still work when the parametric model is wrong about the subject.
 
 BASES: Tuple[str, ...] = ("cpt", "mean_variance", "monotone")
+#: The social base is not crossed with the risk bases; it applies to responder
+#: trials only and carries its own preference knob (BD54).
+SOCIAL_BASE = "fehr_schmidt"
 INTERVENTIONS: Tuple[str, ...] = ("preference", "action", "belief", "noise", "format")
 
 #: On the CPT base a "preference shift" has three possible parameters and Gate
@@ -494,6 +559,7 @@ MISSPECIFIED_BASES: Tuple[str, ...] = ("mean_variance", "monotone")
 #: families have no alpha, so each shifts its own shape parameter.
 PREFERENCE_KNOB: Dict[str, str] = {
     "cpt": "alpha", "mean_variance": "mv_b", "monotone": "mono_scale",
+    "fehr_schmidt": "beta_adv",
 }
 
 
