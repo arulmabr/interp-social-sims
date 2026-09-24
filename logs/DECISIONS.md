@@ -1746,3 +1746,20 @@ neutral descriptive titles naming the reference direction instead.
 Nothing is lost from the record. `g4null/g4null_lottery.csv` and `g4u/g4u_geometry.csv` hold
 every null value, and D99, D100 and D101 hold the findings and the reasoning. Reverting this
 commit restores the ticks.
+
+## D103 — the figure title drops the internal task id (23 Sept)
+
+"G4: instrument and direction geometry" becomes "The steering probe: how it is read out, and
+which directions it is closest to". G4 is a task id from ICLR_PLAN.md and means nothing to a
+reader of the paper; the new title says what the three panels do without it.
+
+The id is not lost: the file is still `figures/g4_summary.{pdf,png}`, the generating script is
+still `figures/make_g4_summary.py`, and every value is still registered under its G4 or G4b
+MANIFEST id, so the figure remains traceable to the task that produced it.
+
+Remaining jargon a reader still meets on the panels, left because each is defined by its own
+axis label or is standard: "choice probe" and "offer probe" (named in the x labels), "logit
+readout" and "free generation" (panel A's legend), "diff-of-means", "first PCA", "ridge, log n",
+"readout gradient". The three coding names on panel A's x axis, legacy, strict and decision,
+are the one place where a caption is still needed: nothing on the figure says they are three
+rules for reading a choice out of generated text.

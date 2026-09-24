@@ -148,7 +148,7 @@ def build():
             s_.set_color(GRID)
     panel_d(axes[0]); panel_e(axes[1]); panel_u(axes[2])
 
-    fig.suptitle("G4: instrument and direction geometry",
+    fig.suptitle("The steering probe: how it is read out, and which directions it is closest to",
                  color=INK, fontsize=12, y=0.985)
     save(fig, "g4_summary")
 
