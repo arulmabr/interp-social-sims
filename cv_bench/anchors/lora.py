@@ -33,6 +33,7 @@ import json
 import os
 import sys
 from dataclasses import replace
+from functools import lru_cache
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple
@@ -45,7 +46,7 @@ import torch
 from cv_bench.estimator import checkpoint as CK
 from cv_bench.estimator.agents import (
     ALPHA0, GAMMA0, LAMBDA0, MDC, AgentParams, choice_prob, latent_z_packed, pack)
-from cv_bench.tasks import core, risk
+from cv_bench.tasks import core, risk, social
 
 MODELS = {"llama70b": "meta-llama/Llama-3.3-70B-Instruct",
           "llama8b": "meta-llama/Llama-3.1-8B-Instruct"}
@@ -71,9 +72,33 @@ def _sha256(p: Path) -> str:
 ADAPTERS = ("reference", "preference", "bias")
 
 
+@lru_cache(maxsize=1)
+def social_mdc_value() -> float:
+    """The ultimatum MDC (BD55), computed once from the grid geometry."""
+    from cv_bench.estimator.social_mdc import social_mdc
+    return float(social_mdc()["mdc_beta_adv"])
+
+
 def agent_for(name: str, tau: float, bias: float,
-              pref_mdc_multiple: float = 1.0) -> AgentParams:
-    """The Tversky-Kahneman fallback agent behind each adapter."""
+              pref_mdc_multiple: float = 1.0,
+              domain: str = "risk") -> AgentParams:
+    """The fallback agent behind each adapter.
+
+    Risk uses Tversky-Kahneman and shifts alpha. Social uses the Fehr-Schmidt
+    responder of BD54 and shifts `beta_adv`, the weight on being worse off than
+    the proposer. The bias adapter is identical in both, a constant push on the
+    latent, so the two negative controls are comparable.
+    """
+    if domain == "social":
+        from cv_bench.estimator.agents import BETA0
+        base = AgentParams(tau=tau, beta_adv=BETA0)
+        if name == "reference":
+            return base
+        if name == "preference":
+            return replace(base, beta_adv=BETA0 - pref_mdc_multiple * social_mdc_value())
+        if name == "bias":
+            return replace(base, action=bias)
+        raise ValueError(f"unknown adapter {name!r}")
     base = AgentParams(alpha=ALPHA0, gamma=GAMMA0, lam=LAMBDA0, tau=tau)
     if name == "reference":
         return base
@@ -87,28 +112,40 @@ def agent_for(name: str, tau: float, bias: float,
     raise ValueError(f"unknown adapter {name!r}")
 
 
+#: Label sets per domain. Social has no "legacy" set, so both of its sets are
+#: used; that also gives the format family something to fit, since `par.label`
+#: only fires on legacy labels and is inert on social trials.
+LABEL_SETS = {"risk": ("legacy",), "social": ("accept_reject", "neutral")}
+
+
+def _content(splits: Sequence[str], domain: str):
+    if domain == "social":
+        return list(social.generate_responder(splits=tuple(splits)))
+    return list(risk.generate_risk(splits=tuple(splits)))
+
+
+def _expand(content, domain: str, max_content: Optional[int]):
+    if max_content:
+        content = sorted(content, key=lambda t: t.content_id)[:max_content]
+    out = list(core.expand_formats(content, response_formats=("mc",),
+                                   label_sets=LABEL_SETS[domain]))
+    return sorted(out, key=lambda t: t.trial_id)
+
+
 def training_trials(splits: Sequence[str] = ("disc", "cal"),
-                    max_content: Optional[int] = None) -> List[core.Trial]:
-    """All frames, non-test reward levels and templates.
+                    max_content: Optional[int] = None,
+                    domain: str = "risk") -> List[core.Trial]:
+    """All frames, non-test levels and templates.
 
     The selection split is held out of training so the cloning check has
     prompts the adapter has not been fitted on.
     """
-    content = list(risk.generate_risk(splits=tuple(splits)))
-    if max_content:
-        content = sorted(content, key=lambda t: t.content_id)[:max_content]
-    out = list(core.expand_formats(content, response_formats=("mc",),
-                                   label_sets=("legacy",)))
-    return sorted(out, key=lambda t: t.trial_id)
+    return _expand(_content(splits, domain), domain, max_content)
 
 
-def cloning_trials(max_content: Optional[int] = None) -> List[core.Trial]:
-    content = list(risk.generate_risk(splits=("sel",)))
-    if max_content:
-        content = sorted(content, key=lambda t: t.content_id)[:max_content]
-    out = list(core.expand_formats(content, response_formats=("mc",),
-                                   label_sets=("legacy",)))
-    return sorted(out, key=lambda t: t.trial_id)
+def cloning_trials(max_content: Optional[int] = None,
+                   domain: str = "risk") -> List[core.Trial]:
+    return _expand(_content(("sel",), domain), domain, max_content)
 
 
 def soft_targets(trials: Sequence[core.Trial], par: AgentParams) -> np.ndarray:
@@ -346,6 +383,9 @@ def cloning_check(z_model: np.ndarray, z_agent: np.ndarray) -> Dict[str, float]:
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--model", default="llama8b", choices=list(MODELS))
+    ap.add_argument("--domain", default="risk", choices=("risk", "social"),
+                    help="risk is the lottery (B3.2); social is the ultimatum "
+                         "responder with the Fehr-Schmidt agent (B7, BD54)")
     ap.add_argument("--tau", type=float, default=PROVISIONAL_TAU,
                     help="temperature of the fallback agent; B2-cal supplies the real one")
     ap.add_argument("--bias", type=float, default=0.6,
@@ -392,8 +432,8 @@ def main(argv=None) -> int:
     torch.manual_seed(args.seed)
     retrain = [s for s in args.retrain.split(",") if s]
 
-    train = training_trials(max_content=args.max_content)
-    clone = cloning_trials(max_content=args.clone_content)
+    train = training_trials(max_content=args.max_content, domain=args.domain)
+    clone = cloning_trials(max_content=args.clone_content, domain=args.domain)
     print(f"{len(train)} training rows (disc+cal, legacy labels), "
           f"{len(clone)} selection-split rows for the cloning check", flush=True)
 
@@ -414,7 +454,8 @@ def main(argv=None) -> int:
         "preference_mdc_multiple": float(args.preference_mdc_multiple),
     }
 
-    agents = {n: agent_for(n, args.tau, args.bias, args.preference_mdc_multiple)
+    agents = {n: agent_for(n, args.tau, args.bias, args.preference_mdc_multiple,
+                           domain=args.domain)
               for n in ADAPTERS}
     targets = {n: soft_targets(train, p) for n, p in agents.items()}
 

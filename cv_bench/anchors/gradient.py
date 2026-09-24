@@ -52,14 +52,26 @@ STEM = "Answer:"
 
 def core_trials(label_sets: Sequence[str], orders: Sequence[int],
                 templates: Optional[Sequence[str]] = None,
-                max_content: Optional[int] = None) -> List[core.Trial]:
+                max_content: Optional[int] = None,
+                domain: str = "risk") -> List[core.Trial]:
     """Calibration-split core-frame trials in the requested formats.
 
     Core is sure-gain at p in {0.25, 0.5, 0.75}; the plan averages the anchor
-    over calibration-split core prompts.
+    over calibration-split core prompts. For the social domain the counterpart
+    is the ultimatum responder on the calibration split, with the catch trials
+    left out for the same reason dominated gambles are (B7).
     """
-    content = [t for t in risk.generate_risk(splits=("cal",), include_catch=False)
-               if t.frame_role == "core"]
+    if domain == "social":
+        from cv_bench.tasks import social
+        # The responder's calibration split alone gives 12 usable prompts once
+        # the catch trials are dropped, too few to average a direction over.
+        # Discovery is added, which is not used by the cloning check, so no set
+        # that any later number depends on is touched. Test stays locked.
+        content = [t for t in social.generate_responder(splits=("disc", "cal"))
+                   if not t.is_catch]
+    else:
+        content = [t for t in risk.generate_risk(splits=("cal",), include_catch=False)
+                   if t.frame_role == "core"]
     if max_content:
         content = sorted(content, key=lambda t: t.content_id)[:max_content]
     out = [t for t in core.expand_formats(content, response_formats=("mc",),
@@ -209,6 +221,8 @@ def main(argv=None) -> int:
     ap.add_argument("--model", default="llama70b", choices=list(MODELS))
     ap.add_argument("--layers", type=int, nargs="+", default=list(LAYERS))
     ap.add_argument("--max-content", type=int, default=None)
+    ap.add_argument("--domain", default="risk", choices=("risk", "social"),
+                    help="social builds the anchor on ultimatum responder prompts (B7)")
     ap.add_argument("--out", type=Path, default=DEFAULT_OUT)
     args = ap.parse_args(argv)
 
@@ -219,11 +233,14 @@ def main(argv=None) -> int:
     # and difference are available. g1 + g2 is the order-invariant anchor Track B
     # uses; g1 - g2 is a position-bias direction by construction and joins the
     # controls; legacy_one_format is what the Friday session loads for G4b.
+    labels = ("accept_reject",) if args.domain == "social" else ("legacy",)
     versions = {
-        "legacy_order0": core_trials(("legacy",), (0,), None, args.max_content),
-        "legacy_order1": core_trials(("legacy",), (1,), None, args.max_content),
-        "legacy_one_format": core_trials(("legacy",), (0,), ("t_cal_0",), args.max_content),
+        "legacy_order0": core_trials(labels, (0,), None, args.max_content, args.domain),
+        "legacy_order1": core_trials(labels, (1,), None, args.max_content, args.domain),
+        "legacy_one_format": core_trials(labels, (0,), ("t_cal_0",),
+                                         args.max_content, args.domain),
     }
+    versions = {k: v for k, v in versions.items() if v}
     for k, v in versions.items():
         print(f"{k}: {len(v)} prompts", flush=True)
 
@@ -237,7 +254,7 @@ def main(argv=None) -> int:
         "utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "model": MODELS[args.model], "stem": STEM, "position": "last",
         "gradient_wrt": "output of model.model.layers[L], the tensor SteeringHook adds to",
-        "split": "cal", "frame_role": "core",
+        "split": "cal", "frame_role": "core", "domain": args.domain,
         "all_formats_caveat": ("includes neutral A/B labels, where the Friday session "
                                "found the unsteered readout ignores the payoff; prefer "
                                "the legacy versions until that work lands"),
