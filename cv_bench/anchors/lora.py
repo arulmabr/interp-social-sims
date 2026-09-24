@@ -434,7 +434,8 @@ def main(argv=None) -> int:
 
     train = training_trials(max_content=args.max_content, domain=args.domain)
     clone = cloning_trials(max_content=args.clone_content, domain=args.domain)
-    print(f"{len(train)} training rows (disc+cal, legacy labels), "
+    print(f"{len(train)} training rows (disc+cal, "
+          f"{'/'.join(LABEL_SETS[args.domain])} labels), "
           f"{len(clone)} selection-split rows for the cloning check", flush=True)
 
     # Everything that can fail on a typo is built BEFORE the 640-second

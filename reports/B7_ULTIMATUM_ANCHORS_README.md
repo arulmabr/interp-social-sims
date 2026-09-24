@@ -317,7 +317,7 @@ fit returns preference **0.000**. The same control here:
 |---|---|---|---|---|---|---|
 | preference, a known preference change | **1.000** | 0.000 | 0.000 | 0.000 | 0.000 | yes, at 1.000 |
 | bias, a known constant push | **0.581** | 0.415 | 0.004 | 0.000 | 0.000 | **no, at 0.735** |
-| bias, the same control on the lottery | 0.000 | 0.491 | — | 0.509 | — | — |
+| bias, the same control on the lottery | 0.000 | 0.491 | not run | 0.509 | not run | not run |
 
 **Read the two criteria separately, because they disagree.**
 
