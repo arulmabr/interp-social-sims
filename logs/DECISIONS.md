@@ -1640,3 +1640,43 @@ roughly 0.6 GPU-hours per repeat it is affordable inside the remaining budget.
 
 Spend: about 18 minutes wall on two A100s, roughly 0.6 GPU-hours. Nothing pre-registered
 changed and no existing file was written; `g4null/` holds only new outputs.
+
+## D100 — the lottery permutation null: the same verdict as ultimatum (23 Sept)
+
+Computed on the arrays saved by the g4null collection, CPU only, 200 permutations of the choice
+labels with every direction refitted each time.
+
+    direction        observed   null p95   verdict
+    diff-of-means       19.3x      45.0x    inside
+    first PCA           13.3x       2.5x    CLEARS
+    ridge, log n        12.0x      21.6x    inside
+    reward probe        11.4x      22.9x    inside
+    random direction 0   2.9x       2.0x    clears, and see below
+    readout gradient     1.7x       2.2x    inside
+    random direction 1   0.8x       2.0x    inside
+
+The same shape as the ultimatum result: every direction fitted alongside the probe sits inside
+its own null except the first principal component, which clears by a wide margin in both games.
+
+**The verdict does not depend on which fit is used.** The observed values above come from the
+re-collected arrays, which give diff-of-means 19.3x where `g4b_geometry.csv` reports 17.4x
+(D99: the probe does not reproduce between runs). Both are far below the 45.0x null, so panel
+B's tallest bar fails its test whichever of the two fits you take. The instability in D99 makes
+the bar heights uninterpretable; this makes the ranking uninterpretable as well, and it does so
+robustly.
+
+**One false positive, reported rather than tidied away.** `rand0` sits at 2.9x against a 2.0x
+null and formally clears. It is a random direction with no relationship to anything. At a 95th
+percentile threshold across seven comparisons a false positive is the expected outcome, not a
+surprise, and it is the reason first PCA's margin matters: 13.3x against 2.5x is a different
+kind of result from 2.9x against 2.0x. Anyone reading this table should read the margin, not the
+verdict column.
+
+What this settles, across both games: the claim panel B carries in its title, that the choice
+probe is a contrastive direction because it sits nearest difference-of-means, is not supported.
+Difference-of-means is the largest bar in both games and is inside its null in both. The one
+direction that survives is the first principal component, which is a statement about the
+dominant variance in the activations rather than about contrast.
+
+Not done: panel B still shows the reported bars with no ticks. Making it match panel C means
+recomputing it from these arrays, which changes every bar (D99). Left for the authors.
