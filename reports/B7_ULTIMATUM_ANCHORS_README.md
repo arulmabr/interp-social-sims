@@ -346,3 +346,86 @@ the model's continuous log-odds rather than sampled choices recovers a great dea
 separation, from 0.984 down to 0.581, without restoring it fully.
 
 ---
+
+## 4. What is established and what is not
+
+**Established.**
+
+- Three adapters clone their target responders on held-out prompts, at correlations of 0.997
+  to 0.998, higher than the lottery's on every adapter.
+- The estimator recovers the size of a planted inequity shift to **0.07 MDC** at one times the
+  detection limit, where the lottery version needs three times it.
+- The readout gradient at layers 48 and 50 is **order-invariant to a cosine of 0.953 and
+  0.956**, with the order-independent part 6.4 times the position part. On the lottery the
+  same ratio is 2.4.
+- The decision rule is specific against the planted bias. Applied to a known constant push it
+  certifies nothing, failing both the share bar and the bootstrap.
+
+**Not established.**
+
+- **That the preference share means what it means on the lottery.** A known pure bias collects
+  0.581 of the evidence on preference here against 0.000 there. The share is not a usable
+  measure on this task on its own, and any later use of it needs the bootstrap beside it.
+- **A second anchor at a larger size.** Three times the MDC is not representable in the
+  declared direction, so there is no sensitivity curve here of the kind the lottery has.
+- **Anything about a probe or an SAE feature.** No real direction has been placed against
+  these anchors. The lottery's Table 2 has no counterpart yet.
+- **A null band.** No random control directions were run on this task.
+- **Transfer between the two games.** Whether a direction that looks preference-like on the
+  lottery also looks preference-like here is the specificity test the plan asks for at B7,
+  and it has not been run.
+
+**Two limitations that apply to all of it.**
+
+Every number is measured with the **logit readout**, which infers the choice from the
+probability the model assigns to each answer token rather than from text the model writes.
+The gap between the two is large on the lottery and unmeasured here.
+
+The grids are **small**. 264 training prompts and 120 for cloning, against 1,872 and 1,016 on
+the lottery, and 30 prompts per option order for the gradient against 88. The gate passes
+comfortably at these sizes, but the intervals behind every number are wider than the
+lottery's.
+
+---
+
+## 5. How the two tasks compare, in one table
+
+| | lottery | ultimatum |
+|---|---|---|
+| decision model | cumulative prospect theory | Fehr-Schmidt inequity aversion |
+| preference parameter | `alpha`, curvature of value | `beta_adv`, weight on being behind |
+| reference value | 0.88 | 0.60 |
+| one MDC | 0.10 | 0.2258 |
+| behavioural size of one MDC | 12.9 tokens of switching point | 5.86% of the pie of threshold |
+| planted effect changes sign | **yes** | no |
+| training prompts | 1,872 | 264 |
+| cloning prompts | 1,016 | 120 |
+| cloning r, worst adapter | 0.9915 | **0.9974** |
+| recovery error at one MDC | 0.13 MDC | **0.07 MDC** |
+| preference share at one MDC | 0.268, fails | **1.000, passes** |
+| gate at one MDC | **FAIL** | **PASS** |
+| gate at three MDC | PASS | not representable |
+| known bias attributed to preference | **0.000** | 0.581 |
+| readout gradient, order agreement | +0.727 | **+0.953** |
+
+**The two tasks fail in opposite places, and that is the useful part.** The lottery's implant
+is hard to detect and easy to tell apart from a bias. The ultimatum implant is easy to detect
+and harder to tell apart from a bias. Neither task on its own would have shown that the two
+halves of the method have different weak points, and a benchmark built on one game would have
+reported whichever weakness that game happens to have.
+
+---
+
+## 6. What would come next
+
+1. **Place a real direction against these anchors**, which is the lottery's Table 2 and has no
+   counterpart here yet. The machinery exists in `cv_bench/anchors/probe_vs_anchors.py` and
+   needs a social dose target, which is the acceptance threshold rather than the switching
+   point.
+2. **Run random controls** to establish a null band, which neither task has in usable form.
+3. **The cross-game specificity test** the plan asks for at B7: a social direction should
+   leave the lottery fingerprint inside the random band, and a risk direction should leave
+   the acceptance threshold there.
+4. **A second anchor in the upward direction**, a more inequity-averse responder, which is
+   the only way to get a sensitivity curve on this task. It is a change to what was declared
+   and so is an author decision.
