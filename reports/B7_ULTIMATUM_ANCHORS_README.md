@@ -3,9 +3,6 @@
 The companion to `B_ANCHORS_README.md`, which covers the lottery. Same three steps, same
 questions, a different game. Read either on its own.
 
-Every decision here was recorded in `logs/B_DECISIONS.md` as BD54 and BD55 **before any
-number in this document existed**, and every value is registered in `MANIFEST_B.csv` under
-`B7.*`.
 
 ---
 
@@ -276,7 +273,51 @@ slightly more weakly than its full strength.
 So the model was successfully taught to behave like three responders whose rules were known
 in advance.
 
-### 3.2 The anchor gate
+### 3.2 The contrast measured by averaging, with its uncertainty
+
+Before the gate statistic, the simpler measurement: take the **mean of the change in z**
+between each shifted adapter and the reference adapter, and put an interval on it. This is
+the measurement the lottery's own contrast figure reports.
+
+| column | meaning |
+|---|---|
+| **Planted** | the change the agent itself shows, in units of z, averaged over the prompts. |
+| **Measured** | what the adapters recovered. |
+| **Noise floor** | the spread of the leftover error, which sets how small a signal could be seen at all. Measured from the per-row residuals rather than assumed. |
+| **95% interval** | the range the true value would fall in 95 times out of 100 if the measurement were repeated. |
+
+| contrast | Planted | Measured | Recovery | Noise floor | 95% interval |
+|---|---|---|---|---|---|
+| preference minus reference | +0.5711 | +0.3312 | 0.580 | 0.2593 | **[+0.2848, +0.3776]** |
+| bias minus reference | +0.6000 | +0.4624 | 0.771 | 0.1757 | **[+0.4310, +0.4938]** |
+
+**Both intervals lie entirely above zero.** On this task the averaging route detects the
+planted preference change outright. On the lottery the same measurement gives
+[-0.0291, +0.1239], an interval that begins below zero, so the planted preference change
+could not be distinguished from no change at all until the prompt count and the independence
+assumption were both corrected. The reason for the difference is size: the ultimatum implant
+is worth 0.5711 in z against the lottery's 0.0302, about nineteen times larger, because
+matching the two on **behaviour** does not match them on the latent.
+
+**Both adapters under-recover, and that is a property of the adapters rather than of the
+measurement.** The preference contrast recovers 58 percent of the planted change and the bias
+contrast 77 percent. The anchor's known value is therefore the **achieved** difference, not
+the nominal one, which is why the gate in the next section fits each adapter separately
+instead of trusting the planted number.
+
+**The residuals of the three adapters are correlated, and this was measured.** The protocol
+gives all three adapters the same data order and the same random seed, so their errors move
+together: the correlation is **+0.477** for the preference pair and **+0.769** for the bias
+pair. Assuming independence would have put the noise floor at 0.357 and 0.361; measuring it
+gives 0.259 and 0.176, so assuming independence would have overstated the noise by about a
+third and by more than double.
+
+**One caution on reading these intervals.** They are narrow, at 0.08 and 0.06 MDC half-width,
+but neither contains its planted value, because the under-recovery is larger than the
+sampling error. The intervals say where the *adapters'* difference lies, precisely. They do
+not say the adapters reproduced the agents' difference in full.
+
+### 3.3 The anchor gate
 
 | column | meaning |
 |---|---|
@@ -307,7 +348,7 @@ weight on inequity. The lottery's second anchor exists because its parameter has
 it. Here there is no room below. A three times anchor is available only in the opposite
 direction, as a **more** inequity-averse responder, which is not what was declared.
 
-### 3.3 The control that decides how much of this to believe
+### 3.4 The control that decides how much of this to believe
 
 A weight of 1.000 on preference might simply be what this classifier always says. On the
 lottery that objection is answered completely: the **bias** contrast run through the identical
@@ -360,6 +401,10 @@ separation, from 0.984 down to 0.581, without restoring it fully.
   same ratio is 2.4.
 - The decision rule is specific against the planted bias. Applied to a known constant push it
   certifies nothing, failing both the share bar and the bootstrap.
+- The simple averaging route also resolves here, at [+0.2848, +0.3776], where the lottery's
+  equivalent interval begins below zero. The noise floor behind it was measured from the
+  per-row residuals rather than assumed, and the three adapters' errors are correlated at
+  +0.477 and +0.769.
 
 **Not established.**
 
@@ -374,6 +419,9 @@ separation, from 0.984 down to 0.581, without restoring it fully.
 - **Transfer between the two games.** Whether a direction that looks preference-like on the
   lottery also looks preference-like here is the specificity test the plan asks for at B7,
   and it has not been run.
+- **That the adapters reproduce their agents in full.** They recover 58 and 77 percent of the
+  planted change in z. The anchors are therefore the achieved differences, which are known,
+  rather than the nominal ones.
 
 **Two limitations that apply to all of it.**
 
@@ -402,6 +450,8 @@ lottery's.
 | cloning prompts | 1,016 | 120 |
 | cloning r, worst adapter | 0.9915 | **0.9974** |
 | recovery error at one MDC | 0.13 MDC | **0.07 MDC** |
+| averaging route, 95% interval | [-0.0291, +0.1239], contains zero | **[+0.2848, +0.3776]** |
+| adapter recovery of the planted dz | not reported | 0.580 preference, 0.771 bias |
 | preference share at one MDC | 0.268, fails | **1.000, passes** |
 | gate at one MDC | **FAIL** | **PASS** |
 | gate at three MDC | PASS | not representable |

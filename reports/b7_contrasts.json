@@ -1,0 +1,75 @@
+{
+  "model": "meta-llama/Llama-3.3-70B-Instruct",
+  "steps": 500,
+  "n_clone": 120,
+  "cloning": {
+    "reference": {
+      "r": 0.9977431162405243,
+      "slope": 0.980163961537502,
+      "pass": true,
+      "z_sd": 4.032583165918369,
+      "residual_sd": 0.27077449212968946
+    },
+    "preference": {
+      "r": 0.9974040113257813,
+      "slope": 0.9327333445675624,
+      "pass": true,
+      "z_sd": 3.2282388309135706,
+      "residual_sd": 0.23246095234238964
+    },
+    "bias": {
+      "r": 0.9980658305678927,
+      "slope": 0.9342362772616424,
+      "pass": true,
+      "z_sd": 3.84238503667867,
+      "residual_sd": 0.23886528470360904
+    }
+  },
+  "all_cloning_pass": true,
+  "mdc_dz": 0.5710906504882736,
+  "contrasts": {
+    "preference": {
+      "truth": 0.5710906504882736,
+      "estimate": 0.3311903680989084,
+      "recovery_ratio": 0.5799260902200829,
+      "trial_correlation": 0.9490747511646278,
+      "noise_floor_sd": 0.2593315346766054,
+      "noise_floor_source": "measured from the per-row residuals",
+      "noise_floor_if_independent": 0.3568710130453607,
+      "residual_correlation": 0.4774370961505158,
+      "n_residual_rows": 120,
+      "buried_x": 0.45409872225167935,
+      "se": 0.02367362190246833,
+      "ci_lo": 0.28479006917007044,
+      "ci_hi": 0.37759066702774635,
+      "ci_contains_truth": false,
+      "ci_contains_zero": false,
+      "abs_err_in_mdc": 0.42007390977991704,
+      "ci_halfwidth_in_mdc": 0.08124857041376252
+    },
+    "bias": {
+      "truth": 0.5999999999999998,
+      "estimate": 0.4623979122943381,
+      "recovery_ratio": 0.7706631871572305,
+      "trial_correlation": 0.5788947403365883,
+      "noise_floor_sd": 0.17571181538119485,
+      "noise_floor_source": "measured from the per-row residuals",
+      "noise_floor_if_independent": 0.3610754073938399,
+      "residual_correlation": 0.769193887364222,
+      "n_residual_rows": 120,
+      "buried_x": 0.29285302563532484,
+      "se": 0.016040220817410605,
+      "ci_lo": 0.4309590794922133,
+      "ci_hi": 0.49383674509646286,
+      "ci_contains_truth": false,
+      "ci_contains_zero": false,
+      "abs_err_in_mdc": 0.24094613979061652,
+      "ci_halfwidth_in_mdc": 0.05505051216517916
+    }
+  },
+  "preference_anchor_passes": true,
+  "preference_point_estimate_within_mdc": true,
+  "preference_estimate_resolved": true,
+  "gate_b3": "PASS",
+  "gate_b3_route": "B3.3 and B4"
+}
