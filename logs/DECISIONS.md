@@ -1680,3 +1680,41 @@ dominant variance in the activations rather than about contrast.
 
 Not done: panel B still shows the reported bars with no ticks. Making it match panel C means
 recomputing it from these arrays, which changes every bar (D99). Left for the authors.
+
+## D101 — the null is drawn on the lottery panel too (23 Sept)
+
+Panel B now carries the permutation null, so the two geometry panels match. Both are titled
+"only first PCA clears its null", which is what both games show.
+
+The bars are unchanged. They are still `g4b_geometry.csv`'s reported values, so the panel still
+matches the reports and the manifest. What is added is each direction's null as a tick, and a
+colour rule that is honest about D99's instability:
+
+    teal    the bar clears its null under BOTH the reported fit and the g4null refit
+    grey    it is inside the null under both
+    hatched the two fits disagree, so the bar is too close to call
+
+That third case exists because the probe does not reproduce between runs. Checked per bar:
+
+    direction     reported   refit   null p95   verdict
+    diff-of-means     17.4    19.3       45.0   inside, both fits
+    first PCA          9.8    13.3        2.5   CLEARS, both fits
+    ridge, log n       8.7    12.0       21.6   inside, both fits
+    reward probe       6.8    11.4       22.9   inside, both fits
+    readout gradient   2.8     1.7        2.2   FLIPS
+    random direction   0.1     2.9        2.0   FLIPS
+
+The four substantive directions agree under both fits, which is why the panel can be drawn at
+all without recomputing the bars. Only the two sitting on top of the null flip, and those are
+hatched rather than coloured either way.
+
+Why the bars were not recomputed from the refit, which was the alternative: it would change
+every value (diff-of-means 17.4 to 19.3, reward probe 6.8 to 11.4), break agreement with
+`g4b_geometry.csv`, `MANIFEST.csv` and the reports, and change nothing about the conclusion,
+since all four verdicts are identical either way. Cheapest to reverse was to leave the bars and
+add the test.
+
+The headline now holds in both games and under both fits: difference of means is the tallest bar
+in each panel and inside its null in each. The title claim that the probe is a contrastive
+direction is not supported. The first principal component is the only direction that clears,
+which is a statement about dominant variance rather than about contrast.
