@@ -1485,3 +1485,40 @@ the consequence. If this figure goes in the paper, that belongs in the caption.
 The "(lottery)" scope marker stays in the suptitle. It is now the only thing on the figure
 saying the panels are single-game, since both the ultimatum panel (D94) and the notes entry
 that said so (D93) are gone.
+
+## D96 — G4 has no Llama ultimatum arm, and why (23 Sept)
+
+Surfaced by a question from the authors, not by any report, which is the process gap worth
+fixing here: the fact was recorded only inside a JSON.
+
+`g4/probe_reconstruction_L48.json` and `_L50.json` both carry, for ultimatum:
+
+    trained=False   classes=[1]   n_kept=152   n_dropped=0   n_levels=19
+
+All 152 probe-training trials are labelled accept. A logistic probe needs two classes and a
+difference of means needs two groups, so no choice direction exists, and the sweep rows record
+`"skipped": "direction unavailable"` rather than running. Nothing was fabricated; nothing was
+reported either.
+
+Checked and ruled out as causes:
+  - not a coding bug. Three scripts agree the text says accept: instr free generation gives
+    P(accept) = 1.000 over 420 generations at 7 levels, the logit readout gives p_positive =
+    1.000 at all 19 levels, and section 3.8 already records 760 of 760 accepts at two
+    temperatures.
+  - not a prompt bug. `cv_bench/instr.py::prompt_for` states both options and both payoffs
+    symmetrically and names the two answers.
+  - not a pipeline bug. The skip is logged per row.
+
+It is real, and it is format-dependent. The same weights at an offer of 10 accept at 1.000 under
+the reconstruction format, 0.775 under vLLM baseline_rp, and 0.000 on the hosted stack. On the
+lottery the stacks differ by a 26-token threshold; on ultimatum they differ by the whole
+behaviour. Accepting 10 tokens is individually rational, so the model is acting as a payoff
+maximiser rather than as the human-like responder the work is trying to simulate.
+
+Consequences already established elsewhere and now joined up: g4_summary panel A cannot be
+extended to ultimatum (D93, both instruments saturate at 1.000), and panel B cannot either,
+because its y axis is the cosine with a choice probe that does not exist. Qwen L17 is
+unaffected, `classes=[0, 1]`, and does yield a full ultimatum geometry.
+
+Not done: adding this to `reports/EXCLUDED_ARMS.md`, where under rule 5 an arm that could not
+run belongs. Offered to the authors.
