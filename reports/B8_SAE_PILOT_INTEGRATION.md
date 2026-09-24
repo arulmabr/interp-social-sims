@@ -193,7 +193,54 @@ B's chat-template rendering and an empty answer stem, which need not match how t
 built its own vector. The valid comparison is of the same quantity computed the same way
 across three prompt formats, not a claim about the pilot's exact vector.
 
-### 5.2 The LoRA anchors do not transfer across the wording
+### 5.2 The SAE directions placed against the decomposed anchor
+
+The gradient anchor from 5.1 splits into a part about the answer and a part about which
+letter is emitted. Asking which of the two each SAE direction aligns with is a sharper
+question than the pilot's single cosine against their sum. Pure geometry, on the pinned
+public checkpoint `Goodfire/Llama-3.3-70B-Instruct-SAE-l50` at revision `128ee921`, with no
+service contacted and no model run.
+
+The null is 2,000 randomly drawn live dictionary features put through the identical
+construction. 3,632 of the 65,536 features are dead and were excluded.
+
+| direction | cos with the answer part | cos with the letter part |
+|---|---:|---:|
+| **random feature, 95th percentile** | 0.033 | 0.027 |
+| **random feature, 99th percentile** | 0.056 | 0.048 |
+| feature 184, the paper's lottery feature | **-0.001** | **+0.016** |
+| feature 4237, the paper's second lottery feature | **+0.004** | **+0.000** |
+| feature 31935, the paper's ultimatum feature | **+0.004** | **+0.004** |
+| the pilot's fitted ten-feature vector, combined target, seed 31 | **+0.067** | -0.006 |
+| the same, seed 73 | **+0.075** | -0.003 |
+| the pilot's fitted vector, neutral target, seed 31 | **+0.091** | +0.002 |
+| the same, seed 73 | **+0.096** | +0.004 |
+| the pilot's sparse fit of the raw readout direction | **+0.269** | +0.037 |
+
+Layer 50 gives the same picture throughout, within 0.005.
+
+**The three features the paper steers with are geometrically indistinguishable from random
+dictionary features.** Every one of them sits inside the 95th percentile of the null against
+both parts of the readout direction. Choosing them by label semantics, which is what the
+paper describes, selects directions with no measurable relationship to the direction that
+drives the answer.
+
+**The pilot's fitted vectors did find the answer component.** They reach 0.067 to 0.096
+against it, above the 99th percentile of the null, while sitting at or below the null against
+the letter component. So the optimisation worked in the sense of locating the answer
+direction rather than the letter direction, which is a positive result for their method and
+one their own single-cosine measurement could not have shown.
+
+**This also explains their sparse reconstruction failing.** They report a relative residual
+norm of 0.961 for the ten-feature fit of the raw readout direction and call it a poor sparse
+approximation. The decomposition says why. The raw readout direction is dominated by the
+letter part, which is 37.7 long against 9.1 for the answer part, and the dictionary
+represents the answer part at 0.269 while barely reaching the null on the letter part at
+0.037. The fit fails because the component it is mostly trying to match is not in the
+dictionary, not because the dictionary is generally poor at this. That is a different and
+more useful conclusion than the one available without the decomposition.
+
+### 5.3 The LoRA anchors do not transfer across the wording
 
 Reading Track B's three trained lottery adapters on the pilot's 432 frozen prompts, with
 `cv_bench/anchors/pilot_read.py`:
