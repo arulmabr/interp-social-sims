@@ -1424,3 +1424,36 @@ target40 close together, 0.061 against 0.073 at thresholds 31.8 and 36.3, and ta
 ran through target40's marker. The label placement now looks ahead at every marker in the panel,
 not only at labels already written, and flips to the left when another point sits where the text
 would go.
+
+## D93 — the ultimatum version of g4_summary: one panel possible, the other not (23 Sept)
+
+Asked to plot the ultimatum version of both panels. Only one can be built from existing data,
+and for two different reasons, so the figure now carries a third panel that says why.
+
+Panel A, the readout against free generation. Not extendable, and this is a behavioural fact
+rather than a data gap. Measured from `instr/freegen_llama.jsonl` and
+`instr/readout_grid_llama.jsonl`, on ultimatum at every offer from 10 to 100:
+
+      free generation  P(accept) = 1.000 at all 7 levels
+      logit readout    p_positive = 1.000 at all 19 levels (0.991 at 85)
+
+Neither curve approaches 0.5, so neither has a crossing and the comparison panel A makes is
+undefined. This is why `instr_agreement.csv`'s six ultimatum rows all carry empty crossings and
+were being silently dropped by the panel's filter. Note the two instruments AGREE perfectly on
+ultimatum, which sounds like a positive result and is not: they agree because both are
+saturated. The panel's finding, that the readout does not track free generation, is a lottery
+result and the figure now says so.
+
+Panel B, direction geometry. Not extendable either, but here it is a genuine gap:
+`results/S/s1/g4b_geometry.csv` has 36 rows, all lottery. No ultimatum probe or direction set
+was ever fitted. Adding it is GPU work, a probe fit plus the five comparison directions at
+layer 50, not a filter change.
+
+Built instead: panel C, both ultimatum curves across offers with the 0.5 line, which documents
+the saturation directly. The figure is now 2x2 and the suptitle names the scope, "lottery, with
+the ultimatum check". A fourth notes entry states that A and B are lottery only.
+
+Outstanding under rule 1: panel C computes its values inline from the two raw jsonl files and
+they are not in `MANIFEST.csv`, unlike panel A's, which come from the registered
+`instr_agreement.csv`. They should be registered before this figure goes anywhere near the
+paper. Not done here.

@@ -11,6 +11,7 @@ Palette and conventions from cv_bench/s1_figures.py.
 from __future__ import annotations
 
 import csv
+import os
 from pathlib import Path
 from typing import Dict, List
 
@@ -85,25 +86,63 @@ def panel_e(ax):
     ax.set_title("B  the probe is not the readout direction", color=INK, fontsize=9, loc="left")
 
 
+
+def panel_u(ax):
+    """Why the instrument check has no ultimatum arm: both instruments saturate."""
+    import json
+    R = os.environ.get("ICLR_RUNROOT",
+                       "/orcd/data/gabrieli/001/guna23/iclr_risk_2027")
+    free = {}
+    acc = {}
+    for line in open(f"{R}/instr/freegen_llama.jsonl"):
+        r = json.loads(line)
+        if r["game"] != "ultimatum" or r.get("legacy_code") not in (0, 1):
+            continue
+        acc.setdefault(r["value"], []).append(r["legacy_code"])
+    free = {v: sum(c) / len(c) for v, c in acc.items()}
+    rd = {}
+    for line in open(f"{R}/instr/readout_grid_llama.jsonl"):
+        r = json.loads(line)
+        if r["game"] == "ultimatum" and r.get("template"):
+            rd[r["value"]] = r["p_positive"]
+    xf, yf = zip(*sorted(free.items()))
+    xr, yr = zip(*sorted(rd.items()))
+    ax.plot(xr, yr, "-", color=PURPLE, lw=2.0, marker="o", ms=4,
+            markeredgecolor=SURFACE, markeredgewidth=0.8, label="logit readout")
+    ax.plot(xf, yf, "--", color=GOLD, lw=2.0, marker="s", ms=5,
+            markeredgecolor=SURFACE, markeredgewidth=0.8, label="free generation")
+    ax.axhline(0.5, color=MUTED, lw=0.9, ls=(0, (2, 3)), zorder=1)
+    ax.text(0.5, 0.46, "no curve reaches this line, so neither instrument\n"
+            "has a crossing and the two cannot be compared",
+            transform=ax.transAxes, ha="center", va="top", fontsize=7.5, color=INK2)
+    ax.set_ylim(-0.03, 1.08)
+    ax.set_xlabel("offer (tokens)", color=INK2, fontsize=8)
+    ax.set_ylabel("P(accept)", color=INK2, fontsize=8)
+    ax.legend(frameon=False, fontsize=7.5, loc="lower right", labelcolor=INK2)
+    ax.set_title("C  on ultimatum both instruments saturate",
+                 color=INK, fontsize=9, loc="left")
+
+
 def build():
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     from matplotlib.gridspec import GridSpec
 
-    # one row: two panels and the notes block
-    fig = plt.figure(figsize=(12.6, 4.4))
-    gs = GridSpec(1, 3, figure=fig, wspace=0.34)
-    axes = [fig.add_subplot(gs[0, 0]), fig.add_subplot(gs[0, 1])]
+    # 2x2: three panels and the notes block
+    fig = plt.figure(figsize=(12.8, 8.0))
+    gs = GridSpec(2, 2, figure=fig, hspace=0.40, wspace=0.30)
+    axes = [fig.add_subplot(gs[0, 0]), fig.add_subplot(gs[0, 1]),
+            fig.add_subplot(gs[1, 0])]
     for ax in axes:
         ax.set_facecolor(SURFACE)
         ax.grid(False)
         ax.tick_params(labelsize=7.5, colors=INK2)
         for s_ in ax.spines.values():
             s_.set_color(GRID)
-    panel_d(axes[0]); panel_e(axes[1])
+    panel_d(axes[0]); panel_e(axes[1]); panel_u(axes[2])
 
-    note = fig.add_subplot(gs[0, 2]); note.axis("off")
+    note = fig.add_subplot(gs[1, 1]); note.axis("off")
     note.text(0.0, 1.0, "What each panel establishes", color=INK, fontsize=10,
               va="top", weight="bold")
 
@@ -117,6 +156,10 @@ def build():
          "It sits nearest difference-of-means and far from\n"
          "the gradient of the answer logit, which is a\n"
          "different object."),
+        ("C", "The instrument check is a lottery result",
+         "On ultimatum the responder accepts every offer, so\n"
+         "both instruments sit at 1.0 and neither has a\n"
+         "crossing. A and B are lottery only."),
     ]
     Q_H, A_H, GAP = 0.075, 0.062, 0.070
     y = 0.88
@@ -127,7 +170,7 @@ def build():
                   va="top", linespacing=1.45)
         y -= Q_H + A_H * (answer.count("\n") + 1) + GAP
 
-    fig.suptitle("G4: instrument and direction geometry",
+    fig.suptitle("G4: instrument and direction geometry (lottery, with the ultimatum check)",
                  color=INK, fontsize=12, y=0.985)
     save(fig, "g4_summary")
 
