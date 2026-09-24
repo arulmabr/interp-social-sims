@@ -10,8 +10,36 @@ dependencies and GPU requirements.
 ```
 interp-social-sims/
 ├── SAE/       # EDSL social-simulation platform + Goodfire Open-SAE feature inspection & steering
+├── edsl_local_sae/ # EDSL surveys connected to local model inference and SAE steering
+├── paper_replication/ # Replay original lottery/ultimatum prompts with a local SAE
+├── label_pilot/ # Label retrieval, activation validation, and shared local GPU runtime
 └── Probes/    # Probe training, calibration, steered experiments, and figure generation
 ```
+
+---
+
+## EDSL with local SAE steering
+
+[`edsl_local_sae/`](edsl_local_sae/README.md) connects EDSL questions, personas
+and answer validation to locally hosted Llama-3.3-70B-Instruct and the released
+Goodfire layer-50 SAE. Baseline and steered conditions use the same BF16 model;
+neither Goodfire's hosted inference nor Expected Parrot hosted inference is
+required. The verified setup uses two 96 GB GPUs.
+
+The package includes CPU tests that run from a clean checkout, an 80-response
+GPU validation gate, a bounded 320-response diagnostic replay for lottery and
+ultimatum, deployment/collection commands, and comparison tools. The GPU checks
+passed, and all 320 diagnostic replays matched the preceding direct-local run
+exactly. This establishes adapter equivalence for the tested inputs; it does
+not reproduce the original hosted effect sizes or add independent trials.
+
+Its shared runtime and original-prompt preparation are in
+[`paper_replication/`](paper_replication/README.md) and
+[`label_pilot/`](label_pilot/README.md). Follow the EDSL package's setup
+instructions to supply the matching label catalog locally and build an immutable
+plan. Credentials, full label catalogs, model weights and generated experiment
+outputs are excluded from this code publication. Results remain separate from
+the manuscript.
 
 ---
 
