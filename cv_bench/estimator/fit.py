@@ -29,6 +29,20 @@ FREE_SETS: Dict[str, Tuple[str, ...]] = {
     "noise": ("tau",),
 }
 
+#: The same five families for the social responder (BD54). Preference is the
+#: inequity weight rather than the three prospect-theory shape parameters;
+#: everything else carries over unchanged, because action, format and noise
+#: enter the latent the same way in both domains and belief is the offer as
+#: the responder reads it.
+SOCIAL_FREE_SETS: Dict[str, Tuple[str, ...]] = {
+    "baseline": (),
+    "preference": ("beta_adv",),
+    "action": ("action",),
+    "format": ("position", "label"),
+    "belief": ("kappa",),
+    "noise": ("tau",),
+}
+
 BOUNDS: Dict[str, Tuple[float, float]] = {
     # gamma's upper bound was 1.60 and the B2-cal refit landed exactly on it,
     # which makes the value a statement about the bound rather than about the
@@ -39,6 +53,10 @@ BOUNDS: Dict[str, Tuple[float, float]] = {
     "alpha": (0.20, 2.50), "gamma": (0.25, 4.00), "lam": (0.50, 6.00),
     "tau": (0.02, 4.00), "action": (-6.0, 6.0), "position": (-6.0, 6.0),
     "label": (-6.0, 6.0), "kappa": (0.20, 5.00), "lapse": (0.0, 0.40),
+    # Social. beta_adv is a weight on being behind, so it is non-negative; the
+    # upper bound is well clear of any threshold the 0..1 offer grid can show,
+    # since threshold = b/(1+2b) approaches 0.5 from below as b grows.
+    "beta_adv": (0.0, 8.00),
 }
 
 
@@ -250,8 +268,11 @@ def fit_all_models(trials: Sequence[Trial],
                    seed: int = 0,
                    template_offsets: Optional[Dict[str, float]] = None,
                    observe: str = "choice",
-                   sigma: float = 1.0) -> Dict[str, Dict[str, object]]:
+                   sigma: float = 1.0,
+                   free_sets: Optional[Dict[str, Tuple[str, ...]]] = None,
+                   ) -> Dict[str, Dict[str, object]]:
     """Fit every nested model on the training levels, score on the held-out ones."""
+    free_sets = FREE_SETS if free_sets is None else free_sets
     trials = list(trials)
     choices = np.asarray(choices, dtype=float if observe == "logit" else int)
     held = heldout_mask(trials)
@@ -260,7 +281,7 @@ def fit_all_models(trials: Sequence[Trial],
     ctr, cte = choices[~held], choices[held]
 
     out: Dict[str, Dict[str, object]] = {}
-    for name, free in FREE_SETS.items():
+    for name, free in free_sets.items():
         par, lapse, ll_train = fit(tr, ctr, free, init,
                                    dominated_policy=dominated_policy, seed=seed,
                                    template_offsets=template_offsets,

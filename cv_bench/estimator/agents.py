@@ -215,8 +215,9 @@ def fehr_schmidt_z(pie: np.ndarray, offer: np.ndarray,
     worthless. Dividing by the pie is the social counterpart of contextual
     utility and makes the agent scale invariant across pies.
     """
-    behind = np.maximum(pie - 2.0 * offer, 0.0)
-    u_accept = offer - par.beta_adv * behind
+    seen = par.kappa * offer          # belief: the offer as the responder reads it
+    behind = np.maximum(pie - 2.0 * seen, 0.0)
+    u_accept = seen - par.beta_adv * behind
     return u_accept / np.where(pie > 1e-9, pie, 1.0) / max(par.tau, 1e-9)
 
 
