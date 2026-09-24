@@ -1718,3 +1718,31 @@ The headline now holds in both games and under both fits: difference of means is
 in each panel and inside its null in each. The title claim that the probe is a contrastive
 direction is not supported. The first principal component is the only direction that clears,
 which is a statement about dominant variance rather than about contrast.
+
+## D102 — the null is taken off both geometry panels (23 Sept)
+
+At the authors' instruction, matching the earlier plain-bar treatment. Panels B and C are now
+solid bars coloured by magnitude (teal at or above 10x the analytic null, navy at or above 3x,
+grey below), no dotted rule at 1.0, no permutation-null ticks, no legend, no hatching.
+
+What comes off the figure with them, so this is a deliberate choice and not a quiet loss:
+
+  - each direction's permutation null, which is what said the bars mean what they appear to
+  - that difference of means, the tallest bar in BOTH panels, is inside its null in both:
+    17.4x against 45.0x on lottery, 34.9x against 56.6x on ultimatum
+  - that first PCA is the only direction clearing its null in either game
+  - the hatching that marked the two lottery bars whose verdict flips between fits (D99)
+
+The colour rule now reads against the test. On lottery, diff-of-means at 17.4x is teal, the
+strongest colour, and fails its null; first PCA at 9.8x is navy and passes. On ultimatum all
+three top bars are teal and only one passes. Height and colour both rank the bars in close to
+the reverse of what the null supports.
+
+Titles were NOT reverted with the styling. The original read "the probe is not the readout
+direction", and that claim is what the null contradicts, so restating it on a panel that no
+longer shows the null would assert something the data does not support. Both panels now carry
+neutral descriptive titles naming the reference direction instead.
+
+Nothing is lost from the record. `g4null/g4null_lottery.csv` and `g4u/g4u_geometry.csv` hold
+every null value, and D99, D100 and D101 hold the findings and the reasoning. Reverting this
+commit restores the ticks.
