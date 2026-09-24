@@ -87,6 +87,61 @@ def panel_e(ax):
 
 
 
+def panel_u(ax):
+    """The same geometry for the ultimatum game, from the G4u run.
+
+    Bar design is panel B's exactly: same height, same colour rule, same label
+    format, same dotted rule at the analytic null. The black ticks are the one
+    addition, and they are an overlay rather than a change to the bars: each is
+    that direction's own permutation null at the 95th percentile over 200
+    refits with the offer labels shuffled.
+
+    The reference direction differs from panel B and cannot be made to match.
+    The ultimatum probe has one class, every training trial is an accept, so
+    there is no choice probe; the reference here is a probe fitted to the offer.
+    """
+    import csv as _csv
+    R = os.environ.get("ICLR_RUNROOT",
+                       "/orcd/data/gabrieli/001/guna23/iclr_risk_2027")
+    rs = [r for r in _csv.DictReader(open(f"{R}/g4u/g4u_geometry.csv"))
+          if r["layer"] == "50"]
+    want = [("readout_gradient", "readout gradient"), ("diffmean", "diff-of-means"),
+            ("pca1", "first PCA"), ("ridge_logn", "ridge, log offer"),
+            ("rand0", "random direction")]
+    labels, vals, p95 = [], [], []
+    for key, lab in want:
+        m = [r for r in rs if r["direction"] == key]
+        if not m:
+            continue
+        labels.append(lab)
+        vals.append(float(m[0]["multiples_of_null"]))
+        p95.append(float(m[0]["perm_null_p95"]))
+    order = np.argsort(vals)
+    labels = [labels[i] for i in order]
+    p95 = [p95[i] for i in order]
+    vals = [vals[i] for i in order]
+    ys = np.arange(len(vals))
+    cols = [TEAL if v >= 10 else (NAVY if v >= 3 else MUTED) for v in vals]
+    ax.barh(ys, vals, color=cols, height=0.62)
+    for i, q in enumerate(p95):
+        ax.plot([q, q], [i - 0.34, i + 0.34], color=INK, lw=1.8, zorder=6,
+                solid_capstyle="butt")
+    for i, v in enumerate(vals):
+        ax.text(v + 0.4, i, f"{v:.1f}x", va="center", color=INK, fontsize=7.5)
+    ax.set_xlim(0, max(vals + p95) * 1.18)
+    ax.axvline(1.0, color=MUTED, lw=0.9, ls=":")
+    ax.set_yticks(ys)
+    ax.set_yticklabels(labels, fontsize=7)
+    ax.set_xlabel("cosine with the offer probe  (multiples of the null)",
+                  color=INK2, fontsize=8)
+    ax.set_title("C  ultimatum: only first PCA clears its null",
+                 color=INK, fontsize=9, loc="left")
+    from matplotlib.lines import Line2D
+    ax.legend(handles=[Line2D([], [], color=INK, lw=1.8,
+                              label="permutation null, 95th pct")],
+              loc="lower right", frameon=False, fontsize=6.8, labelcolor=INK2)
+
+
 def build():
     import matplotlib
     matplotlib.use("Agg")
@@ -94,18 +149,19 @@ def build():
     from matplotlib.gridspec import GridSpec
 
     # one row, two panels
-    fig = plt.figure(figsize=(9.6, 4.4))
-    gs = GridSpec(1, 2, figure=fig, wspace=0.30)
-    axes = [fig.add_subplot(gs[0, 0]), fig.add_subplot(gs[0, 1])]
+    fig = plt.figure(figsize=(14.2, 4.4))
+    gs = GridSpec(1, 3, figure=fig, wspace=0.34)
+    axes = [fig.add_subplot(gs[0, 0]), fig.add_subplot(gs[0, 1]),
+            fig.add_subplot(gs[0, 2])]
     for ax in axes:
         ax.set_facecolor(SURFACE)
         ax.grid(False)
         ax.tick_params(labelsize=7.5, colors=INK2)
         for s_ in ax.spines.values():
             s_.set_color(GRID)
-    panel_d(axes[0]); panel_e(axes[1])
+    panel_d(axes[0]); panel_e(axes[1]); panel_u(axes[2])
 
-    fig.suptitle("G4: instrument and direction geometry (lottery)",
+    fig.suptitle("G4: instrument and direction geometry",
                  color=INK, fontsize=12, y=0.985)
     save(fig, "g4_summary")
 

@@ -1522,3 +1522,34 @@ unaffected, `classes=[0, 1]`, and does yield a full ultimatum geometry.
 
 Not done: adding this to `reports/EXCLUDED_ARMS.md`, where under rule 5 an arm that could not
 run belongs. Offered to the authors.
+
+## D97 — the ultimatum geometry joins g4_summary as panel C (23 Sept)
+
+At the authors' instruction. `g4_summary` is three panels at 14.2x4.4 inches: the readout
+against free generation, the lottery geometry, and now the ultimatum geometry from the G4u run
+in the Track B tree. Suptitle drops "(lottery)" since the figure is no longer single-game.
+
+The bar design is panel B's exactly, as asked: same 0.62 height, same colour rule (teal at or
+above 10x, navy at or above 3x, grey below), same `{v:.1f}x` labels, same dotted rule at the
+analytic null. Data is read from the shared run root, `g4u/g4u_geometry.csv`, so nothing is
+duplicated across trees.
+
+Added on top of the matched design: a black tick per bar at that direction's own permutation
+null, 95th percentile over 200 refits with the offer labels shuffled. That is an overlay, not a
+change to the bars.
+
+THE CONFLICT THIS CREATES, and it is a direct consequence of matching the design. Panel B's
+colour rule is by magnitude. On ultimatum it paints diff-of-means at 34.9x and the ridge at
+32.3x teal, the strongest colour, and both sit INSIDE their permutation null, so their height
+means nothing. First PCA, the only direction that clears its null, is teal too at 21.8x. Colour
+therefore carries no information about which bar survives, and the tallest and most saturated
+bar on the panel is one that fails its test. Only the tick position separates them.
+
+Options not taken: colour by whether the bar clears its null, or hollow the failing bars as the
+Track B figure did before the match. Either fixes the reading and both break the visual
+consistency the authors asked for. Left as instructed and flagged.
+
+Second asymmetry, which no design choice can fix: panel B's reference is the choice probe and
+panel C's is a probe fitted to the offer, because the ultimatum probe has one class. The two
+panels answer related but different questions and should not be read as a like-for-like
+comparison between games.
