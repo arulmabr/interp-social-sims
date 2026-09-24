@@ -1457,3 +1457,16 @@ Outstanding under rule 1: panel C computes its values inline from the two raw js
 they are not in `MANIFEST.csv`, unlike panel A's, which come from the registered
 `instr_agreement.csv`. They should be registered before this figure goes anywhere near the
 paper. Not done here.
+
+## D94 — panel C removed again (23 Sept)
+
+Removed at the authors' instruction, one commit after it was added. The figure is back to two
+panels and the notes block, suptitle "G4: instrument and direction geometry (lottery)", which
+keeps the scope statement the panel was carrying. `panel_u` is deleted and recoverable at
+39db54b.
+
+The measurement behind it stands and is recorded in D93: on ultimatum, free generation gives
+P(accept) = 1.000 at all seven offer levels and the readout gives p_positive = 1.000 at all
+nineteen, so neither instrument has a crossing and panel A's comparison is undefined for that
+game. That is now stated only in the title's "(lottery)" and in this log, not on the face of the
+figure.
