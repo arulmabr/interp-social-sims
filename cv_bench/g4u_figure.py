@@ -78,18 +78,36 @@ def make() -> Path:
     geo = sorted(geo, key=lambda r: float(r["multiples_of_null"]))
     names = [r["direction"] for r in geo]
     vals = [float(r["multiples_of_null"]) for r in geo]
-    bars = ax.barh(range(len(geo)), vals, height=0.62,
-                   color=[COLOUR.get(n, NAVY) for n in names], zorder=3)
+    p95 = [float(r.get("perm_null_p95") or "nan") for r in geo]
+    clears = [str(r.get("clears_perm_null", "")).lower() == "true" for r in geo]
+    # A bar that does not clear its own permutation null is drawn hollow: the
+    # height is real but it is what shuffled offer labels already produce.
+    bars = ax.barh(range(len(geo)), vals, height=0.62, zorder=3,
+                   color=[COLOUR.get(n, NAVY) if c else "none"
+                          for n, c in zip(names, clears)],
+                   edgecolor=[COLOUR.get(n, NAVY) for n in names],
+                   linewidth=1.4)
     ax.axvline(1.0, color=INK2, linewidth=1.0, linestyle=":", zorder=2)
-    for i, (b, v) in enumerate(zip(bars, vals)):
-        ax.annotate(f"{v:.1f}x", (b.get_width(), i), fontsize=8.5, color=INK,
-                    va="center", xytext=(4, 0), textcoords="offset points")
+    for i, q in enumerate(p95):
+        if q == q:
+            ax.plot([q, q], [i - 0.34, i + 0.34], color=INK, linewidth=2.0,
+                    zorder=6, solid_capstyle="butt")
+    for i, (b, v, c) in enumerate(zip(bars, vals, clears)):
+        ax.annotate(f"{v:.1f}x", (b.get_width(), i), fontsize=8.5,
+                    color=INK if c else MUTED, va="center", xytext=(4, 0),
+                    textcoords="offset points")
     ax.set_yticks(range(len(geo)))
     ax.set_yticklabels([LABEL.get(n, n) for n in names], fontsize=8.5,
                        color=INK2)
-    ax.set_xlim(0, max(vals) * 1.22)
-    style(ax, "B  what the offer probe is close to",
-          f"cosine with the offer probe  (multiples of the null), layer {PANEL_LAYER}")
+    hi = max([v for v in vals] + [q for q in p95 if q == q])
+    ax.set_xlim(0, hi * 1.18)
+    from matplotlib.lines import Line2D
+    ax.legend(handles=[Line2D([], [], color=INK, lw=2.0,
+                              label="permutation null, 95th percentile")],
+              loc="lower right", frameon=False, fontsize=7.5, labelcolor=INK2)
+    style(ax, "B  only one direction clears its own null",
+          f"cosine with the offer probe  (multiples of the analytic null), "
+          f"layer {PANEL_LAYER}")
 
     # --- C: what the panels establish --------------------------------------
     ax = axes[2]
@@ -97,6 +115,7 @@ def make() -> Path:
     n_lvl = len(curve)
     lo = min(float(r["p_accept"]) for r in curve)
     acc = float(geo[0]["offer_probe_train_accuracy"])
+    perm_n = max((int(r.get("perm_n") or 0) for r in geo), default=0)
     blocks = [
         ("What each panel establishes", None),
         ("A  There is no choice to probe",
@@ -104,18 +123,24 @@ def make() -> Path:
          "including 10 tokens out of 100. With one class there is no "
          "accept-against-reject contrast, so the lottery panel's choice probe "
          "has no counterpart here."),
-        ("B  Read only the gradient bar as evidence",
-         "The top three directions are fitted to the SAME "
-         f"{n_lvl} activation vectors as the reference, so their agreement is "
-         "largely shared fitting rather than a shared offer signal. The "
-         "readout gradient is the one direction built by another procedure, "
-         "and it lands with the random controls, which is what shows the high "
-         "bars are inflated."),
+        ("B  The two tallest bars are shared fitting",
+         "Every fitted direction here comes from the SAME "
+         f"{n_lvl} activation vectors as the reference, so all of them lie in "
+         "a subspace of at most 18 dimensions and are close before any offer "
+         "signal is involved. Permuting the offer labels and refitting gives "
+         "the null each bar has to clear. Difference of means and the ridge "
+         "sit inside it, so their height says nothing. Only the first "
+         "component clears its null, by a wide margin."),
+        ("Why the axis is not the test",
+         "Multiples of the analytic null are still on the axis because that is "
+         "the lottery panel's unit, but 1/sqrt(d) assumes two independent "
+         "directions and none of these are independent. The black tick is the "
+         f"permutation null at the 95th percentile over {perm_n} refits. Read "
+         "the bars against the ticks, not against the axis."),
         ("Not pre-registered",
          f"Exploratory. {n_lvl} points in 8,192 dimensions, no held-out split, "
          f"so the reference probe's {acc:.2f} training accuracy is separable "
-         "by construction. A permutation null over the offer labels is the "
-         "test that would make the high bars interpretable; it has not run."),
+         "by construction."),
     ]
     yy = 0.97
     for head, body in blocks:

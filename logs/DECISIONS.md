@@ -407,3 +407,55 @@ across allocations. Consequences: the floor has to be measured **in the run that
 from another; and a single measurement of it is not a property of the model. Until `phase_slope`
 returns, the operative figure for the five-times rule is the larger of the two, **0.094**, giving a
 threshold of **0.47 in z** — deliberately the conservative choice.
+
+## G4u permutation null: run, and it changes what the panel says (23 Sept)
+
+Written by the other session at the authors' request, working in this tree with their explicit
+go-ahead. The figure already named this test as the missing one: "A permutation null over the
+offer labels is the test that would make the high bars interpretable; it has not run." It has
+now run, on the activations this job already saved, with no GPU.
+
+Why the analytic null was the wrong reference. `1/sqrt(d)` is the cosine between two
+*independent* directions in 8,192 dimensions. The offer probe, the difference of means, the
+first component and the ridge are all estimated from the same 19 activation vectors, so all four
+lie in a subspace of at most 18 dimensions and are close to one another before any offer signal
+is involved. The panel's own note had identified this; what was missing was the number.
+
+The test: permute the offer labels, refit every direction, 200 times per layer. Activations,
+subspace and estimators are untouched; only the relationship to the offer is destroyed.
+
+    layer 50            observed   null 95th   clears
+    diff-of-means          34.9        56.6      no
+    ridge, log offer       32.3        80.1      no
+    first PCA              21.8         6.2     YES
+    random direction 2      1.3         2.0      no
+    random direction        0.7         1.8      no
+    readout gradient        0.5         2.2      no
+
+Layer 48 agrees within a fraction. Checked at 60 and at 200 permutations; the verdicts are
+identical, so the count is not doing the work.
+
+This inverts the panel's visual message. The two tallest bars are inside their own null, so
+their height says nothing: shuffled offer labels produce that much agreement or more. The only
+direction that clears is the first principal component, which is third by height. The readout
+gradient sits below its null too, so that bar is not positive evidence either; the earlier note
+asking a reader to "read only the gradient bar as evidence" was right that it is the one
+direction built by another procedure, and it turns out to carry no signal.
+
+What changed in the code:
+  - `permutation_null()` in `cv_bench/g4u.py`, with `PERM_N = 200`. Directions not fitted from
+    X, the readout gradient and the two random controls, are included on the same footing:
+    their vector does not move under a permutation but the reference does, which is the
+    comparison the bar is making.
+  - `directions()` gains `fast_ridge`, used only inside the null loop. The dual form
+    Z'(ZZ' + I)^-1 is algebraically identical to the primal and turns an 8,192 x 8,192 solve
+    into a 19 x 19 one. Verified against the primal on the real layer-48 activations: cosine
+    1.0, largest elementwise difference 3.3e-13. The reported observed values still use the
+    primal path and are unchanged to the last digit.
+  - `g4u_geometry.csv` gains `perm_null_mean`, `perm_null_p95`, `clears_perm_null`, `perm_n`.
+  - the figure draws each bar's null as a tick and hollows out any bar that does not clear it.
+    Panel B retitled "only one direction clears its own null".
+
+Nothing was regenerated on a GPU and the pre-registered offer grid was not touched. The five
+existing tests still pass. Not done: the same null for the lottery panel in the main tree, where
+45 levels in 8,192 dimensions raise exactly the same question about `multiples_of_null`.

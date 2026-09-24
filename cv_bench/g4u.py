@@ -48,7 +48,7 @@ import csv
 import json
 import os
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import numpy as np
 
@@ -159,7 +159,8 @@ def _unit(v):
     return v / n if n > 0 else v
 
 
-def directions(X: np.ndarray, offers: np.ndarray) -> Dict[str, np.ndarray]:
+def directions(X: np.ndarray, offers: np.ndarray,
+               fast_ridge: bool = False) -> Dict[str, np.ndarray]:
     """Everything G4 builds, with the offer contrast in place of the choice one.
 
     Built in standardised space and mapped back to raw, which is what G4's
@@ -189,13 +190,65 @@ def directions(X: np.ndarray, offers: np.ndarray) -> Dict[str, np.ndarray]:
     out["pca1"] = to_raw(_unit(Vt[0]))
 
     t = np.log(offers.astype(float))
-    A = Z.T @ Z + 1.0 * np.eye(Z.shape[1])
-    out["ridge_logn"] = to_raw(_unit(np.linalg.solve(A, Z.T @ (t - t.mean()))))
+    tc = t - t.mean()
+    if fast_ridge:
+        # Dual form. (Z'Z + I)^-1 Z' == Z'(ZZ' + I)^-1 exactly, and with n = 19
+        # against d = 8192 this is a 19x19 solve rather than an 8192x8192 one.
+        # Verified against the primal on the real layer-48 activations:
+        # cosine 1.0, max elementwise difference 3.3e-13.
+        out["ridge_logn"] = to_raw(_unit(Z.T @ np.linalg.solve(
+            Z @ Z.T + 1.0 * np.eye(Z.shape[0]), tc)))
+    else:
+        A = Z.T @ Z + 1.0 * np.eye(Z.shape[1])
+        out["ridge_logn"] = to_raw(_unit(np.linalg.solve(A, Z.T @ tc)))
 
     d = X.shape[1]
     for name, seed in RAND_SEEDS.items():
         out[name] = _unit(np.random.default_rng(seed).normal(size=d))
     return out
+
+
+PERM_N = 200
+
+
+def permutation_null(X: np.ndarray, offers: np.ndarray, n: int = PERM_N,
+                     seed: int = 0,
+                     extra: Optional[Dict[str, np.ndarray]] = None) -> Dict[str, dict]:
+    """The null the figure needs: how close these directions get by shared fitting.
+
+    `1/sqrt(d)` is the cosine between two *independent* directions in d
+    dimensions. It is the wrong reference here. The offer probe, the difference
+    of means, the first component and the ridge are all estimated from the same
+    19 activation vectors, so all four lie in a subspace of at most 18
+    dimensions and are close to one another before any offer signal is
+    involved.
+
+    So the offer labels are permuted and every direction refitted, n times. That
+    keeps the activations, the subspace and each estimator exactly as they are
+    and destroys only the relationship to the offer. A direction whose observed
+    cosine sits inside this distribution has shown nothing.
+
+    Directions not fitted from X, the readout gradient and the random controls,
+    are included on the same footing: their vector does not move under a
+    permutation, but the reference does, which is the comparison that matters.
+    """
+    rng = np.random.default_rng(seed)
+    acc: Dict[str, List[float]] = {}
+    for _ in range(n):
+        d = directions(X, rng.permutation(offers), fast_ridge=True)
+        d.pop("_offer_probe_acc", None)
+        # Fixed vectors that were not fitted from X, the readout gradient above
+        # all. They do not move under a permutation but the reference does, and
+        # that is the comparison the bar is making.
+        d.update(extra or {})
+        ref = d["offer_probe"]
+        for name, v in d.items():
+            if name == "offer_probe":
+                continue
+            acc.setdefault(name, []).append(abs(float(np.dot(ref, v))))
+    return {k: dict(perm_null_mean=float(np.mean(v)),
+                    perm_null_p95=float(np.percentile(v, 95)),
+                    perm_n=len(v)) for k, v in acc.items()}
 
 
 def build() -> Path:
@@ -210,18 +263,27 @@ def build() -> Path:
         dirs = directions(X, offers)
         acc = dirs.pop("_offer_probe_acc")
         g = G4BDIR / f"fallback_gradient_L{layer}_ultimatum.npy"
+        extra: Dict[str, np.ndarray] = {}
         if g.exists():
-            dirs["readout_gradient"] = _unit(np.load(g).astype(float))
+            extra["readout_gradient"] = _unit(np.load(g).astype(float))
+        dirs.update(extra)
         ref = dirs["offer_probe"]
+        pn = permutation_null(X, offers, extra=extra)
         for name, v in dirs.items():
             if name == "offer_probe":
                 continue
             c = float(np.dot(ref, v))
+            q = pn.get(name, {})
+            p95 = q.get("perm_null_p95", float("nan"))
             recs.append(dict(layer=layer, game="ultimatum", reference="offer_probe",
                              direction=name, cosine=round(c, 5),
                              abs_cosine=round(abs(c), 5),
                              null_scale=round(null_scale, 5),
                              multiples_of_null=round(abs(c) / null_scale, 2),
+                             perm_null_mean=round(q.get("perm_null_mean", float("nan")) / null_scale, 2),
+                             perm_null_p95=round(p95 / null_scale, 2),
+                             clears_perm_null=bool(abs(c) > p95) if p95 == p95 else "",
+                             perm_n=q.get("perm_n", 0),
                              d=X.shape[1], n_levels=len(offers),
                              offer_probe_train_accuracy=round(acc, 4)))
         print(f"[g4u] L{layer}: offer probe train accuracy {acc:.3f}", flush=True)
