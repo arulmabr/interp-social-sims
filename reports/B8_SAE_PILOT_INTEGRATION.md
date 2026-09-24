@@ -148,12 +148,79 @@ stronger claim than either task alone.
 
 ---
 
-## 5. Still running
+## 5. Both anchors run against the pilot, and both say something
 
-Track B's three lottery adapters are being read on the pilot's 432 frozen prompts, in the
-pilot's wording and its own logit-margin units, so that the planted bias and the planted
-preference sit on one scale with the pilot's conditions. Code is
-`cv_bench/anchors/pilot_read.py`. Results will be added here.
+### 5.1 The readout gradient on an A/B answer format is mostly a letter direction
+
+Computing the gradient separately for each option order on the pilot's own prompt text,
+with `cv_bench/anchors/pilot_gradient.py`, 168 prompts per order:
+
+| prompt format | answer tokens | cos between the two orders | order-invariant part | label part | ratio |
+|---|---|---:|---:|---:|---:|
+| pilot, layer 48 | **A / B** | **-0.889** | 9.128 | 37.682 | **0.24** |
+| pilot, layer 50 | A / B | -0.893 | 8.416 | 35.383 | 0.24 |
+| Track B lottery, layer 48 | safe / risky | +0.727 | 22.678 | 9.191 | 2.47 |
+| Track B ultimatum, layer 48 | Accept / Reject | +0.953 | 18.421 | 2.869 | 6.42 |
+
+**The sign is the whole story.** On the pilot's prompts the two option orders give gradients
+that are 89 percent antisymmetric, so they very nearly cancel. On Track B's prompts they
+agree. The cause is mechanical rather than a defect: the pilot's answer is a **letter**, and
+which letter means "take the gamble" swaps with the order. The quantity being differentiated
+is therefore `log P(A) - log P(B)` in one half of the grid and its negation in the other, so
+the gradient flips with it. Track B's answers are the words naming the options, which do not
+swap when the print order does, so only the position changes and the content direction
+survives.
+
+**What survives is small.** The part that does not flip has length 9.128 against 37.682 for
+the part that does. A readout gradient computed on a letter-answer format is, to about four
+parts in five, a direction that pushes the model toward emitting one letter rather than the
+other, independently of what that letter stands for.
+
+**Why this matters for the pilot's conclusions.** Its raw readout gradient is its action
+control, and it classified that gradient as action-like. On this evidence the direction is
+not merely action-like but largely **label-identity-like**, which is a narrower and stronger
+statement. Its 37 candidate features were also screened partly by readout cosine against that
+direction, and a cosine taken against a vector that is four fifths letter identity is mostly
+measuring alignment with letter identity.
+
+**The three formats give a clean ordering** that is a methodological result in its own right:
+word labels tied to the content give an order-invariant gradient, Accept and Reject give the
+cleanest of all at 6.4 times, and bare letters invert it to 0.24. Anyone computing a readout
+direction on a multiple-choice letter format is mostly computing a letter direction.
+
+One caveat on comparability: this gradient is computed on the pilot's prompt text with Track
+B's chat-template rendering and an empty answer stem, which need not match how the pilot
+built its own vector. The valid comparison is of the same quantity computed the same way
+across three prompt formats, not a claim about the pilot's exact vector.
+
+### 5.2 The LoRA anchors do not transfer across the wording
+
+Reading Track B's three trained lottery adapters on the pilot's 432 frozen prompts, with
+`cv_bench/anchors/pilot_read.py`:
+
+| quantity | planted | measured on the pilot's prompts |
+|---|---:|---:|
+| bias contrast, mean | **+0.600** | **-0.022**, sd 0.914 |
+| preference contrast, mean | positive | **-0.285**, wrong sign |
+| signal retained by the reference adapter | | 0.350 |
+
+The readout itself is sound: the unmodified model measured this way correlates **0.957** with
+the pilot's own baseline margins, so the two readouts agree about what they are measuring.
+The adapters are also plainly active, since the spread of the logit falls from 12.45
+unmodified to 4.36 under the reference adapter. What does not survive is the **planted
+contrast**. The bias adapter's constant push, worth +0.600 on the grid it was trained on,
+is indistinguishable from zero here.
+
+**This is a negative result for the plan of getting a bias pole onto the pilot's scale
+cheaply.** It cannot be done by reading existing adapters. It requires training them on the
+pilot's own grid, which is a two-hour job and has not been run.
+
+**It also corroborates the pilot from the other side.** The pilot found its own LoRA's
+teacher RMSE rising from 0.042 to 0.115 across wording and its recovered curvature falling
+from a planted 0.8 to 0.643. Two teams, two independent implementations, the same conclusion:
+**a LoRA anchor is bound to the prompt format it was trained on.** That is a property of the
+method rather than a defect in either build, and it is what the pilot's own recommended next
+step calls for, a LoRA trained across several phrasings and answer orders.
 
 ---
 
