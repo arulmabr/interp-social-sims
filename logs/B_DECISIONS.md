@@ -954,3 +954,59 @@ carrying an offer signal. A permutation null over the offer labels is the test t
 
 Not pre-registered. No held-out split. The reference probe's 1.00 training accuracy is separable by
 construction at 19 points in 8,192 dimensions.
+
+---
+
+## 2026-09-24 — B7-early, the ultimatum anchor
+
+**BD54. The synthetic ultimatum responder is a Fehr-Schmidt inequity-averse agent, and this is
+recorded before any ultimatum number is computed.** The authors asked for the anchor programme to be
+extended to the ultimatum game. Nothing in the existing estimator can serve it: every utility function
+in `cv_bench/estimator/agents.py` takes a `Lottery`, and `cv_bench/tasks/social.py` renders the
+responder as a pair of degenerate lotteries, so cumulative prospect theory sees accept as a sure
+payment of the offer against a sure zero and predicts accepting every positive offer. Rejecting a low
+offer is exactly what the risk parameterisation cannot express, so a new decision model is required
+rather than a new parameter.
+
+The model, chosen by the authors from three options put to them:
+
+```
+u_accept = offer - beta_adv * max(pie - 2*offer, 0)
+u_reject = 0
+z        = (u_accept - u_reject) / pie / tau  +  action  +  position  +  label
+```
+
+`beta_adv` is the weight on disadvantageous inequity, the responder being worse off than the proposer.
+The reference value is **beta_adv = 0.60**. Dividing by the pie is the social counterpart of the
+contextual-utility normalisation used on the risk side, and it makes the agent scale invariant across
+the three pies of 20, 100 and 1,000, which is the property the risk agent has across stakes.
+
+**Why this model and not the two alternatives.** A fairness-norm threshold agent, accepting when the
+offer share exceeds a fixed fraction, was rejected because that fraction *is* the acceptance threshold,
+so planting a shift in it and then recovering the threshold is close to circular and the anchor would
+prove nothing. Charness-Rabin social welfare weights were rejected as having more free parameters than
+the recovery study can identify on this grid.
+
+**What is planted.** The preference change is a reduction in `beta_adv`, which makes the responder less
+inequity averse and so willing to accept lower offers. The bias is `action = 0.60`, identical to the
+risk side so the two negative controls are comparable. `tau = 0.1186` is carried over from the risk
+side's B2 calibration; it is a declared setting here, not a fitted one.
+
+**BD55. The ultimatum MDC is fixed by matching the risk side's behavioural size, and is declared
+before any adapter is trained.** The authors chose this rule over declaring a round number in
+parameter units, so that one MDC means the same amount of behaviour change on both tasks.
+
+On the risk side one MDC of alpha, 0.10, moves the switching point from 133.9 to 121.0, which is 12.9
+tokens across a grid spanning 20 to 240. That is 5.86 percent of the grid. The ultimatum offer grid
+spans 0 to 100 percent of the pie, so the matched target is a shift of the acceptance threshold of
+5.86 percent of the pie.
+
+The threshold of this agent is `offer/pie = beta_adv / (1 + 2*beta_adv)`, so the MDC is the reduction
+in `beta_adv` that moves that quantity by 0.0586. The value is computed by
+`cv_bench/estimator/social_mdc.py` and registered in `MANIFEST_B.csv` as `B7.mdc.beta_adv`. It is
+derived from the grid geometry and the reference parameter alone. No model output enters it.
+
+**Deviation from the plan's sequencing, recorded rather than done quietly.** `ICLR_PLAN.md` puts the
+social arm at B7 in weeks 5 and 6, after pre-registration, and specifies no synthetic social agent.
+This work is therefore early and its parameterisation is new. The test split stays locked; everything
+here runs on discovery, selection and calibration only.
