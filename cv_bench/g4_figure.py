@@ -93,9 +93,9 @@ def build():
     import matplotlib.pyplot as plt
     from matplotlib.gridspec import GridSpec
 
-    # one row: two panels and the notes block
-    fig = plt.figure(figsize=(12.6, 4.4))
-    gs = GridSpec(1, 3, figure=fig, wspace=0.34)
+    # one row, two panels
+    fig = plt.figure(figsize=(9.6, 4.4))
+    gs = GridSpec(1, 2, figure=fig, wspace=0.30)
     axes = [fig.add_subplot(gs[0, 0]), fig.add_subplot(gs[0, 1])]
     for ax in axes:
         ax.set_facecolor(SURFACE)
@@ -104,30 +104,6 @@ def build():
         for s_ in ax.spines.values():
             s_.set_color(GRID)
     panel_d(axes[0]); panel_e(axes[1])
-
-    note = fig.add_subplot(gs[0, 2]); note.axis("off")
-    note.text(0.0, 1.0, "What each panel establishes", color=INK, fontsize=10,
-              va="top", weight="bold")
-
-    # Claim first, evidence under it. Findings, not verdicts.
-    items = [
-        ("A", "Sampled generation stays the primary measure",
-         "The readout and free generation locate the switch\n"
-         "in different places, so the readout is a check on\n"
-         "text rather than a substitute for it."),
-        ("B", "The choice probe is a contrastive direction",
-         "It sits nearest difference-of-means and far from\n"
-         "the gradient of the answer logit, which is a\n"
-         "different object."),
-    ]
-    Q_H, A_H, GAP = 0.075, 0.062, 0.070
-    y = 0.88
-    for tag, question, answer in items:
-        note.text(0.0, y, f"{tag}  {question}", color=INK, fontsize=8.0,
-                  va="top", weight="bold")
-        note.text(0.030, y - Q_H, answer, color=INK2, fontsize=8,
-                  va="top", linespacing=1.45)
-        y -= Q_H + A_H * (answer.count("\n") + 1) + GAP
 
     fig.suptitle("G4: instrument and direction geometry (lottery)",
                  color=INK, fontsize=12, y=0.985)

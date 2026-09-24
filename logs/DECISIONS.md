@@ -1470,3 +1470,18 @@ P(accept) = 1.000 at all seven offer levels and the readout gives p_positive = 1
 nineteen, so neither instrument has a crossing and panel A's comparison is undefined for that
 game. That is now stated only in the title's "(lottery)" and in this log, not on the face of the
 figure.
+
+## D95 — the notes block removed from g4_summary (23 Sept)
+
+Removed at the authors' instruction. The figure is two panels at 9.6x4.4 inches, down from
+12.6x4.4, since the third grid column was the notes block. Recoverable at ee331e3.
+
+What goes with it, so the authors know what a reader loses. The block carried the only
+statement on the figure of what each panel is for, and in particular the qualifier on panel A:
+that the readout is a check on sampled text rather than a substitute for it. Without it panel
+A's title, "the readout does not track free generation", stands alone and a reader has to infer
+the consequence. If this figure goes in the paper, that belongs in the caption.
+
+The "(lottery)" scope marker stays in the suptitle. It is now the only thing on the figure
+saying the panels are single-game, since both the ultimatum panel (D94) and the notes entry
+that said so (D93) are gone.
