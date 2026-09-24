@@ -252,3 +252,97 @@ between the per-prompt gradients and their own average, is 0.84 to 0.85 on 30 pr
 This is the one place where the ultimatum task is the easier of the two.
 
 ---
+
+## 3. What the runs found, term by term
+
+Llama-3.3-70B-Instruct, rank 16 adapters, 500 training steps, the step used for each adapter
+chosen by its own cloning curve. Gradient anchor 5m34s on four GPUs, adapters 2h00m.
+
+### 3.1 Cloning, the three adapters
+
+| adapter | r | slope | clones | lottery's r |
+|---|---|---|---|---|
+| reference | **0.9977** | 0.9802 | yes | 0.9915 |
+| preference | **0.9974** | 0.9327 | yes | 0.9938 |
+| bias | **0.9981** | 0.9342 | yes | 0.9933 |
+
+All three clear the bar fixed in advance, r at or above 0.95 and slope between 0.9 and 1.1,
+on 120 selection-split prompts none of them was trained on. The correlations are **higher
+than the lottery's** on every adapter, so the model imitates a fairness rule at least as
+readily as it imitates a prospect-theory one. The slopes sit at the lower end of the band for
+the two shifted adapters, meaning they reproduce the direction of their agent's preference
+slightly more weakly than its full strength.
+
+So the model was successfully taught to behave like three responders whose rules were known
+in advance.
+
+### 3.2 The anchor gate
+
+| column | meaning |
+|---|---|
+| **Planted** | the reduction in `beta_adv` built into the synthetic agent, in parameter units. 0.2258 is one MDC. |
+| **Recovered** | the shift the estimator found, by fitting the reference and shifted adapters separately and taking the difference in fitted `beta_adv`. |
+| **Error** | the gap between planted and recovered, expressed in MDC. |
+| **Attributed to preference** | having measured that something changed, attribution asks what **kind** of change it was. Five competing explanations are fitted and each receives a share of the evidence between 0 and 1. The bar is 0.8. |
+| **Action rejected** | whether the constant-push explanation is ruled out on a cluster bootstrap at the 0.95 level. Both this and the share must hold. |
+| **Gate** | the verdict of the decision rule fixed in the plan. |
+
+| Anchor | Planted | Recovered | Error | Attributed to preference | Action rejected | Gate |
+|---|---|---|---|---|---|---|
+| One times the MDC | 0.2258 | +0.2096 | **0.07 MDC** | **1.000** | yes, at 1.000 | **PASS** |
+
+The five competing explanations are **preference**, a change in the weight on being worse off
+than the proposer; **action**, a constant push toward one answer; **belief**, a change in how
+the offer is read; **format**, a pull toward a position on the page; and **noise**, a change
+in how sharply the responder acts on differences.
+
+**This passes where the lottery failed.** The lottery anchor at one MDC returns an error of
+0.13 MDC and a preference share of 0.268, beaten by belief at 0.346, and it fails. Here the
+error is 0.07 MDC and the share is 1.000. On this task the method works at its own declared
+detection limit rather than at three times it.
+
+**A three times anchor does not exist on this task, and the reason is arithmetic.** Three MDCs
+is 0.6773 while `beta_adv` starts at 0.60, so a three times reduction requires a negative
+weight on inequity. The lottery's second anchor exists because its parameter has room above
+it. Here there is no room below. A three times anchor is available only in the opposite
+direction, as a **more** inequity-averse responder, which is not what was declared.
+
+### 3.3 The control that decides how much of this to believe
+
+A weight of 1.000 on preference might simply be what this classifier always says. On the
+lottery that objection is answered completely: the **bias** contrast run through the identical
+fit returns preference **0.000**. The same control here:
+
+| contrast | preference | action | belief | format | noise | action rejected |
+|---|---|---|---|---|---|---|
+| preference, a known preference change | **1.000** | 0.000 | 0.000 | 0.000 | 0.000 | yes, at 1.000 |
+| bias, a known constant push | **0.581** | 0.415 | 0.004 | 0.000 | 0.000 | **no, at 0.735** |
+| bias, the same control on the lottery | 0.000 | 0.491 | — | 0.509 | — | — |
+
+**Read the two criteria separately, because they disagree.**
+
+The **decision rule is specific**. Applied to the known bias it fails both of its tests: the
+preference share of 0.581 is under the 0.8 bar, and the bootstrap does not reject the action
+explanation, reaching only 0.735 against the 0.95 required. A planted bias would not be
+certified as a preference change.
+
+The **share on its own is not specific**. A known pure bias still collects 0.581 of the
+evidence on preference, more than the action explanation it actually is. On the lottery the
+same number is 0.000. So on this task the preference share cannot be read as a measure of how
+preference-like something is; only the full rule, share and bootstrap together, carries
+weight.
+
+The size of the bias is recovered well: the action model fits **+0.523** against a planted
+0.600.
+
+**Why the share behaves worse here.** Section 1.4 has the reason. The planted preference
+change never changes sign across the offer grid, so it is a declining positive function set
+against a flat positive one, and over the offers where behaviour is uncertain the two are
+close. The lottery's implant changes sign, which nothing constant can imitate.
+
+`reports/B7_RECOVERY.md` predicted this from the geometry alone, before any GPU time, and on
+simulated binary choices it was worse still, 0.984 on preference for a known bias. Fitting
+the model's continuous log-odds rather than sampled choices recovers a great deal of the
+separation, from 0.984 down to 0.581, without restoring it fully.
+
+---
