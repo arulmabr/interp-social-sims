@@ -1580,3 +1580,63 @@ fix is a short collection job on the lottery prompts, both layers in one model l
 shape as the ultimatum one that cost 7m54s on two GPUs, so on the order of half a GPU-hour
 against 58.1 of 400 used. Not started: it is new compute two days from the deadline and the
 authors have been deciding each step, so it is theirs to call.
+
+## D99 — the lottery choice probe does not reproduce on a rerun (23 Sept)
+
+The lottery permutation null was authorised and run as `cvb_g4null` (23611883). It did not
+produce a null. The verify guard stopped it first, which is what the guard was for.
+
+    [g4null] verify lottery L50: cosine with G4's direction_raw = 0.39387039
+    [g4null] refit does not reproduce G4's direction; the null is not written
+
+What was rerun. `cv_bench/g4null.py::collect` repeats G4's own `phase_train` loop for lottery at
+layer 50: the same `render`, the same variant config, the same `torch.manual_seed(int(v))` per
+level, the same PROBE_SAMPLES draws at temperature 0.7 and top-p 0.95, the same
+`decision_code` coding. It then refits with `_fit`, which reproduces phase_train's estimator
+exactly.
+
+Where the two runs differ:
+
+    kept / dropped      mine 354 / 6      G4 351 / 9
+    base rate           mine 0.63277      G4 0.62963
+    scaler scale median mine 0.019862     G4 0.019852
+    distinct activation vectors: 45 of 354 rows
+
+The activations are the same object: 45 distinct vectors, one per reward level, and the scaler
+agrees to the fifth decimal. Generation is what differs. Despite the per-level seed, sampling a
+70B across two GPUs is not bit-reproducible across runs, so a handful of trials code
+differently.
+
+How much that matters, measured on the saved arrays by flipping k labels at random and
+refitting:
+
+    k= 1   mean cosine with the original probe 0.931
+    k= 3                                       0.824
+    k= 5                                       0.755
+    k=10                                       0.630
+    k=20                                       0.486   (min 0.395)
+
+Flipping ONE trial in 354 moves the direction to 0.93. The observed 0.394 corresponds to about
+twenty trials coding differently between the two runs.
+
+**The finding.** G4's lottery choice probe is not a stable object. Rerun the same code, same
+seeds, same model, same prompts, and the direction comes back at cosine 0.394 to the one
+reported. Two arbitrary directions in the 44-dimensional span of these activations sit near
+0.12, so 0.394 is above chance and nowhere near reproducible.
+
+This outranks the question that prompted the job. `g4b_geometry.csv` measures every direction's
+cosine against this probe, and G4's own record gives cos_choice_diffmean = 0.269,
+cos_choice_pca1 = 0.215, cos_choice_ridge = 0.137. All three are smaller than the probe's own
+run-to-run movement. Panel B's bars are therefore not interpretable as stated, for a reason that
+has nothing to do with the null scale: the reference direction is noise-dominated at the scale
+of the effects being reported.
+
+Not done, and now the open question for the authors. A null for panel B can still be computed on
+the re-collected arrays, but it would describe my run rather than the reported one, so it would
+not license panel B's numbers. The more useful measurement is the one this accidentally started:
+refit the probe n times with fresh sampling and report the spread of the direction. That is the
+stability check the probe never had, it needs no new code beyond a loop around `collect`, and at
+roughly 0.6 GPU-hours per repeat it is affordable inside the remaining budget.
+
+Spend: about 18 minutes wall on two A100s, roughly 0.6 GPU-hours. Nothing pre-registered
+changed and no existing file was written; `g4null/` holds only new outputs.
