@@ -40,9 +40,6 @@ def panel_d(ax):
     xs = np.arange(len(labels))
     ax.bar(xs - 0.19, rd, width=0.36, color=PURPLE, label="logit readout")
     ax.bar(xs + 0.19, fr, width=0.36, color=GOLD, label="free generation")
-    for i, (a, b) in enumerate(zip(rd, fr)):
-        ax.text(i, 262, f"{abs(a-b)/5:.0f} steps", ha="center",
-                color=INK2, fontsize=7, clip_on=True)
     ax.set_xticks(xs)
     ax.set_xticklabels(labels, fontsize=7.5)
     ax.set_ylabel("crossing (tokens)", color=INK2, fontsize=8)
