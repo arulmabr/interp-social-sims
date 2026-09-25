@@ -763,7 +763,84 @@ survive the change of wording, and they should be read as unavailable rather tha
 
 ---
 
-## 17. What would come next, in order
+## 17. Every result, and what each one means
+
+A reference list rather than something to read aloud. Each row gives the measurement, the
+value it came out at, and the sentence that value supports.
+
+### Step one, the answer direction
+
+| measurement | value | what it means |
+|---|---|---|
+| lottery, agreement between the two option orders at layer 48 | **-0.889** | the two orders almost cancel, so the direction is mostly about which letter is typed |
+| lottery, the same at layer 50 | -0.893 | the result does not depend on the depth chosen |
+| lottery, length of the part common to both orders | 9.128 | the part that is about the answer |
+| lottery, length of the part that flips with the order | **37.682** | the part that is about the letter, four times larger |
+| ultimatum, agreement between the two orders at layer 48 | **+0.953** | the two orders agree, so the direction is about the answer |
+| ultimatum, the same at layer 50 | +0.956 | again independent of depth |
+| ultimatum, common part against flipping part | 18.421 against 2.869 | the balance is reversed, six times in favour of the answer |
+| agreement of single prompts with their own average | 0.851 and 0.844 | each half is one consistent direction rather than an average of noise |
+
+### Step two, the pure push
+
+| measurement | value | what it means |
+|---|---|---|
+| size of the push built in | 0.600 | the target every recovery below is measured against |
+| ultimatum, push recovered | **+0.462** | 77 percent of the planted amount survives, so the anchor holds on this game |
+| ultimatum, preference recovered | +0.331 | the other planted change survives as well |
+| ultimatum, displacement of the push against the preference | 6.512 against 5.930 | the two changes move the model differently, which is what two different kinds should do |
+| lottery, push recovered | **-0.022** | indistinguishable from nothing, so the anchor does not survive the change of wording |
+| lottery, preference recovered | -0.285 | the wrong sign entirely |
+| lottery, unmodified reading against the earlier baseline | 0.957 | the reading itself is sound, so the failure is not in the measurement |
+| lottery, spread under the reference adapter | 12.45 falls to 4.36 | the adapters are plainly doing something, so the failure is not inactivity |
+| lottery, displacement of the push against the preference | 3.073 against 2.521 | too close together for two changes that differ in kind |
+
+### Step three, placing the features
+
+The level an ordinary feature reaches is the comparison for every row. On the lottery that
+level is 0.033 against the answer direction and 0.049 against the push. On the ultimatum it
+is 0.028 and 0.077.
+
+| measurement | value | what it means |
+|---|---|---|
+| feature 184 against all three poles, lottery | -0.001 and +0.016 and -0.005 | below the level an ordinary feature reaches |
+| feature 4237 against all three poles, lottery | +0.004 and +0.000 and +0.004 | below that level |
+| feature 31935 against all three poles, lottery | +0.004 and +0.004 and +0.017 | below that level |
+| feature 31935 against the ultimatum poles | +0.013 and +0.010 and -0.044 | below that level on its own game as well, which removes the objection that it was judged on the wrong task |
+| fitted combinations against the lottery answer direction | **+0.067 to +0.096** | above the level only one feature in a hundred reaches, so the fitting located the answer direction |
+| fitted combinations against the lottery push | -0.013 to +0.031 | below the level, so they are not push-like on this game |
+| fitted combinations against the ultimatum push | **+0.184 to +0.226** | above the one in a hundred level of 0.126, the only positive identification in the whole exercise |
+| fitted combinations against the ultimatum answer direction | -0.049 to -0.064 | they point away from it on this game |
+| rebuilt readout direction against the answer part | **+0.269** | the dictionary can represent the answer part |
+| the same against the letter part | +0.037 | it barely reaches the ordinary level on the letter part |
+| unexplained share of the rebuilt direction | 96 percent | the rebuilding fails because what it is mostly matching is the letter part, which is not in the dictionary |
+
+### Step four, what the steering did
+
+On the lottery the edit is applied at every position at a strength of 16. On the ultimatum it
+is applied at the last position only, in units of the typical size of the model's internal
+state, which was measured at 21.12.
+
+| measurement | value | what it means |
+|---|---|---|
+| lottery, spread of the unmodified answers | 9.23 | the quantity every intervention is measured against |
+| lottery, spread after ten-feature steering | **0.92** | the model has almost stopped telling a good gamble from a bad one |
+| lottery, share of the response left by the readout direction | **0.062** | it removed almost all of it |
+| lottery, share left by the ten-feature combinations | 0.092 to 0.096 | the same |
+| lottery, share left by the dense vectors | 0.129 to 0.143 | the same |
+| lottery, share left by the preference adapter | 0.156 | the same |
+| lottery, share left by random directions of that size | **0.505 to 0.605** | the control preserved three to six times more than the treatment did |
+| lottery, closeness of each fit to a straight line | -0.95 to -1.000 | each intervention is very close to an exact flattening rather than a tendency |
+| lottery, share left at strengths 1 and 4 and 16 | 0.611 and 0.215 and 0.062 | the flattening is caused by the strength, and 16 is where every comparison was made |
+| ultimatum, unmodified average and spread | +1.632 and 7.860 | the starting point for the ladder |
+| ultimatum, feature 31935 at the top strength | shift +1.814 with 1.174 left | it moved the answer while leaving the shape of the response almost unchanged, which is the profile of a push |
+| ultimatum, readout direction at the top strength | 3.574 left, spread rises to 28.21 | a pure push by construction does the same thing more strongly |
+| ultimatum, random live feature at the top strength | 0.977 left, shift +0.154 | it did nothing, which is the control behaving correctly |
+| ultimatum, strength compared with the lottery | 16.9 against 16 | the strength per position is close to the same, so the difference between the two games is where the edit lands rather than how large it is |
+
+---
+
+## 18. What would come next, in order
 
 The first task is to rerun the ultimatum steering while keeping the individual trial values,
 which takes 52 minutes and converts the strongest suggestive result into a measured one.
