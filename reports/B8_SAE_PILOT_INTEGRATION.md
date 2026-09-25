@@ -204,18 +204,38 @@ service contacted and no model run.
 The null is 2,000 randomly drawn live dictionary features put through the identical
 construction. 3,632 of the 65,536 features are dead and were excluded.
 
-| direction | cos with the answer part | cos with the letter part |
-|---|---:|---:|
-| **random feature, 95th percentile** | 0.033 | 0.027 |
-| **random feature, 99th percentile** | 0.056 | 0.048 |
-| feature 184, the paper's lottery feature | **-0.001** | **+0.016** |
-| feature 4237, the paper's second lottery feature | **+0.004** | **+0.000** |
-| feature 31935, the paper's ultimatum feature | **+0.004** | **+0.004** |
-| the pilot's fitted ten-feature vector, combined target, seed 31 | **+0.067** | -0.006 |
-| the same, seed 73 | **+0.075** | -0.003 |
-| the pilot's fitted vector, neutral target, seed 31 | **+0.091** | +0.002 |
-| the same, seed 73 | **+0.096** | +0.004 |
-| the pilot's sparse fit of the raw readout direction | **+0.269** | +0.037 |
+The bias anchor carries no direction in its file, so its pole is its **activation-space
+displacement**: the mean change in the residual stream between the reference adapter and the
+bias adapter, measured on the same prompts by `cv_bench/anchors/bias_direction.py`. That is
+what plan item A5 means by a weight-space control matched to the gradient anchor in
+activation space.
+
+| direction | cos, gradient answer part | cos, gradient letter part | cos, bias anchor |
+|---|---:|---:|---:|
+| **random feature, 95th percentile** | 0.033 | 0.027 | 0.049 |
+| **random feature, 99th percentile** | 0.056 | 0.048 | 0.078 |
+| feature 184, the paper's lottery feature | **-0.001** | **+0.016** | **-0.005** |
+| feature 4237, the paper's second lottery feature | **+0.004** | **+0.000** | **+0.004** |
+| feature 31935, the paper's ultimatum feature | **+0.004** | **+0.004** | **+0.017** |
+| the pilot's fitted ten-feature vector, combined target, seed 31 | **+0.067** | -0.006 | +0.031 |
+| the same, seed 73 | **+0.075** | -0.003 | -0.013 |
+| the pilot's fitted vector, neutral target, seed 31 | **+0.091** | +0.002 | -0.013 |
+| the same, seed 73 | **+0.096** | +0.004 | -0.004 |
+| the pilot's sparse fit of the raw readout direction | **+0.269** | +0.037 | -0.008 |
+
+**Nothing aligns with the bias pole.** Every direction, including the pilot's fitted vectors,
+sits inside the 95th percentile of the null against it. So on this measurement the SAE
+directions are not bias-like either; the only structure any of them shows is alignment with
+the answer component of the readout.
+
+**How much that last point is worth is limited, and the limit is measurable.** The bias
+displacement was captured on the pilot's wording, where Section 5.3 shows the adapter's
+behavioural contrast has collapsed from a planted +0.600 to -0.022. Its displacement norm is
+3.073 at layer 48 against 2.521 for the preference adapter, so the two adapters move the
+residual stream by similar amounts on these prompts when they are supposed to differ in kind.
+That similarity is the geometric signature of the same transfer failure. A null result
+against this pole therefore says less than a null result against the gradient pole, which was
+computed from the prompts themselves and does not depend on any adapter.
 
 Layer 50 gives the same picture throughout, within 0.005.
 

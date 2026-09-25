@@ -84,13 +84,27 @@ def main(argv=None) -> int:
 
     D = decoder()
     print(f"decoder {D.shape}", flush=True)
-    combos = {**PAPER_FEATURES, **pilot_combos(a.pilot)}
+    fitted = pilot_combos(a.pilot)
+    # Missing pilot inputs used to drop rows silently, which looked like a
+    # smaller result rather than an absent one.
+    missing = [f for f in ("selected_feature_coefficients.csv", "readout_geometry.json")
+               if not (a.pilot / f).exists()]
+    if missing:
+        raise SystemExit(f"missing pilot inputs in {a.pilot}: {', '.join(missing)}")
+    combos = {**PAPER_FEATURES, **fitted}
+    print(f"{len(combos)} directions ({len(fitted)} fitted by the pilot)", flush=True)
     poles = {}
     for L in (48, 50):
         for part in ("sum", "diff"):
             p = a.grad_dir / f"pilot_grad_L{L}_{part}.npy"
             if p.exists():
                 poles[f"L{L}_{part}"] = np.load(p).astype(np.float64)
+        # The bias anchor carries no direction in its file. Its activation-space
+        # displacement, measured by `bias_direction.py`, is the pole (A5).
+        for other in ("bias", "preference"):
+            p = a.grad_dir / f"displacement_{other}_L{L}.npy"
+            if p.exists():
+                poles[f"L{L}_{other}"] = np.load(p).astype(np.float64)
     if not poles:
         raise SystemExit(f"no gradient vectors in {a.grad_dir}")
 

@@ -1,4 +1,5 @@
 """The pilot bridge, whose one dangerous step is the outcome ordering."""
+import pathlib
 import numpy as np
 import pytest
 
@@ -40,3 +41,10 @@ def test_the_trial_is_usable_by_the_estimator():
     z = A.latent_z(t, A.AgentParams(tau=0.1186))
     assert np.isfinite(z)
     assert z < 0            # a 18% shot at 13.3 against a sure 35 is bad
+
+
+def test_bias_direction_uses_the_peft_safe_layer_path():
+    """Regression: `model.model.layers` fails on a PeftModel (B8, and before)."""
+    src = pathlib.Path("cv_bench/anchors/bias_direction.py").read_text()
+    assert "decoder_layers(model)" in src
+    assert "model.model.layers[" not in src
