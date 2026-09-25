@@ -254,7 +254,31 @@ Signal retained above one means the intervention made the model respond **more**
 the offer rather than less. The random feature does nothing at any strength, which is the
 control behaving correctly.
 
-**Three readings of this.** The paper's ultimatum feature moves the answer by 1.814 in
+**Where the SAE directions sit against the ultimatum poles.** With a working bias pole the
+same geometric placement as Section 3.1 can be repeated on this task.
+
+| direction | gradient, answer | gradient, letter | bias anchor |
+|---|---:|---:|---:|
+| **random feature, 95th percentile** | 0.028 | 0.026 | 0.077 |
+| **random feature, 99th percentile** | 0.038 | 0.039 | 0.126 |
+| feature 31935, the paper's ultimatum feature | **+0.013** | **+0.010** | **-0.044** |
+| fitted ten-feature vector, combined, seed 31 | -0.049 | -0.013 | **+0.184** |
+| the same, seed 73 | -0.049 | -0.009 | **+0.215** |
+| fitted vector, second target, seed 31 | -0.062 | -0.027 | **+0.226** |
+| the same, seed 73 | -0.064 | -0.029 | **+0.220** |
+
+**The paper's ultimatum feature is inside the null against all three poles**, including the
+one built from its own game. Measured against the direction that drives the answer on the
+task it was chosen for, it is indistinguishable from a feature picked at random.
+
+**The fitted vectors align with the planted bias, at 0.184 to 0.226 against a
+99th-percentile null of 0.126.** This is the first above-null alignment with a bias pole
+anywhere in this work, and it is a positive attribution rather than a failure to be
+preference-like: vectors fitted on the lottery to reproduce a decision agent point, on the
+social task, at the direction of a constant push toward one answer. It is also the reason the
+bias pole was worth building, since the lottery version of this comparison could say nothing.
+
+**Three readings of the steering curves.** The paper's ultimatum feature moves the answer by 1.814 in
 log-odds while changing the shape of the response by 17 percent, which is the profile of a
 push toward one answer rather than a change in what the responder considers fair. The readout
 gradient, which is a pure answer-push by construction, does the same thing far more violently,
@@ -286,6 +310,9 @@ re-run that keeps the per-trial values.
 - Steering with feature 31935 at the last position shifts the answer log-odds by 1.814 while
   leaving the shape of the response nearly unchanged, and a random live feature at the same
   strength does nothing.
+- The pilot's fitted ten-feature vectors align with the planted ultimatum bias at 0.184 to
+  0.226, above the 99th percentile of the random-feature null at 0.126. That is the only
+  above-null alignment with a bias pole in this work.
 - On a letter-answer format the readout direction is about four fifths letter identity, with
   the two orders anti-correlated at -0.889. The same computation on word answers gives +0.727
   and +0.953, so this is a property of the format rather than of the model.
