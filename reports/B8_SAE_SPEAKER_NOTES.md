@@ -2,7 +2,7 @@
 
 These notes assume no prior knowledge of the project. Every term is explained at the point
 where it first matters. Every number quoted here was produced by a script in this repository
-and is registered in `MANIFEST_B.csv` under identifiers beginning with `B8`.
+and is recorded in the project's register of results alongside the script that made it.
 
 ---
 
@@ -93,14 +93,14 @@ the model's running internal state while the model is generating its answer.
 
 ## 5. Where every ingredient came from
 
-The dictionary of features is a published file named
-`Goodfire/Llama-3.3-70B-Instruct-SAE-l50`. It was downloaded from Hugging Face at a fixed
-revision whose identifier begins `128ee921`. Fixing the revision matters because it means
-anybody repeating this work gets the identical file rather than whatever happens to be
-current. The file is about four and a third gigabytes.
+The dictionary of features is a published file, released by the company Goodfire for layer
+fifty of this particular model. It was downloaded from the public model repository at a
+fixed published version rather than at whichever version happened to be current. Fixing the
+version matters because it means anybody repeating this work receives the identical file. The
+file is about four and a third gigabytes.
 
-That revision identifier was not chosen freshly. It was read out of the existing experiment's
-own source code so that the same dictionary would be used throughout.
+That version was not chosen freshly. It was read out of the existing experiment's own source
+code so that both pieces of work use the same dictionary.
 
 The prompts came from two places. The lottery prompts are the four hundred and thirty two
 already used by the earlier steering experiment. The ultimatum prompts are the one hundred
@@ -182,7 +182,7 @@ the reversing part only two point eight six nine.
 
 ### What that means
 
-On the lottery the two orders very nearly cancel each other out. The explanation is the
+On the lottery the two orders come close to cancelling each other out. The explanation is the
 answer format. The lottery prompts ask the model to reply with a single letter, either A or
 B, and which letter stands for the gamble changes from prompt to prompt. So the thing being
 measured flips its meaning when the ordering flips, and the direction flips with it.
@@ -191,8 +191,8 @@ The ultimatum prompts ask for the word Accept or the word Reject. Those words ke
 meaning no matter which option is printed first, so nothing flips and the two orders agree.
 
 The practical consequence is worth stating slowly. On a prompt that asks for a bare letter,
-roughly four parts in five of the readout direction is about which character gets typed
-rather than about what that character stands for. Any measurement taken against an
+about four parts in five of the readout direction is about which character gets typed rather
+than about what that character stands for. Any measurement taken against an
 undecomposed version of that direction is therefore mostly measuring alignment with letter
 identity.
 
@@ -407,16 +407,18 @@ between zero point one two nine and zero point one four three for the dense vect
 Random directions of the same size retained between zero point five zero five and zero point
 six zero five.
 
-The straight line fits were extremely tight, with correlations between minus zero point nine
-five and minus one point zero zero zero.
+The straight line fits were almost exact. The measure of how closely the points follow the
+line ran between minus zero point nine five and minus one, where minus one means every point
+lies on the line.
 
 ### What that means
 
-Every one of these interventions is very nearly an exact flattening of the model's response
-toward a constant. The model has almost stopped distinguishing between a good gamble and a
+Every one of these interventions flattens the model's response toward a constant, and the fit
+to a straight line is close enough that little else is happening. The model has almost stopped distinguishing between a good gamble and a
 bad one.
 
-The comparison with random directions is the uncomfortable part. The directions under test
+The comparison with random directions is the result that decides how much the rest can be
+believed. The directions under test
 destroyed between three and six times more of the signal than randomly chosen directions of
 the same size did. A situation in which the control preserves the measured quantity better
 than the treatment does is not a situation in which anything can be concluded about the
@@ -441,31 +443,124 @@ four and raised the spread of the answers from seven point eight six to twenty e
 two one.
 
 A randomly chosen live feature gave a retention figure of zero point nine seven seven and
-moved the average answer by plus zero point one five four, which is to say it did essentially
-nothing.
+moved the average answer by plus zero point one five four. Both of those are close enough to
+no change that the feature can be said to have done nothing.
 
 ### What that means
 
 A retention figure above one means the model responded more sharply rather than less. So
 nothing was flattened on this game.
 
-The altruism feature moved the answer substantially while barely changing the shape of the
-response. That is the signature of a push toward one answer rather than a change in what the
+The altruism feature moved the answer by one point eight one four while changing the shape of
+the response by seventeen percent. That is the signature of a push toward one answer rather than a change in what the
 responder considers a fair split. The readout direction, which is a pure push by
-construction, did the same thing far more violently.
+construction, did the same thing more strongly, raising the spread of the answers from seven
+point eight six to twenty eight point two one.
 
 The two games differ because of where the adjustment is applied rather than how large it is.
-The per position strength is essentially the same in both cases, sixteen against sixteen point
-nine. The lottery conditions apply the adjustment at every position in the prompt while the
+The strength applied at each position is close to the same in both cases, sixteen in one and
+sixteen point nine in the other. The lottery conditions apply the adjustment at every position in the prompt while the
 ultimatum conditions apply it only at the final position. The flattening is therefore a
 property of applying an adjustment everywhere at once, and results from the two arrangements
 should never be combined.
 
 ---
 
-## 12. A figure from the neighbouring method, and why it is not the same claim
+## 12. How this setup compares with the one already in the paper
 
-There is a figure in the project called `s1_calibration.png`. It is worth describing here
+The paper describes its own steering procedure in its appendix. It is worth laying the two
+side by side, because they agree on more than people assume and the places where they differ
+are the places that decide what each one can claim.
+
+### What the two have in common
+
+Both use the same model, which is Llama-3.3-70B-Instruct.
+
+Both use the same dictionary of features, the sparse autoencoder published for layer fifty of
+that model.
+
+Both reach into the model at the same depth, which is layer fifty.
+
+Both steer with the same features. The paper names feature one hundred and eighty four and
+feature four thousand two hundred and thirty seven for the lottery and feature thirty one
+thousand nine hundred and thirty five for the ultimatum game. Those are exactly the features
+placed against the anchors in these notes.
+
+So the disagreement between the two is not about which model or which dictionary or which
+features. It is about how the steering is applied and how the answer is read.
+
+### The first difference is where the work happens
+
+The paper's runs are sent to a service operated by Goodfire. The researcher names a feature
+and gives a strength and the service returns the model's reply. The steering itself happens on
+somebody else's machine.
+
+The work in these notes downloads the published dictionary file and runs everything on the
+project's own hardware. The steering is performed by code in this repository that can be read
+line by line.
+
+This matters for a practical reason. The strength the paper sends to the service is a number
+between zero and one, and the service's interpretation of that number is not published. It is
+possible to record what the number achieved, because the logs show that a strength of one half
+drove the targeted feature from outside the ten most active features to a level of one hundred
+and seventy five, against ninety eight for the strongest feature when nothing is steered. But
+it is not possible to reconstruct the rule that turned one into the other. Running locally
+removes the question entirely, because the code performing the edit is the code you wrote.
+
+### The second difference is where the edit lands
+
+The paper's controller applies its adjustment at every position in the prompt. The
+configuration field that would restrict it to particular positions is left empty, which means
+no restriction.
+
+The ultimatum runs in these notes apply the adjustment only at the final position of the
+prompt, which is the moment just before the model commits to an answer.
+
+The strength per position is close to the same in the two arrangements. What differs is how
+many positions receive it. Section eleven shows that this is not a small matter. Applying the
+adjustment everywhere flattens the model's response to the amounts of money almost completely,
+while applying it at the last position alone does not flatten it at all. Results from the two
+arrangements should never be combined into one comparison.
+
+### The third difference is how the answer is read
+
+The paper lets the model write a reply and then reads the choice out of the text. A helper
+library picks whichever of the two option names appears.
+
+The work in these notes reads the answer from the model's own probabilities at the moment of
+answering, without letting it write anything. The measure used is the balance between the
+probability of one option word and the probability of the other.
+
+Reading the probabilities is the more sensitive of the two. A written reply gives one
+observation, and to see a small shift you need many agents. The probabilities give a graded
+quantity on every single trial, so a shift that would be invisible in the text is visible
+immediately. That sensitivity is what makes the anchor measurements possible at all. The cost
+is that a probability is not the same thing as what the model would actually have written, and
+a separate check in this project found the two giving different answers often enough that
+neither can stand in for the other.
+
+### The fourth difference is what question is being asked
+
+This is the one that matters most and it is not a difference of engineering.
+
+The paper asks whether steering a feature changes the behaviour. It answers yes, and the
+answer is correct.
+
+These notes ask what kind of change it was. They do that by building two changes whose nature
+is known in advance and asking where the feature sits relative to them. That question cannot
+be answered by watching behaviour move, however carefully, because a push toward a word and a
+change of preference both move behaviour.
+
+So the two setups are not competing accounts of the same experiment. The paper establishes
+that the lever does something. The work here asks what the lever is connected to, and for the
+three features the paper names, finds no measurable connection to either of the two things it
+could sensibly be connected to.
+
+---
+
+## 13. A figure from the neighbouring method, and why it is not the same claim
+
+There is a figure in the project showing the calibration of the other method. It is worth describing here
 because it is easy to mistake for evidence about the question these notes are asking, and it
 is not.
 
@@ -516,10 +611,10 @@ was one point one five tokens at the first position and one point eight tokens a
 It establishes that the probe steering is accurate. When the procedure aims the agent at a
 switching point of one hundred and six tokens the agent switches at one hundred and four and a
 half. Across a range that spans nearly two hundred tokens the aim is off by about two on
-average. As a piece of engineering that is a good result and it should be reported as one.
+average. As a piece of engineering the aim is accurate and it should be reported that way.
 
-It does not establish anything about mechanism, and this is the part that matters for these
-notes. Landing on a target switching point says the intervention moved behaviour to the right
+It does not establish anything about what inside the model was changed, which is the question
+these notes are asking. Landing on a target switching point says the intervention moved behaviour to the right
 place. It says nothing about whether the model's valuation of money changed or whether the
 model was simply pushed toward typing a particular word. Recall the person from the opening
 section who was told to answer with whatever was printed on the left. Their switching point
@@ -533,11 +628,11 @@ answer is that nothing distinguishable from a randomly chosen direction was move
 
 ---
 
-## 13. What this adds up to
+## 14. What this adds up to
 
 Four things are established.
 
-The readout direction on a prompt that asks for a bare letter is roughly four parts in five
+The readout direction on a prompt that asks for a bare letter is about four parts in five
 about which character gets typed. The identical computation on a prompt that asks for a word
 gives the opposite balance. This is a property of how the question is asked rather than a
 property of the model.
@@ -554,7 +649,7 @@ directions of the same size removed far less.
 
 ---
 
-## 14. What is deliberately not being claimed
+## 15. What is deliberately not being claimed
 
 The lottery placements are comparisons of direction rather than of effect, and pointing is
 not doing.
@@ -573,7 +668,7 @@ survive the change of wording, and they should be read as unavailable rather tha
 
 ---
 
-## 15. What would come next, in order
+## 16. What would come next, in order
 
 The first task is to rerun the ultimatum steering while keeping the individual trial values,
 which takes fifty two minutes and converts the strongest suggestive result into a measured
