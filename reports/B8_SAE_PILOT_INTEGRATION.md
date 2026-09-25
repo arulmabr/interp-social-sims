@@ -1,303 +1,233 @@
-# B8 — Track B's anchors applied to the SAE steering pilot
+# Running the anchors on SAE steering: what was done and what was found
 
-The pilot in `anchor_pilot/` asks whether a small fixed residual edit changes risk
-preferences or merely answer bias, and answers it by the RMSE of each condition's
-risky-choice probabilities against a planted target. It concludes that dense and ten-feature
-SAE steering each passed 0 of 8 cells.
+A point by point account. Each step says what was run, on what, and what came out. The
+explained-from-scratch version, which defines every term, is `B8_SAE_ANCHORS_README.md`.
+Every value is registered in `MANIFEST_B.csv` under `B8.*`.
 
-This report re-reads the pilot's own saved evidence with Track B's instrument. No model was
-re-run for Section 1, no pilot file was modified, and every number comes from
-`anchor_pilot/evidence/decision/frozen_scores_*.json` and `frozen_rows.json`. Code is
-`cv_bench/anchors/pilot_bridge.py` with tests in `cv_bench/tests/test_pilot_bridge.py`.
-Values are registered as `MANIFEST_B.csv:B8.*`.
+Model: Llama-3.3-70B-Instruct, loaded locally. Dictionary:
+`Goodfire/Llama-3.3-70B-Instruct-SAE-l50`, the public checkpoint pinned at revision
+`128ee921`, 65,536 features of which 3,632 are dead. No hosted service is contacted at any
+point.
 
----
-
-## 1. The finding that changes how the pilot's null should be read
-
-**Every condition in the decision experiment removes most of the model's response to the
-payoff, and the ones under test remove more of it than random directions do.**
-
-Regressing each condition's change in logit on the baseline logit gives a slope. A slope of
-zero means the intervention added something without touching how the model responds to the
-payoff. A slope of minus one means it removed that response entirely. What survives, one
-plus the slope, is the share of the payoff signal the measurement still has to work with.
-
-| condition | slope | signal retained | correlation | sd after |
-|---|---:|---:|---:|---:|
-| readout gradient, norm 16 | -0.938 | **0.062** | -0.999 | 0.69 |
-| SAE ten-feature, seed 31 | -0.904 | **0.096** | -1.000 | 0.92 |
-| SAE ten-feature, seed 73 | -0.908 | **0.092** | -1.000 | 0.88 |
-| dense, seed 31 | -0.857 | **0.143** | -0.992 | 1.65 |
-| dense, seed 73 | -0.871 | **0.129** | -0.994 | 1.50 |
-| LoRA anchor | -0.844 | **0.156** | -0.987 | 1.91 |
-| random 19, norm 16 | -0.495 | **0.505** | -0.973 | 4.79 |
-| random 41, norm 16 | -0.428 | **0.572** | -0.965 | 5.39 |
-| random 89, norm 16 | -0.395 | **0.605** | -0.952 | 5.70 |
-
-The baseline logit has a standard deviation of 9.23. After ten-feature SAE steering at norm
-16 it is 0.92. The model has stopped distinguishing between the gambles almost entirely.
-
-**Three things follow.**
-
-**The correlations are near perfect, between -0.95 and -1.000.** This is not a noisy tendency.
-Each intervention is, to an extremely good approximation, a linear compression of the
-baseline signal toward a constant, plus an offset.
-
-**The directions under test destroy three to six times more signal than random directions of
-the same norm.** Random directions at norm 16 retain 0.505 to 0.605. The SAE vectors retain
-0.081 to 0.096. A comparison in which the null control preserves the measured quantity better
-than the treatment does is not measuring what it was built to measure.
-
-**It is the dose, and the dose ladder shows it.** The same gradient direction at three
-strengths:
-
-| dose | signal retained |
-|---|---:|
-| norm 1 | 0.611 |
-| norm 4 | 0.215 |
-| norm 16 | 0.062 |
-
-Retention falls monotonically with strength. Norm 16 is the dose at which every dense and
-SAE comparison in the decision experiment was made.
-
-**What this means for the pilot's conclusion.** "0 of 8 cells passed" is consistent with the
-SAE dictionary lacking preference capacity, and it is equally consistent with the dose having
-flattened the payoff response before any preference could be expressed. The evidence cannot
-separate those, because the quantity the criterion is computed on has largely been destroyed
-in every cell. The pilot's own qualification, that a failed optimizer and candidate budget is
-not proof that no vector exists, understates this: the measurement regime itself is the
-problem.
-
-**The remedy is already specified.** Plan item A9 asks for an iso-behavioural dose, scaling
-each direction so that it produces the same shift of the behavioural measure, and then asking
-what moved underneath. Track B's lottery anchors are dosed that way, and the doses that
-achieve a matched shift differ across directions by about 150 times. Matching on norm, as
-here, compares very different amounts of intervention.
+Two tasks are covered. The **lottery** uses 432 prompts, 108 economic scenarios in gain, loss
+and mixed frames, each in two answer orders and two wordings, answered with the bare letter
+**A** or **B**. The **ultimatum responder** uses 120 prompts answered with the words
+**Accept** or **Reject**.
 
 ---
 
-## 2. The attribution, and why the anchor itself reads as a sharpness change
+## Step 1. Build the readout gradient anchor
 
-Running Track B's five-family attribution over the pilot's frozen conditions puts **noise**,
-a change in how sharply the agent acts on differences, top for almost every condition
-including the LoRA anchor. That is the correct answer and it is diagnostic rather than
-surprising.
+**What was run.** The gradient of the answer log-odds with respect to the residual stream at
+the final prompt token, at layers 48 and 50, averaged over prompts. Computed **separately for
+each option order**, then combined: their sum is the part independent of the labelling, their
+difference is the part that flips with it. Catch trials excluded. Lottery, 168 prompts per
+order, 11m16s. Ultimatum, 30 prompts per order, 5m34s.
 
-The pilot's combined target plants four parameters at once: alpha 0.8, gamma 0.72, lambda 2
-and **beta 3**. Beta is the temperature. Planting it at 3 is planting a sharpness change
-directly, so the anchor is a preference change and a noise change combined, and on this grid
-the noise part dominates. The estimator reports the dominant mechanism, and here the dominant
-mechanism is the one that was planted alongside the preference.
+**What was found.**
 
-**This is the second structural point.** Track B plants **one** parameter at a time, at a
-declared minimum detectable change, with a separate bias adapter as the negative control,
-because an anchor that moves four parameters has no single known true value to recover. The
-pilot's own result reflects this: its recovered curvature was 0.643 against a planted 0.8,
-and its teacher RMSE rose from 0.042 to 0.115 across wording. An anchor measured against the
-base model, with four parameters moved together, cannot separate "became a prospect-theory
-agent at all" from "has the planted parameters".
-
-Attribution numbers at these doses are reported in `reports/b8_pilot_attribution.json` for
-completeness, and they should not be quoted as evidence about the SAE dictionary until the
-dose question in Section 1 is settled.
-
----
-
-## 3. Where the two frameworks already agree, which is worth saying out loud
-
-**On the control.** The pilot classifies the raw readout gradient as action-like and passes
-it as its action control. Track B builds the readout gradient anchor to be action-like by
-construction and uses it as one of its two poles. Two instruments built independently, with
-different statistics and different decision rules, place the same direction in the same
-category. That is real calibration evidence for both.
-
-**On geometry not being the test.** The pilot found SAE steering vectors with readout cosines
-of only 0.068 to 0.073 that still failed its behavioural checks, and concluded that low
-cosine alone is insufficient as a preference test. Track B reaches the same conclusion from
-the other side in `B_ANCHORS_README.md` section 5.3: the distance that matters is not
-geometric but the distance between what two directions **do** to the choice, measured in the
-space of the model-free variance decomposition. Both say that how a direction points does not
-settle what it does.
-
----
-
-## 4. What Track B adds that the pilot does not have
-
-**A planted bias.** The pilot's only negative control is the readout gradient, a direction.
-Track B also trains a **bias adapter**, a weight-space change that is a constant push and
-nothing else, matched to the gradient anchor in activation space. Without one, a finding that
-SAE steering looks shortcut-like can only be stated as a failure to be preference-like. With
-one it can be stated as a positive attribution against a calibrated example. This is being
-measured on the pilot's own prompts; see Section 5.
-
-**An order-decomposed gradient.** The pilot uses one raw readout direction. Track B computes
-it separately for each option order and keeps the sum as the anchor and the difference as a
-position control. On the lottery the two orders agree at only +0.727, so the position
-component is real and the order-invariant part is 2.4 times it. An undecomposed gradient
-therefore mixes an answer effect with a position effect, and the decomposition supplies a
-third pole that is pure format, which is the category the pilot's own shortcut finding points
-at and which it currently has no example of.
-
-**A second task.** The pilot is lottery only. Track B now has the ultimatum responder as
-well, in `B7_ULTIMATUM_ANCHORS_README.md`, and the two tasks fail in opposite places. On the
-lottery a planted bias is attributed to preference at 0.000 and the gate fails at one
-detectable change, passing only at three. On the ultimatum a planted bias reaches 0.581 and
-the gate passes at one. A benchmark that reports its own blind spots differing by task is a
-stronger claim than either task alone.
-
----
-
-## 5. Both anchors run against the pilot, and both say something
-
-### 5.1 The readout gradient on an A/B answer format is mostly a letter direction
-
-Computing the gradient separately for each option order on the pilot's own prompt text,
-with `cv_bench/anchors/pilot_gradient.py`, 168 prompts per order:
-
-| prompt format | answer tokens | cos between the two orders | order-invariant part | label part | ratio |
+| task | answer tokens | cosine between the orders | sum length | difference length | ratio |
 |---|---|---:|---:|---:|---:|
-| pilot, layer 48 | **A / B** | **-0.889** | 9.128 | 37.682 | **0.24** |
-| pilot, layer 50 | A / B | -0.893 | 8.416 | 35.383 | 0.24 |
-| Track B lottery, layer 48 | safe / risky | +0.727 | 22.678 | 9.191 | 2.47 |
-| Track B ultimatum, layer 48 | Accept / Reject | +0.953 | 18.421 | 2.869 | 6.42 |
+| lottery, layer 48 | A / B | **-0.889** | 9.128 | 37.682 | **0.24** |
+| lottery, layer 50 | A / B | -0.893 | 8.416 | 35.383 | 0.24 |
+| ultimatum, layer 48 | Accept / Reject | **+0.953** | 18.421 | 2.869 | **6.42** |
+| ultimatum, layer 50 | Accept / Reject | +0.956 | 17.271 | 2.614 | 6.61 |
 
-**The sign is the whole story.** On the pilot's prompts the two option orders give gradients
-that are 89 percent antisymmetric, so they very nearly cancel. On Track B's prompts they
-agree. The cause is mechanical rather than a defect: the pilot's answer is a **letter**, and
-which letter means "take the gamble" swaps with the order. The quantity being differentiated
-is therefore `log P(A) - log P(B)` in one half of the grid and its negation in the other, so
-the gradient flips with it. Track B's answers are the words naming the options, which do not
-swap when the print order does, so only the position changes and the content direction
-survives.
+On the lottery the two orders are 89 percent antisymmetric and very nearly cancel. The cause
+is the answer format: which letter means "take the gamble" swaps with the order, so the
+quantity being differentiated flips sign. On the ultimatum the answer is a word, which does
+not swap, and the two orders agree.
 
-**What survives is small.** The part that does not flip has length 9.128 against 37.682 for
-the part that does. A readout gradient computed on a letter-answer format is, to about four
-parts in five, a direction that pushes the model toward emitting one letter rather than the
-other, independently of what that letter stands for.
+**Consequence.** On a letter-answer format the readout direction is about four parts in five a
+direction that pushes toward emitting one character, independently of what it stands for.
+Any cosine measured against an undecomposed version of it is mostly measuring alignment with
+letter identity. Within-order coherence is 0.851 and 0.844 at layer 48, so each half is a
+well determined direction rather than an average of noise.
 
-**Why this matters for the pilot's conclusions.** Its raw readout gradient is its action
-control, and it classified that gradient as action-like. On this evidence the direction is
-not merely action-like but largely **label-identity-like**, which is a narrower and stronger
-statement. Its 37 candidate features were also screened partly by readout cosine against that
-direction, and a cosine taken against a vector that is four fifths letter identity is mostly
-measuring alignment with letter identity.
+---
 
-**The three formats give a clean ordering** that is a methodological result in its own right:
-word labels tied to the content give an order-invariant gradient, Accept and Reject give the
-cleanest of all at 6.4 times, and bare letters invert it to 0.24. Anyone computing a readout
-direction on a multiple-choice letter format is mostly computing a letter direction.
+## Step 2. Build the bias anchor and check it holds
 
-One caveat on comparability: this gradient is computed on the pilot's prompt text with Track
-B's chat-template rendering and an empty answer stem, which need not match how the pilot
-built its own vector. The valid comparison is of the same quantity computed the same way
-across three prompt formats, not a claim about the pilot's exact vector.
+**What was run.** Three adapters trained to imitate agents whose rules are known: a reference,
+one with a preference parameter shifted, and one whose only change is a constant push toward
+one answer. Read on the task's prompts to recover the contrast, then run again capturing the
+residual stream at layers 48 and 50 so the adapter's mean displacement can be taken. That
+displacement is the pole, since trained weights carry no direction of their own. Lottery,
+7m56s and 11m32s. Ultimatum, part of a 52m27s pass.
 
-### 5.2 The SAE directions placed against the decomposed anchor
+**What was found.**
 
-The gradient anchor from 5.1 splits into a part about the answer and a part about which
-letter is emitted. Asking which of the two each SAE direction aligns with is a sharper
-question than the pilot's single cosine against their sum. Pure geometry, on the pinned
-public checkpoint `Goodfire/Llama-3.3-70B-Instruct-SAE-l50` at revision `128ee921`, with no
-service contacted and no model run.
+| quantity | planted | lottery prompts | ultimatum prompts |
+|---|---:|---:|---:|
+| bias contrast | +0.600 | **-0.022** | **+0.462** |
+| preference contrast | positive | **-0.285**, wrong sign | +0.331 |
+| bias displacement, layer 48 | | 3.073 | 6.512 |
+| preference displacement, layer 48 | | 2.521 | 5.930 |
 
-The null is 2,000 randomly drawn live dictionary features put through the identical
-construction. 3,632 of the 65,536 features are dead and were excluded.
+**The lottery pole does not hold.** The adapters were trained on different wording. Reading
+them on these prompts, a constant push worth 0.600 comes out indistinguishable from zero. The
+reading itself is sound, since the unmodified model measured this way agrees with the
+experiment's own baseline at a correlation of 0.957, and the adapters are plainly active,
+since the spread of the log-odds falls from 12.45 to 4.36. What fails is the transfer of the
+planted contrast. The displacement norms say the same thing: 3.073 against 2.521 for two
+changes that are supposed to differ in kind.
 
-The bias anchor carries no direction in its file, so its pole is its **activation-space
-displacement**: the mean change in the residual stream between the reference adapter and the
-bias adapter, measured on the same prompts by `cv_bench/anchors/bias_direction.py`. That is
-what plan item A5 means by a weight-space control matched to the gradient anchor in
-activation space.
+**The ultimatum pole holds.** It recovers 77 percent of the planted push, and the two
+displacements separate more cleanly at 6.512 against 5.930. Comparisons against this pole
+carry weight; comparisons against the lottery one do not.
 
-| direction | cos, gradient answer part | cos, gradient letter part | cos, bias anchor |
+---
+
+## Step 3. Place the SAE directions against both poles
+
+**What was run.** Each direction built from the decoder as the sum of coefficient times
+feature column, then compared by cosine with the answer part, the letter part and the bias
+displacement. Three kinds of direction: the features named in the paper, taken singly; the
+ten-feature combinations fitted by the steering experiment; and its sparse reconstruction of
+the raw readout direction. The null is 2,000 randomly drawn live features through the
+identical construction. CPU only.
+
+**What was found, lottery poles.**
+
+| direction | answer part | letter part | bias anchor |
 |---|---:|---:|---:|
 | **random feature, 95th percentile** | 0.033 | 0.027 | 0.049 |
 | **random feature, 99th percentile** | 0.056 | 0.048 | 0.078 |
-| feature 184, the paper's lottery feature | **-0.001** | **+0.016** | **-0.005** |
-| feature 4237, the paper's second lottery feature | **+0.004** | **+0.000** | **+0.004** |
-| feature 31935, the paper's ultimatum feature | **+0.004** | **+0.004** | **+0.017** |
-| the pilot's fitted ten-feature vector, combined target, seed 31 | **+0.067** | -0.006 | +0.031 |
-| the same, seed 73 | **+0.075** | -0.003 | -0.013 |
-| the pilot's fitted vector, neutral target, seed 31 | **+0.091** | +0.002 | -0.013 |
-| the same, seed 73 | **+0.096** | +0.004 | -0.004 |
-| the pilot's sparse fit of the raw readout direction | **+0.269** | +0.037 | -0.008 |
+| feature 184 | **-0.001** | **+0.016** | **-0.005** |
+| feature 4237 | **+0.004** | **+0.000** | **+0.004** |
+| feature 31935 | **+0.004** | **+0.004** | **+0.017** |
+| fitted ten-feature, combined, seed 31 | **+0.067** | -0.006 | +0.031 |
+| fitted ten-feature, combined, seed 73 | **+0.075** | -0.003 | -0.013 |
+| fitted ten-feature, second target, seed 31 | **+0.091** | +0.002 | -0.013 |
+| fitted ten-feature, second target, seed 73 | **+0.096** | +0.004 | -0.004 |
+| sparse fit of the raw readout | **+0.269** | +0.037 | -0.008 |
 
-**Nothing aligns with the bias pole.** Every direction, including the pilot's fitted vectors,
-sits inside the 95th percentile of the null against it. So on this measurement the SAE
-directions are not bias-like either; the only structure any of them shows is alignment with
-the answer component of the readout.
+**What was found, ultimatum poles.**
 
-**How much that last point is worth is limited, and the limit is measurable.** The bias
-displacement was captured on the pilot's wording, where Section 5.3 shows the adapter's
-behavioural contrast has collapsed from a planted +0.600 to -0.022. Its displacement norm is
-3.073 at layer 48 against 2.521 for the preference adapter, so the two adapters move the
-residual stream by similar amounts on these prompts when they are supposed to differ in kind.
-That similarity is the geometric signature of the same transfer failure. A null result
-against this pole therefore says less than a null result against the gradient pole, which was
-computed from the prompts themselves and does not depend on any adapter.
+| direction | answer part | letter part | bias anchor |
+|---|---:|---:|---:|
+| **random feature, 95th percentile** | 0.028 | 0.026 | 0.077 |
+| **random feature, 99th percentile** | 0.038 | 0.039 | 0.126 |
+| feature 184 | +0.022 | -0.020 | -0.005 |
+| feature 4237 | -0.004 | +0.007 | +0.016 |
+| feature 31935 | **+0.013** | **+0.010** | **-0.044** |
+| fitted ten-feature, combined, seed 31 | -0.049 | -0.013 | **+0.184** |
+| fitted ten-feature, combined, seed 73 | -0.049 | -0.009 | **+0.215** |
+| fitted ten-feature, second target, seed 31 | -0.062 | -0.027 | **+0.226** |
+| fitted ten-feature, second target, seed 73 | -0.064 | -0.029 | **+0.220** |
+| sparse fit of the raw readout | -0.133 | -0.002 | +0.091 |
 
-Layer 50 gives the same picture throughout, within 0.005.
+**Three results.**
 
-**The three features the paper steers with are geometrically indistinguishable from random
-dictionary features.** Every one of them sits inside the 95th percentile of the null against
-both parts of the readout direction. Choosing them by label semantics, which is what the
-paper describes, selects directions with no measurable relationship to the direction that
-drives the answer.
+**The features named in the paper are indistinguishable from random ones.** Features 184, 4237
+and 31935 sit inside the 95th percentile of the null against every pole on both tasks,
+including feature 31935 measured against the anchor built from its own game. Selecting a
+direction by reading its label produced directions with no measurable relationship to the
+direction that drives the answer, the direction that drives the letter, or a planted bias.
 
-**The pilot's fitted vectors did find the answer component.** They reach 0.067 to 0.096
-against it, above the 99th percentile of the null, while sitting at or below the null against
-the letter component. So the optimisation worked in the sense of locating the answer
-direction rather than the letter direction, which is a positive result for their method and
-one their own single-cosine measurement could not have shown.
+**The fitted combinations align with the answer part on the lottery**, at 0.067 to 0.096,
+above the 99th percentile, and with nothing else there.
 
-**This also explains their sparse reconstruction failing.** They report a relative residual
-norm of 0.961 for the ten-feature fit of the raw readout direction and call it a poor sparse
-approximation. The decomposition says why. The raw readout direction is dominated by the
-letter part, which is 37.7 long against 9.1 for the answer part, and the dictionary
-represents the answer part at 0.269 while barely reaching the null on the letter part at
-0.037. The fit fails because the component it is mostly trying to match is not in the
-dictionary, not because the dictionary is generally poor at this. That is a different and
-more useful conclusion than the one available without the decomposition.
+**On the ultimatum they align with the planted bias**, at 0.184 to 0.226 against a
+99th-percentile null of 0.126. This is the only above-null alignment with a bias pole in the
+whole exercise. Vectors fitted on the lottery to imitate a decision agent point, on the social
+task, at the direction of a constant push toward one answer. It is a positive attribution
+rather than a failure to be preference-like, and it is the reason the bias pole was worth
+building.
 
-### 5.3 The LoRA anchors do not transfer across the wording
-
-Reading Track B's three trained lottery adapters on the pilot's 432 frozen prompts, with
-`cv_bench/anchors/pilot_read.py`:
-
-| quantity | planted | measured on the pilot's prompts |
-|---|---:|---:|
-| bias contrast, mean | **+0.600** | **-0.022**, sd 0.914 |
-| preference contrast, mean | positive | **-0.285**, wrong sign |
-| signal retained by the reference adapter | | 0.350 |
-
-The readout itself is sound: the unmodified model measured this way correlates **0.957** with
-the pilot's own baseline margins, so the two readouts agree about what they are measuring.
-The adapters are also plainly active, since the spread of the logit falls from 12.45
-unmodified to 4.36 under the reference adapter. What does not survive is the **planted
-contrast**. The bias adapter's constant push, worth +0.600 on the grid it was trained on,
-is indistinguishable from zero here.
-
-**This is a negative result for the plan of getting a bias pole onto the pilot's scale
-cheaply.** It cannot be done by reading existing adapters. It requires training them on the
-pilot's own grid, which is a two-hour job and has not been run.
-
-**It also corroborates the pilot from the other side.** The pilot found its own LoRA's
-teacher RMSE rising from 0.042 to 0.115 across wording and its recovered curvature falling
-from a planted 0.8 to 0.643. Two teams, two independent implementations, the same conclusion:
-**a LoRA anchor is bound to the prompt format it was trained on.** That is a property of the
-method rather than a defect in either build, and it is what the pilot's own recommended next
-step calls for, a LoRA trained across several phrasings and answer orders.
+**A fourth result falls out.** The sparse reconstruction of the raw readout direction was
+reported as leaving a relative residual of 0.961, a poor approximation. The decomposition
+explains it: the raw direction is mostly the letter part, and the dictionary represents the
+answer part at 0.269 while barely reaching the null on the letter part at 0.037. The fit
+fails because the component it is mostly trying to match is not in the dictionary.
 
 ---
 
-## 6. What this supports in the paper
+## Step 4. Measure what the steering does, not only where it points
 
-The pilot's current claim is that one SAE steering recipe failed to reproduce a planted
-agent. That is a negative result about a recipe, heavily and correctly qualified.
+**What was run.** For each condition, the change in answer log-odds is regressed on the
+unsteered value. A slope of zero means something was added without touching how the model
+responds to the payoff. A slope of minus one means that response was removed. What survives,
+one plus the slope, is the share of the signal the measurement still has. On the lottery this
+reads the saved conditions, edits applied at **every position** at a per-position strength of
+16. On the ultimatum it is newly generated, edits applied at the **last position only**, in
+units of the median residual stream norm of 21.12, over a ladder of six strengths.
 
-With Section 1 the claim becomes sharper and positive: at the doses used in the field's
-standard practice, feature steering removes most of the model's sensitivity to the thing
-being decided, and it does so more than a random direction of the same size. That is a
-statement about steering as it is actually practised, it is measured rather than argued, and
-it motivates the iso-behavioural protocol as the fix rather than as a preference.
+**Lottery.**
+
+| condition | signal retained | correlation |
+|---|---:|---:|
+| readout gradient | **0.062** | -0.999 |
+| SAE ten-feature, both seeds | **0.092 to 0.096** | -1.000 |
+| dense vector, both seeds | **0.129 to 0.143** | -0.99 |
+| preference adapter | **0.156** | -0.987 |
+| **random directions, same size** | **0.505 to 0.605** | -0.95 to -0.97 |
+
+The unsteered spread is 9.23; after ten-feature steering it is 0.92. The correlations near
+minus one mean each intervention is close to an exact linear flattening toward a constant.
+The directions under test destroy three to six times more signal than random ones of the same
+size. The dose ladder confirms the cause: the same gradient retains 0.611, 0.215 and 0.062 at
+strengths 1, 4 and 16, and strength 16 is where every comparison was made.
+
+**Ultimatum.**
+
+| direction | strength | shift in mean log-odds | signal retained |
+|---|---:|---:|---:|
+| feature 31935 | 0.20 | +0.408 | 1.032 |
+| feature 31935 | 0.80 | **+1.814** | **1.174** |
+| readout gradient | 0.20 | +10.028 | 3.209 |
+| readout gradient | 0.80 | -1.381 | **3.574** |
+| random live feature | 0.20 | -0.349 | 0.974 |
+| random live feature | 0.80 | +0.154 | **0.977** |
+
+Nothing flattens here. Retention above one means the model responded more sharply rather than
+less. Feature 31935 moves the answer by 1.814 while changing the shape of the response by 17
+percent, which is the profile of a push toward one answer rather than a change in what the
+responder considers fair. The readout gradient, a pure push by construction, does the same far
+more violently, raising the spread from 7.86 to 28.21. A random feature does nothing at any
+strength.
+
+**The two tasks differ because of where the edit lands, not how large it is.** Per-position
+strength is comparable, 16 against 0.80 times 21.12 which is 16.9. The lottery applies it at
+every position and the ultimatum at one. The flattening is a property of the all-position
+regime, and results from the two regimes must not be pooled.
+
+---
+
+## What this establishes
+
+- On a letter-answer format the readout direction is about four fifths letter identity. The
+  same computation on word answers gives +0.953. This is a property of the answer format.
+- The three features named in the paper sit inside a random-feature null against every pole
+  on both tasks.
+- Fitted feature combinations align with the answer direction on the lottery and with the
+  planted bias on the ultimatum, both above the 99th percentile of the null.
+- At the strength used throughout the lottery conditions, every intervention retains under
+  0.16 of the model's response to the payoff, and random directions of the same size retain
+  three to six times more.
+- A bias anchor trained on one wording does not carry its planted contrast to another.
+
+## What this does not establish
+
+- **What the SAE directions do**, as opposed to where they point, on the lottery. Every
+  placement there is a cosine, and geometry is not the test.
+- **That feature 31935 is an answer-push**, as opposed to consistent with being one. The
+  ultimatum run saved per-dose summaries rather than per-trial log-odds, so the five-family
+  attribution cannot be computed from it. Fixing this is a re-run of the same 52 minutes
+  keeping the per-trial values.
+- **That the dictionary lacks preference capacity.** The lottery null result is equally
+  consistent with the dose having removed the payoff response before any preference could
+  show.
+- **A usable bias comparison on the lottery.** Those columns rest on a pole whose planted
+  meaning does not survive the change of wording.
+
+## What would come next
+
+1. Re-run the ultimatum steering keeping per-trial log-odds, so the attribution can be
+   computed. 52 minutes.
+2. Retrain the anchors on the lottery prompts so a bias pole exists in that wording. Two
+   hours.
+3. Repeat the lottery placement at strengths 1 and 4, where the payoff response still exists.
+4. Scale every direction to produce the same behavioural shift before comparing, rather than
+   the same vector length. The strengths that achieve a matched shift differ across
+   directions by about a factor of 150.
