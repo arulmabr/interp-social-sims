@@ -463,7 +463,77 @@ should never be combined.
 
 ---
 
-## 12. What this adds up to
+## 12. A figure from the neighbouring method, and why it is not the same claim
+
+There is a figure in the project called `s1_calibration.png`. It is worth describing here
+because it is easy to mistake for evidence about the question these notes are asking, and it
+is not.
+
+### What the figure shows
+
+The figure concerns the other steering method used in the project, which is called a probe. A
+probe is a direction found by training a small classifier to separate the internal states that
+precede one answer from those that precede the other. It is a different way of obtaining a
+direction from the sparse autoencoder route described above.
+
+Before a probe is used it is calibrated. Calibration means searching for the strength at which
+the probe moves the model's behaviour to a chosen point. The chosen point here is the
+switching point, which is the amount of money at which the agent becomes equally likely to
+take the gamble or to take the certain sum. So the researcher says in advance that the agent
+should switch at one hundred and six tokens, and the search hunts for the strength that
+achieves it.
+
+The figure asks whether that hunt succeeded. Each dot is one calibration target. Its position
+from left to right is where the agent was aimed and its position from bottom to top is where
+the agent actually ended up. The straight line running corner to corner is where a dot would
+sit if the aim were perfect. Distance from that line is the calibration error measured in
+tokens.
+
+### Why this particular view was drawn
+
+The released data reports the strength that the search returned for each target. That is the
+inverse view and it is much weaker than it looks, because a search returns a number whether or
+not it actually arrived anywhere. Reporting the strength it settled on says what the procedure
+did rather than whether the procedure worked.
+
+The forward view answers the question directly. It goes back to the raw counts of how many
+agents chose each option at each amount of money, with forty agents at every level, finds the
+amount at which the choice curve crosses one half, and compares that to the target. Nothing is
+taken on trust from the search.
+
+### What was found
+
+On the lottery game ten targets were set, spaced from thirty tokens up to two hundred. At the
+deeper of the two positions inside the model the average miss was two point one three tokens
+and the worst single miss was four point five tokens. At the other position the average miss
+was two point five seven tokens and the worst was five tokens.
+
+On the ultimatum game four targets were set, from thirty tokens up to sixty. The average miss
+was one point one five tokens at the first position and one point eight tokens at the second.
+
+### What that does and does not establish
+
+It establishes that the probe steering is accurate. When the procedure aims the agent at a
+switching point of one hundred and six tokens the agent switches at one hundred and four and a
+half. Across a range that spans nearly two hundred tokens the aim is off by about two on
+average. As a piece of engineering that is a good result and it should be reported as one.
+
+It does not establish anything about mechanism, and this is the part that matters for these
+notes. Landing on a target switching point says the intervention moved behaviour to the right
+place. It says nothing about whether the model's valuation of money changed or whether the
+model was simply pushed toward typing a particular word. Recall the person from the opening
+section who was told to answer with whatever was printed on the left. Their switching point
+could be moved to any chosen value with enough pressure, and their attitude to risk would
+never have entered into it.
+
+That gap between hitting a behavioural target and having changed the thing you named is
+exactly the gap the anchors exist to close. The calibration figure shows the aim is good. The
+anchor work asks what was actually moved, and for the features examined in these notes the
+answer is that nothing distinguishable from a randomly chosen direction was moved at all.
+
+---
+
+## 13. What this adds up to
 
 Four things are established.
 
@@ -484,7 +554,7 @@ directions of the same size removed far less.
 
 ---
 
-## 13. What is deliberately not being claimed
+## 14. What is deliberately not being claimed
 
 The lottery placements are comparisons of direction rather than of effect, and pointing is
 not doing.
@@ -503,7 +573,7 @@ survive the change of wording, and they should be read as unavailable rather tha
 
 ---
 
-## 14. What would come next, in order
+## 15. What would come next, in order
 
 The first task is to rerun the ultimatum steering while keeping the individual trial values,
 which takes fifty two minutes and converts the strongest suggestive result into a measured
