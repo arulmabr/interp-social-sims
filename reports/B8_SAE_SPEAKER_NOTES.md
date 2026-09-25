@@ -34,7 +34,7 @@ apart, and then to apply it to the technique we actually use in the paper.
 
 An anchor is a change whose nature is known in advance because it was built deliberately.
 
-The analogy worth holding onto is the calibration of a thermometer. Before a thermometer is
+The comparison is the calibration of a thermometer. Before a thermometer is
 trusted to report the temperature of a patient it is placed in melting ice and then in
 boiling water. Those two temperatures are known without needing the thermometer. If the
 instrument reports them correctly then its reading on the patient can be believed. If it
@@ -49,9 +49,8 @@ push then it cannot be trusted to recognise a push when it meets one in the wild
 The second is a change built to move an actual preference, meaning the agent's valuation of
 the options rather than its tendency to say a particular word.
 
-Both anchors are constructed without using the technique under test. That point is not a
-detail. A ruler made out of the same material as the thing being measured would settle
-nothing.
+Both anchors are constructed without using the technique under test. A ruler made out of the
+same material as the thing being measured would settle nothing.
 
 ---
 
@@ -190,13 +189,12 @@ measured flips its meaning when the ordering flips, and the direction flips with
 The ultimatum prompts ask for the word Accept or the word Reject. Those words keep their
 meaning no matter which option is printed first, so nothing flips and the two orders agree.
 
-The practical consequence is worth stating slowly. On a prompt that asks for a bare letter,
-about four parts in five of the readout direction is about which character gets typed rather
-than about what that character stands for. Any measurement taken against an
+On a prompt that asks for a bare letter, about four parts in five of the readout direction is
+about which character gets typed rather than about what that character stands for. Any measurement taken against an
 undecomposed version of that direction is therefore mostly measuring alignment with letter
 identity.
 
-One reassurance about quality. Within a single ordering the individual prompts agreed with
+Within a single ordering the individual prompts agreed with
 their own average at zero point eight five one, which means the direction is a consistent
 thing rather than an average of unrelated noise.
 
@@ -220,8 +218,8 @@ shifted instead.
 
 ### Why a reference adapter exists at all
 
-This is easy to overlook and it matters. If the pushed adapter were compared against the
-plain unmodified model then the comparison would mix two different things together. It would
+If the pushed adapter were compared against the plain unmodified model then the comparison
+would mix two different things together. It would
 mix the effect of the push with the effect of the model having been taught to behave like a
 decision making agent at all. Comparing the pushed adapter against a reference adapter that
 received the same training without the push removes the second effect and leaves only the
@@ -238,8 +236,8 @@ become comparable.
 
 ### What was found
 
-The size of the push that was built in is zero point six in units of the answer log-odds. The
-term log-odds is explained in the next section.
+The size of the push that was built in is zero point six in units of the answer log-odds,
+which is defined in the next section.
 
 On the ultimatum prompts the measurement recovered plus zero point four six two of that
 planted zero point six, which is about seventy seven percent. The displacement had a length of
@@ -262,8 +260,7 @@ lengths tell the same story. The pushed adapter moved the internal state by thre
 seven three and the preference adapter by two point five two one, which are close to each
 other when two changes of genuinely different kinds should not be.
 
-The honest conclusion is that an adapter trained on one phrasing does not carry its planted
-meaning to another phrasing. Comparisons against the ultimatum version of this anchor can be
+An adapter trained on one phrasing does not carry its planted meaning to another phrasing. Comparisons against the ultimatum version of this anchor can be
 believed. Comparisons against the lottery version cannot.
 
 ---
@@ -358,8 +355,7 @@ the level that only one random feature in a hundred reaches. On the ultimatum ga
 instead with the pure push anchor, scoring up to plus zero point two two six against a
 one in a hundred level of zero point one two six.
 
-That last result deserves emphasis because it is the only positive identification anywhere in
-this work. Vectors that were fitted on the lottery in order to imitate a decision making
+It is the only positive identification anywhere in this work. Vectors that were fitted on the lottery in order to imitate a decision making
 agent turn out, when examined on the social task, to point at the direction of a constant
 push toward one answer. That is a statement about what they are rather than a statement about
 what they failed to be.
@@ -417,8 +413,7 @@ Every one of these interventions flattens the model's response toward a constant
 to a straight line is close enough that little else is happening. The model has almost stopped distinguishing between a good gamble and a
 bad one.
 
-The comparison with random directions is the result that decides how much the rest can be
-believed. The directions under test
+The comparison with random directions is what decides how much the rest can be believed. The directions under test
 destroyed between three and six times more of the signal than randomly chosen directions of
 the same size did. A situation in which the control preserves the measured quantity better
 than the treatment does is not a situation in which anything can be concluded about the
@@ -468,9 +463,9 @@ should never be combined.
 
 ## 12. How this setup compares with the one we already use in the paper
 
-Our own steering procedure is described in the appendix of the paper. It is worth laying the
-two side by side, because they agree on more than people assume and the places where they
-differ are the places that decide what each one can claim.
+Our own steering procedure is described in the appendix of the paper. The two agree on the
+model and the dictionary and the features. They differ in how the steering is applied and how
+the answer is read, and those differences decide what each one can claim.
 
 ### What the two have in common
 
@@ -576,7 +571,7 @@ neither can stand in for the other.
 
 ### The fourth difference is what question is being asked
 
-This is the one that matters most and it is not a difference of engineering.
+This difference is not one of engineering.
 
 In the paper we ask whether steering a feature changes the behaviour. We answer yes, and the
 answer is correct.
@@ -595,9 +590,9 @@ sensibly be connected to.
 
 ## 13. A figure from the neighbouring method, and why it is not the same claim
 
-There is a figure in the project showing the calibration of the other method. It is worth describing here
-because it is easy to mistake for evidence about the question these notes are asking, and it
-is not.
+There is a figure in the project showing the calibration of the other method. It is often read
+as evidence about the question these notes are asking. It is not evidence about that
+question, and the reason is set out below.
 
 ### What the figure shows
 
@@ -648,16 +643,15 @@ switching point of one hundred and six tokens the agent switches at one hundred 
 half. Across a range that spans nearly two hundred tokens the aim is off by about two on
 average. As a piece of engineering the aim is accurate and it should be reported that way.
 
-It does not establish anything about what inside the model was changed, which is the question
-these notes are asking. Landing on a target switching point says the intervention moved behaviour to the right
+It does not establish what inside the model was changed. Landing on a target switching point says the intervention moved behaviour to the right
 place. It says nothing about whether the model's valuation of money changed or whether the
 model was simply pushed toward typing a particular word. Recall the person from the opening
 section who was told to answer with whatever was printed on the left. Their switching point
 could be moved to any chosen value with enough pressure, and their attitude to risk would
 never have entered into it.
 
-That gap between hitting a behavioural target and having changed the thing you named is
-exactly the gap the anchors exist to close. The calibration figure shows the aim is good. The
+The gap between hitting a behavioural target and having changed the thing you named is the
+gap the anchors close. The calibration figure shows the aim is good. The
 anchor work asks what was actually moved, and for the features examined in these notes the
 answer is that nothing distinguishable from a randomly chosen direction was moved at all.
 
