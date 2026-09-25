@@ -105,7 +105,92 @@ responder grid.
 
 ---
 
-## 6. What Expected Parrot and EDSL are, and why they never appear here
+## 6. The branch this was built on, and what is already in it
+
+None of this started from nothing. There is a branch in the repository called the SAE anchor
+pilot, and the work in these notes sits directly on top of it. Six directories on that branch are
+relevant here.
+
+### What the branch already contains
+
+**The anchor code itself.** A directory called probe anchor holds the code that builds both
+anchors. It also holds the gate they have to pass and the analysis that places a direction
+against them.
+It is the same code used for the measurements described in these notes, published with the
+machine-specific file paths replaced by placeholders so that it can be read by anybody. That
+directory is the reason the work here is an extension rather than a fresh start.
+
+**A completed SAE steering experiment.** A directory called anchor pilot holds an experiment
+run over three days in September. It trained a small set of extra weights to imitate a
+decision maker with known parameters, then asked whether steering the model with sparse
+autoencoder features could reproduce that same decision maker. It saved 432 frozen prompts and the 28 conditions run over
+them. It also saved the exact strengths and feature numbers used, together with the released
+dictionary version it pinned.
+
+**A local replication of the paper's own runs.** A directory called paper replication holds a
+runner that regenerates the responses behind the published figures using the model and the
+released dictionary on our own machines, without calling Goodfire's service. It preserves the
+original prompts and the original sampling settings.
+
+**A bridge to the survey library.** A directory called EDSL local SAE connects that survey
+library to the local runner, so that a survey can be described once in the usual way while
+every model call is answered on hardware we control.
+
+**A label-guided pilot.** A directory called label pilot follows a specific chain, from a
+human-readable label, to a candidate feature, to independent evidence that the feature
+actually activates, to a controlled intervention, to a held-out behavioural check. It reports
+one result that bears on the rest of these notes. Of 20 positive edits, all 20 displaced the
+model's internal state. Of 20 negative edits, all 20 produced no displacement at all. That asymmetry is a
+consequence of the edit being clipped at zero.
+
+**The historical data.** Three further directories hold the earlier prompting runs, the probe
+results and the original SAE work, kept as a record.
+
+### What this work took from the branch
+
+Four things, all read rather than modified.
+
+The 432 frozen lottery prompts, which is why the measurements here sit on the same prompts as
+the earlier experiment rather than on a set of our own.
+
+The 28 saved conditions, which is what made the flattening result in section 12 possible
+without running the model at all.
+
+The feature numbers and the fitted coefficients, so that the directions placed against the
+anchors are the directions that were actually steered with.
+
+The pinned version of the dictionary, read out of the branch's own source, so that both
+pieces of work use the identical file.
+
+### What this work added
+
+The readout anchor was computed on the branch's own prompts and then split into the part about
+the answer and the part about the letter, which had not been done before and which changes
+how the earlier cosine measurements should be read.
+
+The weight anchor was read on those prompts too, which established that it does not carry its
+planted meaning across a change of wording.
+
+Both anchors were then built for the ultimatum game, which the branch's experiment never
+covered, and the steering on that game was generated fresh.
+
+Every direction was placed against both anchors on both games, with 2,000 randomly drawn
+features setting the level an ordinary feature reaches.
+
+### What this work has not touched
+
+The local runner and the survey bridge were read but not used. The ultimatum steering in these
+notes was performed by our own code rather than by the branch's runner, and the two apply their
+edit in slightly different ways. Ours adds the feature's direction to the internal state
+directly. The branch's runner raises the feature's activation and then rebuilds the state
+around it while keeping what the dictionary cannot represent. It then clips the result at
+zero. If the
+two sets of numbers are ever to sit in one table then the run should be repeated on the
+branch's runner.
+
+---
+
+## 7. What Expected Parrot and EDSL are, and why they never appear here
 
 Expected Parrot is a company that publishes a Python library called EDSL, which stands for
 Experimental Design Specification Language. The library helps a researcher describe a survey
@@ -130,7 +215,7 @@ file.
 
 ---
 
-## 7. The first step, building the answer direction
+## 8. The first step, building the answer direction
 
 ### What was done
 
@@ -199,7 +284,7 @@ minutes and 34 seconds.
 
 ---
 
-## 8. The second step, building the pure push
+## 9. The second step, building the pure push
 
 ### What was done
 
@@ -260,7 +345,7 @@ against the lottery version cannot.
 
 ---
 
-## 9. Two terms that appear in every result from here on
+## 10. Two terms that appear in every result from here on
 
 ### Log-odds
 
@@ -292,7 +377,7 @@ blindfolded.
 
 ---
 
-## 10. The third step, placing the features against the anchors
+## 11. The third step, placing the features against the anchors
 
 ### What was done
 
@@ -359,7 +444,7 @@ component it is mostly trying to match is simply not in the pantry.
 
 ---
 
-## 11. The fourth step, measuring what the steering actually does
+## 12. The fourth step, measuring what the steering actually does
 
 ### Why pointing is not enough
 
@@ -444,7 +529,7 @@ should never be combined.
 
 ---
 
-## 12. How this setup compares with the one we already use in the paper
+## 13. How this setup compares with the one we already use in the paper
 
 Our own steering procedure is described in the appendix of the paper. The two agree on the
 model and the dictionary and the features. They differ in how the steering is applied and
@@ -529,7 +614,7 @@ The ultimatum runs in these notes apply the adjustment only at the final positio
 prompt, which is the moment just before the model commits to an answer.
 
 The strength per position is close to the same in the two arrangements. What differs is how
-many positions receive it. Section eleven shows that this is not a small matter. Applying
+many positions receive it. Section 12 measures the consequence. Applying
 the adjustment everywhere flattens the model's response to the amounts of money almost
 completely, while applying it at the last position alone does not flatten it at all. Results
 from the two arrangements should never be combined into one comparison.
@@ -570,7 +655,7 @@ things it could sensibly be connected to.
 
 ---
 
-## 13. A figure from the neighbouring method, and why it is not the same claim
+## 14. A figure from the neighbouring method, and why it is not the same claim
 
 There is a figure in the project showing the calibration of the other method. It is often
 read as evidence about the question these notes are asking. It is not evidence about that
@@ -638,7 +723,7 @@ nothing distinguishable from a randomly chosen direction was moved at all.
 
 ---
 
-## 14. What this adds up to
+## 15. What this adds up to
 
 Four things are established.
 
@@ -659,7 +744,7 @@ directions of the same size removed far less.
 
 ---
 
-## 15. What is deliberately not being claimed
+## 16. What is deliberately not being claimed
 
 The lottery placements are comparisons of direction rather than of effect, and pointing is
 not doing.
@@ -678,7 +763,7 @@ survive the change of wording, and they should be read as unavailable rather tha
 
 ---
 
-## 16. What would come next, in order
+## 17. What would come next, in order
 
 The first task is to rerun the ultimatum steering while keeping the individual trial values,
 which takes 52 minutes and converts the strongest suggestive result into a measured one.
