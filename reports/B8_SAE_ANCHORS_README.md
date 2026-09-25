@@ -218,12 +218,74 @@ The displacement norms say the same thing geometrically. The bias adapter moves 
 stream by 3.073 and the preference adapter by 2.521, which are similar, when two changes of
 different kinds should not be.
 
+### 3.4 The same measurements on the ultimatum game
+
+Everything above is the lottery. The steering experiment never covered the social task, so
+that side was generated here on the responder grid, where the anchors were trained and
+therefore hold their planted meaning. 120 trials, the edit applied at the **last prompt
+position only**, with strength in units of the median residual stream norm at layer 50, which
+is 21.12.
+
+**The ultimatum bias pole works, where the lottery one did not.**
+
+| quantity | planted | measured |
+|---|---:|---:|
+| bias contrast | +0.600 | **+0.462** |
+| preference contrast | positive | **+0.331** |
+| bias displacement at layer 48 | | 6.512 |
+| preference displacement at layer 48 | | 5.930 |
+
+The bias adapter recovers 77 percent of its planted push and the two displacements differ by
+more than they did on the lottery, 6.51 against 5.93. So comparisons against this pole mean
+something, which is not true of the lottery pole in Section 3.3.
+
+**Feature 31935 adds a near-constant push toward accepting, and little else.**
+
+| direction | strength | shift in mean log-odds | signal retained |
+|---|---:|---:|---:|
+| feature 31935, the paper's ultimatum feature | 0.20 | +0.408 | 1.032 |
+| | 0.80 | **+1.814** | **1.174** |
+| readout gradient | 0.20 | +10.028 | 3.209 |
+| | 0.80 | -1.381 | **3.574** |
+| random live feature | 0.20 | -0.349 | 0.974 |
+| | 0.80 | +0.154 | **0.977** |
+
+Signal retained above one means the intervention made the model respond **more** sharply to
+the offer rather than less. The random feature does nothing at any strength, which is the
+control behaving correctly.
+
+**Three readings of this.** The paper's ultimatum feature moves the answer by 1.814 in
+log-odds while changing the shape of the response by 17 percent, which is the profile of a
+push toward one answer rather than a change in what the responder considers fair. The readout
+gradient, which is a pure answer-push by construction, does the same thing far more violently,
+raising the spread from 7.86 to 28.21. And the compression that dominates every lottery
+condition does not appear here at all.
+
+**That last difference is informative rather than contradictory.** The lottery conditions
+apply their edit at **every position**; this one applies it at the **last position only**, at
+a comparable per-position strength. So the flattening in Section 3.2 is a property of the
+all-position regime rather than of magnitude alone. The two are not interchangeable and
+should not be pooled.
+
+**What is missing from this run.** Only per-dose summaries were saved, not the per-trial
+log-odds, so the full five-family attribution cannot be computed from it. Establishing that
+feature 31935 is action-like rather than merely consistent with being action-like needs a
+re-run that keeps the per-trial values.
+
 ---
 
 ## 4. What is established and what is not
 
 **Established.**
 
+- Feature 31935, measured against the **ultimatum** readout direction rather than the lottery
+  one, gives +0.013 on the answer part against a 95th-percentile null of 0.028. It is
+  indistinguishable from a random feature even on its own game.
+- On the ultimatum responder the bias anchor recovers +0.462 of its planted +0.600, so a
+  working bias pole exists on that task.
+- Steering with feature 31935 at the last position shifts the answer log-odds by 1.814 while
+  leaving the shape of the response nearly unchanged, and a random live feature at the same
+  strength does nothing.
 - On a letter-answer format the readout direction is about four fifths letter identity, with
   the two orders anti-correlated at -0.889. The same computation on word answers gives +0.727
   and +0.953, so this is a property of the format rather than of the model.
@@ -247,8 +309,10 @@ different kinds should not be.
 - **A bias pole on this wording.** The transfer failure means the bias comparisons in §3.1
   rest on a pole whose planted meaning is in doubt. The gradient comparisons do not have this
   problem, since the gradient is computed from the prompts alone.
-- **Anything about the ultimatum game here.** Feature 31935 was measured against a lottery
-  readout direction, which is the wrong target for it.
+- **That feature 31935 is action-like**, as opposed to consistent with being action-like. Its
+  profile in Section 3.4, a shift of 1.814 with the response shape barely changed, is what a
+  push toward one answer looks like, but the run saved per-dose summaries only and the
+  attribution needs per-trial values.
 
 ---
 
