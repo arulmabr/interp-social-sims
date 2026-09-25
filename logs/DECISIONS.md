@@ -1845,28 +1845,35 @@ activation vectors, so every vector appears in both folds, and Section 3.3's "he
 preference trials" describes something the code does not do. Adopting the caption convention
 requires fixing that first, which is a by-prompt split and a small change.
 
-## D107 — every text-addressable review point turned into an applicable edit (24 Sept)
+## D107 — every text-only change written out as paste-ready edits (24 Sept)
 
-The authors asked that everything the review raises which can be fixed in text be addressed in
-the paper. It cannot be applied here: there is no `paper_src/` and no `.tex` anywhere, and the
-only artefact is the 21 Sept PDF. So the deliverable is the edit itself, in applicable form,
-written as section 8 of `friday_session.txt` per the authors' standing instruction that
-everything lives in one file.
+The authors asked that everything in the review answerable in text be addressed in the paper.
+It cannot be: there is no LaTeX in this repository. Zero .tex files at any depth, only the
+21 Sept PDF and two docx files that are the extension plan and the speaker notes. The paper
+lives in Overleaf and this session has no access to it.
 
-Fifty-four rows of `paper_patches/CLAIMS.csv`, ordered by where each lands in the paper rather
-than by id, so the section can be worked top to bottom. Each entry carries the location, the
-finding, and the sentence to carry.
+Written instead: `paper_patches/TEXT_EDITS.md`, 243 lines, every text-only change with its
+location, the sentence as it stands in the PDF, and the sentence to replace it with. Four
+tiers by what happens if it is skipped:
 
-  29 text alone
-  17 text carrying a measurement already finished
-   3 a figure and a sentence
-   5 limitations
+  1  risks the submission: the AI-use statement, the page limit, six reference defects, and a
+     citation that does not support its claim
+  2  the paper disagreeing with its own data: the lambda sign convention, four switching
+     points that differ from the fitted values, the rho grid arithmetic, "held-out" describing
+     something the code does not do, and the judge-ordering claim Figure 5 contradicts
+  3  reviewer weaknesses answered in text: the position policy under KV caching, the ultimatum
+     construct, SAE features as correlational, the fluency ceiling, high temperature
+  4  the limitations paragraph, covering the five points with no experiment behind them
 
-Two structural points the ordering exposed. The twelve PROV-fig rows have one cause and are
-discharged by one statement plus a labelling decision, so what reads as twelve items is one
-author decision and the largest in the list. And only ONE row in the whole review needs a new
-experiment: F-collateral, the psychometric battery for collateral distortion, which cannot be
-run in the time. Everything else is writing.
+Every quoted current sentence was pulled from the PDF rather than recalled, and every
+replacement number resolves in `MANIFEST.csv`.
 
-Not done, and it is the binding constraint: none of this is in the paper. The deadline is
-25 Sept 23:59 AoE and applying it needs Overleaf access rather than more analysis.
+One judgement recorded rather than acted on. PAPER_AUDIT section 2.1 reads the lambda polarity
+sentence as wrong. On the released values it is not: all calibrated lambda are negative, more
+negative raises the switching point, and the text describes that correctly. What is wrong is
+that Figure 10 plots the magnitude while the values are negative and the convention is never
+stated, so text and figure appear to disagree. The edit states the convention rather than
+reversing the sentence.
+
+Not done and not doable here: applying any of it. The binding constraint is Overleaf access,
+not analysis or compute.
