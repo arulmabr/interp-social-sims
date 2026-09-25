@@ -1809,3 +1809,38 @@ One asymmetry the two remaining panels still carry, unchanged by this edit: pane
 referenced to the choice probe and panel B to a probe fitted on the offer, because the
 ultimatum arm has no choice probe on this stack. The panels are therefore not a like-for-like
 comparison between games, and nothing on the figure says so now that the notes block is gone.
+
+## D106 — a calibration scatter, borrowing the target-against-achieved device (24 Sept)
+
+Built at the authors' request after they asked whether Kim, Evans and Schein's Figure A1 device
+transfers. It does, and it needed no GPU: every value comes from
+`Probes/raw_data/probe_results_final.json`, the psychometric curves already released.
+
+`cv_bench/s1_calib.py` interpolates the 0.5 crossing from the raw per-level counts at each
+calibration target, 40 agents per level, and plots it against the target. The diagonal is
+perfect calibration so distance from it is the calibration error in tokens.
+
+    lottery   L48  10 targets, 30 to 200    mean |error| 2.13 tokens, max 4.50, r 0.9995
+    lottery   L50  10 targets               mean |error| 2.57, max 5.00, r 0.9991
+    ultimatum L48   4 targets, 30 to 60     mean |error| 1.15, max 2.50, r 0.9922
+    ultimatum L50   4 targets               mean |error| 1.80, max 3.75, r 0.9823
+
+Why this is worth having. `figure_11_dose_response_*` reports the lambda a bracketed search
+returned for each target, which is the inverse of the question: a search returns a number
+whether or not it arrived. D78 read that as possibly an artefact of the bracket and D79
+corrected it using exactly this forward view. The scatter puts the forward view on a figure,
+and it is the strongest honest form of the calibration claim. The paper already uses this
+device for the capability tasks in Figures 9 and 10; the preference tasks never got it.
+
+Two drawing decisions, both from the render-and-look step rather than from taste. The two
+layers land on top of each other at nearly every target, so layer 50 is drawn open and layer 48
+filled; dodging one series would have moved points off the coordinates the diagonal exists to
+measure. The "perfect calibration" label was rotated onto the line and the line struck it
+through, so it now sits below the line and horizontal.
+
+Not done, and it is what would make the figure match the reference properly: Kim et al. report
+a cross-validated correlation. There is no held-out evaluation here to report one from. S1.4
+found the split is StratifiedKFold over rows and each prompt contributes eight identical
+activation vectors, so every vector appears in both folds, and Section 3.3's "held-out
+preference trials" describes something the code does not do. Adopting the caption convention
+requires fixing that first, which is a by-prompt split and a small change.
