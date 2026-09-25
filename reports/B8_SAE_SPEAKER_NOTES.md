@@ -26,7 +26,7 @@ their answers also change, but nothing about how they value money has moved at a
 people give different answers than before. Only one of them has changed their mind.
 
 The whole purpose of this work is to build a measurement that can tell those two situations
-apart, and then to apply it to the technique the paper actually uses.
+apart, and then to apply it to the technique we actually use in the paper.
 
 ---
 
@@ -306,7 +306,7 @@ blindfolded.
 
 Three kinds of direction were compared against both anchors on both games.
 
-The first kind is the individual features that the paper names and steers with. Feature one
+The first kind is the individual features we name and steer with in the paper. Feature one
 hundred and eighty four is labelled "willing to take risks or make sacrifices for a goal".
 Feature four thousand two hundred and thirty seven is labelled "executing potentially risky
 operations that require caution". Feature thirty one thousand nine hundred and thirty five is
@@ -346,7 +346,7 @@ combinations scored between plus zero point one eight four and plus zero point t
 
 ### What all of that means
 
-The three features the paper actually steers with score below the level that one random
+The three features we actually steer with score below the level that one random
 feature in twenty reaches. This holds against every anchor on both games. It holds for the
 altruism feature even when it is measured against the anchor built from the ultimatum game
 rather than from the lottery, which removes the obvious objection that it was being judged on
@@ -366,9 +366,9 @@ what they failed to be.
 
 ### A number that was previously unexplained
 
-The earlier experiment had reported that rebuilding the readout direction out of ten features
-left ninety six percent of it unaccounted for, and had described this as a poor
-approximation without being able to say why. The decomposition explains it. The readout
+We had reported that rebuilding the readout direction out of ten features left ninety six
+percent of it unaccounted for, and had described this as a poor approximation without being
+able to say why. The decomposition explains it. The readout
 direction on those prompts is mostly the letter identity part. The dictionary can represent
 the answer part reasonably well at plus zero point two six nine but barely reaches the null on
 the letter part at plus zero point zero three seven. The rebuilding fails because the
@@ -426,7 +426,7 @@ treatment.
 
 The cause is the strength. The identical direction retains zero point six one one at strength
 one, zero point two one five at strength four and zero point zero six two at strength sixteen.
-Strength sixteen is where every comparison in the original experiment was made.
+Strength sixteen is where we made every comparison in the original experiment.
 
 ### What was found on the ultimatum game
 
@@ -466,11 +466,11 @@ should never be combined.
 
 ---
 
-## 12. How this setup compares with the one already in the paper
+## 12. How this setup compares with the one we already use in the paper
 
-The paper describes its own steering procedure in its appendix. It is worth laying the two
-side by side, because they agree on more than people assume and the places where they differ
-are the places that decide what each one can claim.
+Our own steering procedure is described in the appendix of the paper. It is worth laying the
+two side by side, because they agree on more than people assume and the places where they
+differ are the places that decide what each one can claim.
 
 ### What the two have in common
 
@@ -481,7 +481,7 @@ that model.
 
 Both reach into the model at the same depth, which is layer fifty.
 
-Both steer with the same features. The paper names feature one hundred and eighty four and
+Both steer with the same features. In the paper we use feature one hundred and eighty four and
 feature four thousand two hundred and thirty seven for the lottery and feature thirty one
 thousand nine hundred and thirty five for the ultimatum game. Those are exactly the features
 placed against the anchors in these notes.
@@ -491,25 +491,60 @@ features. It is about how the steering is applied and how the answer is read.
 
 ### The first difference is where the work happens
 
-The paper's runs are sent to a service operated by Goodfire. The researcher names a feature
-and gives a strength and the service returns the model's reply. The steering itself happens on
-somebody else's machine.
+In the paper our runs are sent to a service operated by Goodfire. We name a feature and give a
+strength and the service returns the model's reply. The steering itself happens on somebody
+else's machine.
 
 The work in these notes downloads the published dictionary file and runs everything on the
 project's own hardware. The steering is performed by code in this repository that can be read
 line by line.
 
-This matters for a practical reason. The strength the paper sends to the service is a number
-between zero and one, and the service's interpretation of that number is not published. It is
+This matters for a practical reason. The strength we send to the service is a number between
+zero and one, and the service's interpretation of that number is not published. It is
 possible to record what the number achieved, because the logs show that a strength of one half
 drove the targeted feature from outside the ten most active features to a level of one hundred
 and seventy five, against ninety eight for the strongest feature when nothing is steered. But
 it is not possible to reconstruct the rule that turned one into the other. Running locally
 removes the question entirely, because the code performing the edit is the code you wrote.
 
+### What a position is, in concrete terms
+
+A prompt is not one thing to the model. It is a sequence of tokens, and the model holds a
+separate internal state at each one. A position simply means one of those token slots.
+
+Here is the tail of a real ultimatum prompt. The whole thing is one hundred and twenty one
+tokens long and it ends like this:
+
+| position | token | what it is |
+|---|---|---|
+| 114 | end of turn | closes the scenario text |
+| 115 | start of header | the model's turn begins |
+| 116 | assistant | names whose turn it is |
+| 117 | end of header | |
+| 118 | blank line | |
+| 119 | Answer | the word Answer |
+| 120 | : | the colon, and the final position |
+
+The one hundred and fourteenth token closes the scenario text. The next four are the marks
+that tell the model its turn has begun. The one hundred and nineteenth token is the word
+Answer and the one hundred and twentieth is the colon after it.
+
+That colon is the final position. It is the last token of the prompt and the point at which
+the model has read everything and is about to produce its first word. The answer is read
+from exactly there, by comparing the probability the model gives to one option word against
+the probability it gives to the other.
+
+So applying the adjustment at the final position means adding the direction to the model's
+internal state at that colon and nowhere else. The model reads the entire scenario normally
+and is nudged only at the instant of committing to an answer.
+
+Applying it at every position means adding it at all one hundred and twenty one tokens. The
+model reads the size of the offer and the consequence of refusing through an internal state
+that has already been altered.
+
 ### The second difference is where the edit lands
 
-The paper's controller applies its adjustment at every position in the prompt. The
+The controller we use in the paper applies its adjustment at every position in the prompt. The
 configuration field that would restrict it to particular positions is left empty, which means
 no restriction.
 
@@ -524,7 +559,7 @@ arrangements should never be combined into one comparison.
 
 ### The third difference is how the answer is read
 
-The paper lets the model write a reply and then reads the choice out of the text. A helper
+In the paper we let the model write a reply and then read the choice out of the text. A helper
 library picks whichever of the two option names appears.
 
 The work in these notes reads the answer from the model's own probabilities at the moment of
@@ -543,7 +578,7 @@ neither can stand in for the other.
 
 This is the one that matters most and it is not a difference of engineering.
 
-The paper asks whether steering a feature changes the behaviour. It answers yes, and the
+In the paper we ask whether steering a feature changes the behaviour. We answer yes, and the
 answer is correct.
 
 These notes ask what kind of change it was. They do that by building two changes whose nature
@@ -551,10 +586,10 @@ is known in advance and asking where the feature sits relative to them. That que
 be answered by watching behaviour move, however carefully, because a push toward a word and a
 change of preference both move behaviour.
 
-So the two setups are not competing accounts of the same experiment. The paper establishes
+So the two setups are not competing accounts of the same experiment. In the paper we establish
 that the lever does something. The work here asks what the lever is connected to, and for the
-three features the paper names, finds no measurable connection to either of the two things it
-could sensibly be connected to.
+three features we name, it finds no measurable connection to either of the two things it could
+sensibly be connected to.
 
 ---
 
@@ -586,7 +621,7 @@ tokens.
 
 ### Why this particular view was drawn
 
-The released data reports the strength that the search returned for each target. That is the
+Our released data reports the strength that the search returned for each target. That is the
 inverse view and it is much weaker than it looks, because a search returns a number whether or
 not it actually arrived anywhere. Reporting the strength it settled on says what the procedure
 did rather than whether the procedure worked.
@@ -637,13 +672,13 @@ about which character gets typed. The identical computation on a prompt that ask
 gives the opposite balance. This is a property of how the question is asked rather than a
 property of the model.
 
-The three features the paper steers with cannot be distinguished from randomly chosen
-features by any of the anchors on either game.
+The three features we steer with cannot be distinguished from randomly chosen features by any
+of the anchors on either game.
 
 Feature combinations that were fitted numerically do carry structure. On the lottery they
 match the answer direction. On the ultimatum game they match the pure push anchor.
 
-At the strength used throughout the original experiment every intervention removed more than
+At the strength we use throughout the original experiment every intervention removed more than
 eighty four percent of the model's responsiveness to the payoffs, while randomly chosen
 directions of the same size removed far less.
 
