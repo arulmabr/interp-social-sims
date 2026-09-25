@@ -1844,3 +1844,29 @@ found the split is StratifiedKFold over rows and each prompt contributes eight i
 activation vectors, so every vector appears in both folds, and Section 3.3's "held-out
 preference trials" describes something the code does not do. Adopting the caption convention
 requires fixing that first, which is a by-prompt split and a small change.
+
+## D107 — every text-addressable review point turned into an applicable edit (24 Sept)
+
+The authors asked that everything the review raises which can be fixed in text be addressed in
+the paper. It cannot be applied here: there is no `paper_src/` and no `.tex` anywhere, and the
+only artefact is the 21 Sept PDF. So the deliverable is the edit itself, in applicable form,
+written as section 8 of `friday_session.txt` per the authors' standing instruction that
+everything lives in one file.
+
+Fifty-four rows of `paper_patches/CLAIMS.csv`, ordered by where each lands in the paper rather
+than by id, so the section can be worked top to bottom. Each entry carries the location, the
+finding, and the sentence to carry.
+
+  29 text alone
+  17 text carrying a measurement already finished
+   3 a figure and a sentence
+   5 limitations
+
+Two structural points the ordering exposed. The twelve PROV-fig rows have one cause and are
+discharged by one statement plus a labelling decision, so what reads as twelve items is one
+author decision and the largest in the list. And only ONE row in the whole review needs a new
+experiment: F-collateral, the psychometric battery for collateral distortion, which cannot be
+run in the time. Everything else is writing.
+
+Not done, and it is the binding constraint: none of this is in the paper. The deadline is
+25 Sept 23:59 AoE and applying it needs Overleaf access rather than more analysis.
