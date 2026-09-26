@@ -1,0 +1,19 @@
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/orcd/home/002/guna23/shrey/risk-trackB/cv_bench/anchors/pilot_read.py", line 85, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/orcd/home/002/guna23/shrey/risk-trackB/cv_bench/anchors/pilot_read.py", line 50, in main
+    sp, rows = specs(a.evidence)
+               ^^^^^^^^^^^^^^^^^
+  File "/orcd/home/002/guna23/shrey/risk-trackB/cv_bench/anchors/pilot_read.py", line 30, in specs
+    rows = json.loads((evidence / "frozen_rows.json").read_text())
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/software/anaconda3/2023.07/lib/python3.11/pathlib.py", line 1058, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/software/anaconda3/2023.07/lib/python3.11/pathlib.py", line 1044, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/tmp/claude-234238/-home-guna23-shrey-risk-trackB/f5535c1e-e903-45d9-9ba1-6b2b4a0ca3c6/scratchpad/pilot/frozen_rows.json'

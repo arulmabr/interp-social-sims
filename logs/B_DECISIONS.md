@@ -1112,3 +1112,22 @@ trained.
 **What remains true from BD57.** A result here is about the model's propensity to produce
 text the judges called original. It is not a result about the judges being right, and it does
 not certify the creativity claim on its own.
+
+**BD59. The creativity weight-push anchor sets its two constants by rule, not by hand, and the
+rules are recorded here before the job runs.** The bias adapter adds a constant to the
+readout, and a constant only means something against the spread of that readout in the
+unmodified model. That spread is not known until measured, so the job measures it first and
+then applies these two rules.
+
+**The push.** On the lottery the planted push is 0.600 against a latent spread of about 3.4,
+which is 0.176 of a spread. The creativity push is the same fraction of the creativity
+readout's own measured spread.
+
+**The detectable change.** On the lottery one detectable change of curvature moves the mean
+latent by 0.0302, which is 0.009 of that spread. The creativity detectable change is the shift
+in the judge's originality weight that moves the mean readout by the same fraction of its own
+spread.
+
+Both rules are fixed now. What the job measures is a property of the unmodified model rather
+than an outcome, in the same way the choice temperature was measured before the risk anchors
+were trained. The numbers they produce are recorded before any adapter is read.

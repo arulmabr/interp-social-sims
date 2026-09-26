@@ -1,0 +1,140 @@
+264 training rows (disc+cal, legacy labels), 120 selection-split rows for the cloning check
+loaded in 148s; 207.1M trainable LoRA params; 4bit=False
+--- training reference ---
+  reference step 25/500 loss 0.8187
+  reference step 50/500 loss 0.2998
+  reference step 75/500 loss 0.1872
+  reference step 100/500 loss 0.1742
+  reference step 125/500 loss 0.1641
+  reference step 150/500 loss 0.1735
+  reference step 175/500 loss 0.1627
+  reference step 200/500 loss 0.1737
+  reference step 225/500 loss 0.1541
+  reference step 250/500 loss 0.1715
+  reference @ 250: held-out r=0.9972 slope=0.9799 z_sd=4.030 | train r=0.9988 slope=1.0454  (train-heldout gap +0.066; verdict at step 500)  [best so far]
+  reference step 275/500 loss 0.1637
+  reference step 300/500 loss 0.1781
+  reference step 325/500 loss 0.1514
+  reference step 350/500 loss 0.1683
+  reference step 375/500 loss 0.1630
+  reference step 400/500 loss 0.1781
+  reference step 425/500 loss 0.1495
+  reference step 450/500 loss 0.1701
+  reference step 475/500 loss 0.1596
+  reference step 500/500 loss 0.1778
+  reference @ 500: held-out r=0.9969 slope=0.9331 z_sd=3.839 | train r=0.9997 slope=0.9981  -> clones
+  reference: selected step 250 (held-out slope 0.9799)
+--- training preference ---
+  preference step 25/500 loss 0.7505
+  preference step 50/500 loss 0.2531
+  preference step 75/500 loss 0.2290
+  preference step 100/500 loss 0.2109
+  preference step 125/500 loss 0.1932
+  preference step 150/500 loss 0.2089
+  preference step 175/500 loss 0.1967
+  preference step 200/500 loss 0.2090
+  preference step 225/500 loss 0.1858
+  preference step 250/500 loss 0.2057
+  preference @ 250: held-out r=0.9973 slope=0.9323 z_sd=3.216 | train r=0.9987 slope=0.9796  (train-heldout gap +0.047; verdict at step 500)  [best so far]
+  preference step 275/500 loss 0.1975
+  preference step 300/500 loss 0.2155
+  preference step 325/500 loss 0.1864
+  preference step 350/500 loss 0.1999
+  preference step 375/500 loss 0.1986
+  preference step 400/500 loss 0.2126
+  preference step 425/500 loss 0.1865
+  preference step 450/500 loss 0.2007
+  preference step 475/500 loss 0.1961
+  preference step 500/500 loss 0.2123
+  preference @ 500: held-out r=0.9974 slope=0.9265 z_sd=3.195 | train r=0.9989 slope=0.9792  -> clones
+  preference: selected step 250 (held-out slope 0.9323)
+--- training bias ---
+  bias step 25/500 loss 0.7633
+  bias step 50/500 loss 0.2200
+  bias step 75/500 loss 0.1891
+  bias step 100/500 loss 0.1804
+  bias step 125/500 loss 0.1617
+  bias step 150/500 loss 0.1702
+  bias step 175/500 loss 0.1611
+  bias step 200/500 loss 0.1707
+  bias step 225/500 loss 0.1494
+  bias step 250/500 loss 0.1683
+  bias @ 250: held-out r=0.9979 slope=0.9371 z_sd=3.852 | train r=0.9985 slope=1.0115  (train-heldout gap +0.074; verdict at step 500)  [best so far]
+  bias step 275/500 loss 0.1616
+  bias step 300/500 loss 0.1767
+  bias step 325/500 loss 0.1486
+  bias step 350/500 loss 0.1645
+  bias step 375/500 loss 0.1621
+  bias step 400/500 loss 0.1739
+  bias step 425/500 loss 0.1482
+  bias step 450/500 loss 0.1660
+  bias step 475/500 loss 0.1592
+  bias step 500/500 loss 0.1737
+  bias @ 500: held-out r=0.9981 slope=0.9354 z_sd=3.844 | train r=0.9990 slope=1.0107  -> clones
+  bias: selected step 250 (held-out slope 0.9371)
+cloning reference: r=0.9977 slope=0.9802 PASS
+cloning preference: r=0.9974 slope=0.9327 PASS
+cloning bias: r=0.9981 slope=0.9342 PASS
+
+{
+  "accum": 8,
+  "all_cloning_pass": true,
+  "bias": 0.6,
+  "cloning": {
+    "bias": {
+      "PASS": true,
+      "correlation": 0.9980658305678927,
+      "intercept": 0.31549747330076633,
+      "n": 120,
+      "slope": 0.9342362772616424
+    },
+    "preference": {
+      "PASS": true,
+      "correlation": 0.9974040113257813,
+      "intercept": 0.21557791923240716,
+      "n": 120,
+      "slope": 0.9327333445675624
+    },
+    "reference": {
+      "PASS": true,
+      "correlation": 0.9977431162405243,
+      "intercept": 0.3090842046443423,
+      "n": 120,
+      "slope": 0.980163961537502
+    }
+  },
+  "contrasts": {
+    "bias_minus_reference": {
+      "agent_mean_dz": 0.5999999999999998,
+      "correlation": 0.5788947403365883,
+      "model_mean_dz": 0.4623979122943381,
+      "recovery_ratio": 0.7706631871572305
+    },
+    "preference_minus_reference": {
+      "agent_mean_dz": 0.5710906504882736,
+      "correlation": 0.9490747511646278,
+      "model_mean_dz": 0.3311903680989084,
+      "recovery_ratio": 0.5799260902200829
+    }
+  },
+  "four_bit": false,
+  "init_from_reference": false,
+  "lr": 0.0001,
+  "model": "meta-llama/Llama-3.3-70B-Instruct",
+  "n_clone_rows": 120,
+  "n_train_rows": 264,
+  "preference_mdc_multiple": 1.0,
+  "rank": 16,
+  "reinit": false,
+  "retrained": [],
+  "seed": 0,
+  "steps": 500,
+  "tau": 0.1186,
+  "tau_is_provisional": false,
+  "theta0": {
+    "alpha": 0.88,
+    "gamma": 0.61,
+    "lambda": 2.25
+  },
+  "utc": "2026-09-24T04:48:40+00:00"
+}
