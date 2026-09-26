@@ -744,7 +744,67 @@ directions of the same size removed far less.
 
 ---
 
-## 16. What is deliberately not being claimed
+## 16. The creativity tasks, and why they have no anchor
+
+The paper steers three tasks. Two of them are the decision games covered above. The third is
+creativity, where the model is given an object and writes a list of unusual uses for it, and
+five judges score what it wrote out of ten. Three features are steered for that arm.
+
+### Why the method does not reach it
+
+Every number in these notes is the balance between the probability of one answer word and the
+probability of another, read at a single position in the prompt. Two candidate words are the
+minimum the measurement needs.
+
+A written paragraph offers none. There is no pair of words to take a balance of, so there is
+no quantity for an anchor to shift. Two further pieces are missing with it. There is no
+synthetic agent, because the decision games have a formula whose parameters can be changed by
+a known amount and a paragraph of prose has nothing of the kind. And there is no unit for the
+smallest change worth detecting, because on both decision games that unit is a movement of a
+threshold measured in tokens, and a judge's score out of ten with five judges disagreeing has
+no such threshold.
+
+### What was checked instead
+
+The three creativity features were placed against the anchors that do exist, which are the
+ones built for the two decision games.
+
+| feature | against the lottery choice direction | level an ordinary feature reaches |
+|---|---:|---:|
+| 13142, enabling creative expression | +0.011 | 0.033 |
+| 20117, thinking outside the box | +0.011 | 0.033 |
+| 4992, professional innovation | +0.011 | 0.033 |
+
+All three sit inside the band against every pole tested, on both games.
+
+### What that does and does not say
+
+It says the three creativity features are not secretly aligned with the direction that drives
+a decision, which is a reasonable thing to rule out and costs nothing to check.
+
+It does not test them on a creativity task. A decision-task anchor is the wrong instrument
+for a creativity feature, in the same way that a feature chosen for the ultimatum game told
+us nothing until an ultimatum anchor existed to measure it against.
+
+### Why no creativity anchor was built
+
+One design would have worked. Show two candidate uses for an object and ask which is the more
+creative, which restores a two-word answer and lets the whole apparatus run unchanged. It was
+designed, recorded and then withdrawn before any code was written.
+
+The reason is that it measures the wrong ability. The paper's claim is that steering raises
+the score of what the model **writes**. A pairwise item asks whether the model can **rank**
+two uses that are handed to it. Whether ranking transfers to writing is the open question
+rather than something available to assume, so an anchor on the second would not support a
+claim about the first. It would sit beside the creativity arm rather than validate it.
+
+The gap is therefore reported rather than filled. The method as built applies to tasks with a
+forced choice between two answer words. The creativity arm of the paper is uncalibrated, and
+saying so is more useful than covering it with a task the paper does not run.
+
+---
+
+## 17. What is deliberately not being claimed
 
 The lottery placements are comparisons of direction rather than of effect, and pointing is
 not doing.
@@ -763,7 +823,7 @@ survive the change of wording, and they should be read as unavailable rather tha
 
 ---
 
-## 17. Every result, and what each one means
+## 18. Every result, and what each one means
 
 A reference list rather than something to read aloud. Each row gives the measurement, the
 value it came out at, and the sentence that value supports.
@@ -840,7 +900,7 @@ state, which was measured at 21.12.
 
 ---
 
-## 18. What would come next, in order
+## 19. What would come next, in order
 
 The first task is to rerun the ultimatum steering while keeping the individual trial values,
 which takes 52 minutes and converts the strongest suggestive result into a measured one.
