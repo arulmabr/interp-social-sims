@@ -744,7 +744,7 @@ directions of the same size removed far less.
 
 ---
 
-## 16. The creativity tasks, and why they have no anchor
+## 16. The creativity arm, and what its own scores already say
 
 The paper steers three tasks. Two of them are the decision games covered above. The third is
 creativity, where the model is given an object and writes a list of unusual uses for it, and
@@ -764,7 +764,89 @@ smallest change worth detecting, because on both decision games that unit is a m
 threshold measured in tokens, and a judge's score out of ten with five judges disagreeing has
 no such threshold.
 
-### What was checked instead
+### The anchor question asked a different way
+
+The two vector anchors cannot reach this arm. What can be carried over is the **question**
+they exist to ask. On the decision games it is whether an intervention changed what the agent
+wants or merely pushed the word it types. Here the same question is whether an intervention
+changed what the model produced or merely changed surface properties that judges reward.
+
+That version is answerable on the paper's own task with no new run, because the judges did
+not report one number. They scored four separate dimensions:
+
+| dimension | what it counts |
+|---|---|
+| fluency | how many ideas were produced |
+| flexibility | how many distinct kinds of idea |
+| originality | how unusual they were |
+| elaboration | how much detail each carried |
+
+The first three are content. The fourth is closer to surface. A change that lifts the reported
+score by moving only elaboration is the creativity counterpart of a push. A change that lifts
+originality and flexibility is the counterpart of a real shift. The number of words in each
+response is reported alongside, so the judges are not the only witness.
+
+One correction had to be made first. The responses come from two different inference stacks,
+and they are not even formatted alike: one returns a quoted list of ideas and the other free
+prose. Differencing a condition on one stack against a baseline on the other produces nonsense,
+and doing so initially made every condition look as though it gained its score through sheer
+length. Each condition is therefore compared only with the baseline of its own stack.
+
+### What was found
+
+The steering arm of the paper, on its own stack, measured against its own baseline. Every
+figure is a change from that baseline.
+
+| task | dimension | steering | prompting |
+|---|---|---:|---:|
+| brick | originality | **+0.171** | +0.112 |
+| brick | flexibility | +0.188 | +0.258 |
+| brick | fluency | +0.096 | +0.137 |
+| brick | elaboration | **-1.167** | -0.496 |
+| brick | words per response | -10.7 | -19.9 |
+| brick | **reported score** | **-0.178** | +0.003 |
+| stapler | originality | **+1.146** | +0.496 |
+| stapler | flexibility | +0.396 | +0.279 |
+| stapler | fluency | +0.225 | +0.158 |
+| stapler | elaboration | +0.054 | +0.313 |
+| stapler | words per response | +22.3 | +7.5 |
+| stapler | **reported score** | **+0.455** | +0.311 |
+
+The baselines these move from are an originality of 2.88 on the brick and 4.41 on the stapler.
+
+### What it means
+
+**Steering moves content, not length.** Originality rises on both tasks and flexibility rises
+on both, while the number of words barely changes at all, falling by 11 on one task and rising
+by 22 on the other. That is the profile of a change in what the model produced rather than a
+change in how much of it there is.
+
+**On the stapler it raises originality by more than twice what prompting achieves**, 1.146
+against 0.496, on a baseline of 4.41. That is the largest single movement anywhere in this
+table.
+
+**On the brick the reported score falls even though content rises.** Originality is up 0.171
+and flexibility up 0.188, but elaboration falls by 1.167 and the reported score follows it
+down to -0.178. The single number hides a change in two directions at once because it mixes
+content with detail and those move opposite ways here.
+
+**So the headline creativity figure under-reports what the steering does.** Read as one
+number, steering looks like it helps on one task and hurts on the other. Read by dimension, it
+raises originality on both and does so without inflating the text, which is the outcome the
+paper's argument wants and which its own scoring already contains.
+
+### What this is not
+
+It is not the two vector anchors. Those measure a balance between two answer words and were
+not run here, because no such balance exists for a written paragraph.
+
+It is not a certified result either. The four dimensions come from the same judges whose
+disagreement is recorded elsewhere in this project, and no anchor of known kind was planted
+into the creativity task, so there is nothing here whose answer was known in advance. What the
+decomposition provides is a reading of the paper's own scores that separates two things the
+headline number combines.
+
+### The earlier cross-domain check
 
 The three creativity features were placed against the anchors that do exist, which are the
 ones built for the two decision games.
