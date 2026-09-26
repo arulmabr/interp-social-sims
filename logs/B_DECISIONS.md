@@ -1077,3 +1077,38 @@ a forced choice between two answer words. It does not apply to open generation s
 judges, and the creativity arm of the paper is therefore uncalibrated. That is a scope
 statement about the method and it is more useful stated plainly than covered over with a
 proxy task.
+
+**BD58. BD57 is narrowed. Both anchors ARE buildable on the creativity task, on generation
+rather than on a ranking, and are built.** BD57 concluded that no creativity anchor was
+possible. That conclusion was drawn too quickly. It rested on the assumption that a readout
+must be a choice the model is asked to make. It need not be. A readout is any scalar computed
+from the model's own probabilities, and one exists here:
+
+```
+z = mean per-token log P(a response the judges scored high on originality)
+  - mean per-token log P(a response they scored low)
+```
+
+both conditioned on the same task prompt. The model is never asked to choose. It is given
+"List creative uses for a brick" exactly as in the paper, and z is read off the probabilities
+it assigns to two real responses drawn from the paper's own data. So the task is unchanged and
+the pairwise redesign BD56 proposed is still rejected.
+
+**The pairs.** Responses in the top and bottom quarter of judged originality, within a task,
+each scored by at least three judges. On the brick the two groups are matched on length at 321
+words against 319, so the contrast is originality rather than length, which is the confound
+hypothesis 6 of the extension plan is about. On the stapler they are 116 against 104.
+
+**The two anchors, in the same roles as on the other tasks.** The readout gradient is the
+direction that most efficiently raises z, readout-like by construction. The LoRA anchor trains
+adapters to clone a synthetic judge whose z is `w` times the difference in judged originality,
+with a reference `w`, a preference `w` shifted by one detectable change, and a bias adapter
+that adds a constant to z regardless of the originality difference.
+
+**The detectable change is fixed by the same rule as the ultimatum**, matching the behavioural
+size of one lottery detectable change, and is computed before any creativity adapter is
+trained.
+
+**What remains true from BD57.** A result here is about the model's propensity to produce
+text the judges called original. It is not a result about the judges being right, and it does
+not certify the creativity claim on its own.
