@@ -1052,3 +1052,28 @@ against any anchor built for their own task.
 
 **Sequencing.** `ICLR_PLAN.md` places no creativity anchor anywhere, so this is new work and
 its parameterisation is new. The test split stays locked.
+
+**BD57. BD56 is withdrawn before anything was built. No creativity anchor is constructed.**
+The pairwise design in BD56 restores a two-word answer and so makes the existing apparatus
+run, but it changes what is being measured. The paper's creativity claim is about
+**generation**: the model writes uses for an object and five judges score what it wrote. A
+pairwise item asks whether the model can **rank** two uses. Those are different abilities and
+an anchor on the second carries no weight for the first, because whether ranking transfers to
+generating is the open question rather than an assumption available for use.
+
+An anchor that measures something the paper does not claim would sit beside the creativity
+arm rather than validate it. Withdrawing it costs nothing, since BD56 was recorded before any
+code was written and no creativity number exists.
+
+**What stands instead.** The three features the paper steers with for creativity were placed
+against the anchors that do exist, which are the lottery and ultimatum ones. Feature 13142 at
++0.011, feature 20117 at +0.011 and feature 4992 at +0.011 against the lottery choice
+direction, where an ordinary feature reaches 0.033. All three sit inside that band against
+every pole tested. This is a cross-domain check and is reported as one. It does not test the
+creativity features on a creativity task.
+
+**The gap is reported rather than filled.** The anchor method as built applies to tasks with
+a forced choice between two answer words. It does not apply to open generation scored by
+judges, and the creativity arm of the paper is therefore uncalibrated. That is a scope
+statement about the method and it is more useful stated plainly than covered over with a
+proxy task.
