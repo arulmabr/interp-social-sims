@@ -835,6 +835,73 @@ number, steering looks like it helps on one task and hurts on the other. Read by
 raises originality on both and does so without inflating the text, which is the outcome the
 paper's argument wants and which its own scoring already contains.
 
+### What the extension plan actually asks for here, and what it returned
+
+The plan does not ask for the two vector anchors on this arm. Its sixth hypothesis asks
+something else: whether the creativity effects survive once length is removed, and whether the
+judges agree once it is. Both were run.
+
+**Length explains far more of the judging than the plan assumed.** The plan puts it at up to
+43 percent of one judge's variance. Regressing each judge's score on the log word count of the
+response it was given returns this:
+
+| judge and task | share of that judge's score explained by length |
+|---|---:|
+| gemini on the stapler | **77.4 percent** |
+| gpt-5 on the stapler | 75.8 percent |
+| claude on the stapler | 68.5 percent |
+| gpt-5 on the brick | 64.1 percent |
+| gemini on the brick | 64.0 percent |
+| deepseek on the brick | 57.4 percent |
+| kimi on the brick | 52.2 percent |
+| claude on the brick | 50.7 percent |
+| deepseek on the stapler | 49.4 percent |
+| kimi on the stapler | **18.0 percent** |
+
+Seven of the ten exceed the figure the plan carries. For three of the five judges on the
+stapler, more than two thirds of what they reported is predictable from how long the answer
+was.
+
+**The steering effect survives, at about two thirds of its size.** Removing length from every
+score and repeating the comparison:
+
+| task | condition | reported | with length removed |
+|---|---|---:|---:|
+| stapler | SAE steering | +0.455 | **+0.294** |
+| stapler | prompting | +0.311 | +0.249 |
+| brick | SAE steering | -0.178 | **-0.115** |
+| brick | prompting | +0.003 | +0.083 |
+
+So the stapler gain is real rather than an artefact of longer text, and the brick result stays
+negative either way.
+
+**The prompting ladder gains rather than loses from the correction.** On the brick, few-shot
+with chain of thought goes from +1.484 to +1.722 once length is out, and plain few-shot from
++0.696 to +1.105. Both wrote **shorter** answers than their baseline and still scored higher,
+so removing length reveals more of their effect rather than less.
+
+**Judge agreement is low, and length is not what the judges agree about.** Computing the
+average rank agreement between judges within a single condition, before and after removing
+length:
+
+| subset | reported | with length removed |
+|---|---:|---:|
+| brick, SAE steering | +0.654 | +0.657 |
+| brick, baseline | +0.493 | +0.463 |
+| brick, prompting | +0.135 | +0.129 |
+| stapler, SAE steering | +0.484 | +0.422 |
+| stapler, baseline | +0.220 | +0.198 |
+| stapler, prompting | +0.020 | +0.045 |
+
+Removing length barely moves any of them, so the judges' agreement does not rest on length.
+
+**And these numbers sit well below the agreement the paper reports.** The published figure is
+an average rank agreement of 0.77. Measured **within** a condition it runs from 0.02 to 0.65.
+The likely reason is that the published figure pools every condition together, and judges who
+agree that one condition is worse overall will show high pooled agreement without agreeing
+about any individual response. That is a plausible account rather than a verified one, and
+checking it means recomputing the published figure the same way it was originally computed.
+
 ### What this is not
 
 It is not the two vector anchors. Those measure a balance between two answer words and were
