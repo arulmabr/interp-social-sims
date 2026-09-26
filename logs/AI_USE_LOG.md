@@ -104,3 +104,16 @@ automated review. Now added: the provenance of `GATE_S0_RESPONSE.md` above.
   unchanged from `iclr-extension` so the ultimatum prompt matches the one G4 used. Ran job 23607904.
   Produced `figures/g4u_summary.{png,pdf}` and the two CSVs under the run root. Drafted BD53, including
   the argument that the panel's three high bars reflect shared fitting rather than signal.
+
+## 2026-09-26, B10.6 to B10.8, creativity anchors
+
+- Corrected the creativity LoRA anchor's `w0` construction rule (agent spread matched to the
+  model's readout spread rather than a ratio of means) and reran; logged in `logs/B_DEVIATIONS.md`.
+- Wrote `cv_bench/anchors/creativity_disp.py`, which extracts each creativity adapter's
+  residual-stream displacement so the LoRA anchor has a direction to be placed against.
+- Wrote `cv_bench/anchors/creativity_place.py`, which places the 3 SAE features and the probe
+  against all 4 LoRA poles with a 2,000-draw random-feature null.
+- Wrote `cv_bench/anchors/creativity_probe_check.py`, which recomputes the probe's judge
+  agreement holding out responses as well as judges and separately within each task.
+- Drafted `reports/B10_CREATIVITY_ANCHORS.md`. Every number in it was verified against its
+  source file by script before commit; no value was typed from memory.
