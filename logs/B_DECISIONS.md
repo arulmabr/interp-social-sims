@@ -1010,3 +1010,45 @@ derived from the grid geometry and the reference parameter alone. No model outpu
 social arm at B7 in weeks 5 and 6, after pre-registration, and specifies no synthetic social agent.
 This work is therefore early and its parameterisation is new. The test split stays locked; everything
 here runs on discovery, selection and calibration only.
+
+---
+
+## 2026-09-25 — B10, the creativity anchor
+
+**BD56. Creativity is anchored as a pairwise judgement, and this is recorded before any
+creativity number exists.** The anchors measure a shift in the balance between two answer
+words. The creativity tasks in the paper have no two answer words: the model writes a
+paragraph of alternative uses and five judges score it. Three things therefore break rather
+than bend. There is no latent to measure, there is no synthetic agent whose parameters could
+be planted, and there is no behavioural threshold in which a minimum detectable change could
+be expressed.
+
+The authors chose, from three options put to them, to restore the two-word answer by turning
+the task into a **pairwise judgement**. Each item shows two candidate uses for an object and
+asks which is the more creative. The agent is then a judge that trades novelty against
+practicality:
+
+```
+u(option) = practicality + w * unusualness
+z         = (u(B) - u(A)) / range / tau  +  action
+```
+
+`w` is the weight the judge puts on unusualness, which is the preference parameter and the
+counterpart of curvature on the lottery and of the inequity weight on the ultimatum. `action`
+is the constant push and is 0.6 as on both other tasks, so the three negative controls are
+comparable.
+
+**Both attributes are stated in the prompt**, in the same way the lottery states the
+probability and the amounts. Without that the judge's parameters could not be recovered from
+the prompt and nothing could be planted.
+
+**What this design does and does not cover, stated plainly so it is not overclaimed later.**
+It anchors a creativity **judgement**. It does not anchor the free generation that the paper
+actually reports, and no claim about the generation task may be carried over from it. The two
+rejected options are recorded for the same reason: anchoring the judged score directly was
+rejected because it yields only one pole and cannot plant a pure answer push, and stopping at
+the cross-domain check was rejected because it leaves the creativity features untested
+against any anchor built for their own task.
+
+**Sequencing.** `ICLR_PLAN.md` places no creativity anchor anywhere, so this is new work and
+its parameterisation is new. The test split stays locked.
