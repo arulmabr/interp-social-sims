@@ -117,3 +117,6 @@ automated review. Now added: the provenance of `GATE_S0_RESPONSE.md` above.
   agreement holding out responses as well as judges and separately within each task.
 - Drafted `reports/B10_CREATIVITY_ANCHORS.md`. Every number in it was verified against its
   source file by script before commit; no value was typed from memory.
+- Drafted `reports/B10_CREATIVITY_SPEAKER_NOTES.md` and rendered it as
+  `reports/B10_Creativity_Speaker_Notes.docx` with a navigable contents list. Every number in it
+  was verified against its source file by script before commit.
