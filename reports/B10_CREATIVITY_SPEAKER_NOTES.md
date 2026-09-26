@@ -264,6 +264,11 @@ minus one to plus one, where zero means the ordering is unrelated.
 | GPT-5 | 0.837 | 0.838 |
 | DeepSeek V4 Pro | 0.794 | 0.798 |
 | average of the five | 0.846 | 0.847 |
+| length of the fitted direction | 2.992 | 2.935 |
+
+**What the last row is for.** The length of the direction the fit landed on. It is recorded
+because every comparison in section 11 is a cosine, which ignores length entirely, so the length
+has to be written down somewhere or it is lost. It plays no part in any result.
 
 **What each row is.** One row per judge. The row named Claude Sonnet 4.6 means that judge's
 scores were removed entirely, the probe was fitted on the average of the other four, and then
@@ -390,18 +395,19 @@ Before an anchor can be used, the adapters have to be shown to have actually lea
 agents. Two things are checked. The first is whether the adapted model orders the pairs the way
 its agent does. The second is whether it moves as far as its agent does.
 
-| adapter | does it order the pairs the same way | does it move as far | its average reading |
-|---|---:|---:|---:|
-| the standard that had to be met | 0.95 | 0.90 to 1.10 | |
-| reference | 0.810 | 0.764 | +0.556 |
-| preference | 0.797 | 0.759 | +0.561 |
-| bias, the pure push | 0.798 | 0.824 | +0.612 |
+| adapter | does it order the pairs the same way | does it move as far | its average reading | training error at the end |
+|---|---:|---:|---:|---:|
+| the standard that had to be met | 0.95 | 0.90 to 1.10 | | |
+| reference | 0.810 | 0.764 | +0.556 | 0.0444 |
+| preference | 0.797 | 0.759 | +0.561 | 0.0435 |
+| bias, the pure push | 0.798 | 0.824 | +0.612 | 0.0411 |
 
 **What each column is.** The first column asks whether the adapted model ranks the 82 pairs in
 the same order as the agent it copied, where 1.0 would be a perfect match. The second column
 asks how far it moves for each step the agent moves, where 1.0 means it moves exactly as far
 and 0.76 means it moves about three quarters as far. The third column is the adapted model's
-average reading over the pairs.
+average reading over the pairs. The fourth is how badly it still disagreed with its agent when
+training stopped, so a lower number means a closer copy.
 
 **What the first row is.** It is the standard, not a result. It is the bar that the lottery and
 ultimatum adapters cleared and it is put first so that the shortfall below it is legible.
