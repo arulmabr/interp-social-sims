@@ -96,7 +96,12 @@ def main(argv=None) -> int:
     spread = float(z0.std())
     push = PUSH_FRACTION * spread
     d_orig = np.array([p["d_originality"] for p in pairs], dtype=float)
-    w0 = float(z0.mean() / d_orig.mean()) if d_orig.mean() else 0.0
+    # The agent must vary across pairs by about as much as the model's own
+    # readout does, or the cloning measure has a ceiling far below its bar. On
+    # the lottery the two spreads are 3.4 against 3.6. Calibrating to the mean
+    # instead left the agent varying by 0.0088 of the model's spread, which made
+    # the bar unreachable (logs/B_DEVIATIONS.md).
+    w0 = float(spread / d_orig.std()) if d_orig.std() else 0.0
     mdc_w = float(MDC_FRACTION * spread / d_orig.mean())
     print(f"unmodified readout: mean {z0.mean():+.4f} spread {spread:.4f}", flush=True)
     print(f"derived: w0 {w0:+.5f}  detectable change {mdc_w:.5f}  push {push:.4f}",

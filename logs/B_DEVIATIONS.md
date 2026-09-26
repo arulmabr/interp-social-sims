@@ -166,3 +166,27 @@ Author decision, 22 Sept.
   readout is carried over: mean +0.0059, spread 0.2425, from which w0 +0.00412, detectable
   change 0.00150 and push 0.0428 were derived before the failure.
 - *Not outcome driven:* no result had been produced when the job died.
+
+**B10.5 creativity anchor: the reference weight was constructed wrongly, and the cloning bar
+was unreachable because of it. Corrected and rerun.**
+- *What happened:* all three adapters failed the cloning bar, at correlations of -0.066, +0.020
+  and -0.038 against a bar of 0.95.
+- *Why, and this is arithmetic rather than judgement:* the reference weight was set so the
+  agent reproduced the model's **mean** readout, which left the agent's target varying by only
+  0.00238 across pairs while the model's own readout varies by 0.26906. The ratio is 0.0088.
+  An adapter that tracked the target perfectly, leaving the rest of the model's variation
+  untouched, would therefore score about 0.0088 on the cloning measure. The observed +0.020 is
+  already above that ceiling. The bar could not be met by any adapter.
+- *The comparison that shows it is a construction fault:* on the lottery the agent's latent
+  spread is about 3.4 against a model readout spread of about 3.6, a ratio near 0.94, and
+  cloning reaches 0.99. The established design uses an agent whose latent spans the same range
+  as the model's. The creativity agent was calibrated to a mean instead, which is a departure
+  from that design that I introduced.
+- *Fix:* the reference weight is now set so the agent's target spread matches the model's
+  readout spread, which is the property the lottery design has. Nothing else changes. The push
+  and the detectable change keep the BD59 rules, which are fractions of the readout spread and
+  are unaffected.
+- *Why this is not outcome driven:* the fault is visible without reference to any result, from
+  the two spreads alone, and the corrected rule is the one the other two tasks already use. The
+  failed run and its numbers are retained in `MANIFEST_B.csv` under `B10.5.*` and are not
+  deleted.
