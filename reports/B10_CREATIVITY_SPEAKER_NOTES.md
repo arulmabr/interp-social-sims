@@ -68,8 +68,9 @@ recognised as depending on the depth chosen rather than on the model.
 
 A direction is a list of 8,192 numbers as well, pointing a particular way through that space.
 Turning up an internal quantity means adding some amount of a direction to the state. So every
-method discussed here, the technique under test and the anchors used to test it, comes down to
-a direction, and comparing two methods comes down to comparing two directions.
+method discussed here comes down to a direction. That is true of the technique under test and
+it is equally true of the anchors used to test it. Comparing two methods therefore comes down
+to comparing two directions.
 
 ---
 
@@ -155,21 +156,28 @@ reading existed.
 ### What happened at stage 4, and what was done about it
 
 The first attempt to train the adapters stopped after 1 minute 35 seconds because it ran out of
-memory on the cards. The reason is the arithmetic above. Training needs to keep, for every word of
-every response, the intermediate quantities required to work out how to adjust the weights, and
-two full responses at once did not fit in the 9 gigabytes left over after the model.
+memory on the cards. The reason is the arithmetic above. For every word of every response,
+training has to hold on to the intermediate quantities needed to work out how the weights
+should move. Two full responses at once did not fit in the 9 gigabytes left over after the
+model.
 
 Two things were changed and neither touches what was being measured. The intermediate quantities
 are now recomputed when they are needed instead of being kept, which costs time and saves memory.
 And each response is cut off at 192 words worth of text rather than 320.
 
-Everything else was left exactly as it was. The agents, the two sizes and the rules that set them,
-the set of pairs, the starting point, the number of steps, the learning rate and the measure of
-error are all unchanged. This matters because the project's rules allow a rerun for a technical
-reason and forbid one because a result was unwelcome, so the reason and the list of what did not
-change are both written into the log of deviations. Two further submissions of the same job were
-cancelled before they ever started, while waiting for cards to become free, so they ran nothing
-and measured nothing.
+Everything else was left exactly as it was. What did not change:
+
+- the three agents and what each one does
+- the two sizes and the rules that fixed them
+- the set of 82 pairs used for training
+- the starting point and the number of steps
+- the learning rate
+- the measure of error being reduced
+
+This matters because the project's rules allow a rerun for a technical reason and forbid one
+because a result was unwelcome, so both the reason and this list are written into the log of
+deviations. Two further submissions of the same job were cancelled before they ever started,
+because they were still waiting for cards to become free. They ran nothing and measured nothing.
 
 ### What happened at stage 5, and why it was run a third time
 
@@ -216,12 +224,18 @@ earlier the same night. Nothing about that affects the result it will produce.
 
 ### What the judges are
 
-Five separate large language models score each response. They are GPT-5, Claude Sonnet 4.6,
-Gemini 2.5 Pro, Kimi K2.6 and DeepSeek V4 Pro. Each one scores a response on four things:
-how many relevant ideas it produced, how many different categories those ideas came from, how
-unusual the ideas are, and how much each idea was developed. The paper calls those fluency,
-flexibility, originality and elaboration. Each judge sees only the response and the task and
-is not told which condition produced it.
+Five separate large language models score each response. The table in section 9 names all five.
+
+Each one scores a response on four separate things. The paper's own name for each is given beside
+it.
+
+- how many relevant ideas the response produced, which the paper calls fluency
+- how many different categories those ideas came from, which it calls flexibility
+- how unusual the ideas are, which it calls originality
+- how much each idea was developed, which it calls elaboration
+
+Each judge sees only the response and the task. No judge is told which condition produced the
+writing it is reading.
 
 The work below uses the third of those four, how unusual the ideas are, because that is the
 one the anchors are about.
@@ -267,10 +281,10 @@ about 5 percent of the pair to pair variation. On the stapler task it is about 2
 42 pairs the brick average sits about a third of a standard error away from zero. In the two
 games the equivalent reading separates the two answers many times more cleanly.
 
-So a creativity reading exists, it points the right way, and it is weak. Everything downstream
-inherits that. A result of nothing measured against this reading is much less informative than
-the same result measured against the ultimatum game's reading, and these notes say so at each
-point rather than once.
+So a creativity reading exists and it points the right way. It is also weak, and everything
+downstream inherits that. A result of nothing measured against this reading is much less
+informative than the same result measured against the ultimatum game's reading, and these notes
+say so at each point rather than once.
 
 For the paper, this is the piece that lets the creativity work be discussed in the same terms
 as the rest. At present every creativity number in the paper passes through an outside judge,
@@ -384,10 +398,10 @@ The second is that the two tasks were pooled into one ranking. Brick responses r
 A direction that does nothing but tell brick from stapler therefore earns ordering agreement
 without knowing anything about creativity at all.
 
-A recomputation that holds out responses as well as judges, and repeats the measurement inside
-each task separately so the task cannot carry the ordering, is running and its result is not
-yet available. Until it returns, 0.846 is the ceiling of what this probe achieves and not its
-performance, and the paper should not quote it. What can be said now is narrower and still
+A recomputation is running and its result is not yet available. It holds out responses as well
+as judges, and it repeats the measurement inside each task separately so that the task cannot
+carry the ordering. Until it returns, 0.846 is the ceiling of what this probe achieves and not
+its performance, and the paper should not quote it. What can be said now is narrower and still
 worth saying: a single linear direction orders creative writing the way an independent judge
 does, under a protocol that at minimum removes the circularity of training and testing on one
 judge.
@@ -468,10 +482,11 @@ terms. The agent was asked to vary by about 0.002 while the model it was being t
 imitate varies by 0.269, so the signal it was supposed to carry was roughly 70 times smaller
 than the noise it was sitting in. There was nothing for the adapter to learn.
 
-All three adapters then failed completely, agreeing with their agents at −0.066, +0.020 and
-−0.038, which is no agreement at all. The rule was corrected and the run repeated. Both the
-before and the after are recorded in the project's log of deviations, because a rerun is only
-allowed for a technical reason and the reason has to be written down.
+All three adapters then failed completely. The reference adapter agreed with its agent at
+−0.066. The one carrying the change of taste agreed at +0.020. The one carrying the push agreed
+at −0.038. None of those three is agreement at all. The rule was corrected and the run
+repeated. Both the before and the after are recorded in the project's log of deviations,
+because a rerun is only allowed for a technical reason and the reason has to be written down.
 
 ### What was found about whether the adapters copied their agents
 
@@ -591,9 +606,9 @@ The paper's appendix states that these three were identified because their label
 creativity related concepts. That is the point at issue. The probe direction from section 9 was
 taken at both depths as well.
 
-Each direction was then compared by cosine with each anchor. There are four anchor targets. Two
-are the gradients of section 8, one per task. Two are the adapter movements of section 11, the
-pure push and the change of taste.
+Each direction was then compared with each anchor by cosine. There are four anchor targets. Two
+are the gradients of section 8, one per task. The other two are the adapter movements of
+section 11, which are the pure push and the change of taste.
 
 ### What was found against the gradients
 
@@ -666,8 +681,8 @@ gradient it reaches +0.031 and +0.033 where 1 draw in 20 reaches 0.027 and 1 in 
 0.039, so it is above the first level and below the second. Against the brick gradient it
 reaches between +0.012 and +0.019 and stays inside the level. Against the pure push it reaches
 between +0.050 and +0.054 against a level of 0.151 and stays well inside it. So the probe has a
-detectable relationship with the model's own generation direction on product innovation, none on
-divergent creativity, and none with a planted push on either.
+detectable relationship with the model's own generation direction on product innovation. It has
+none on divergent creativity. And it has none with a planted push on either task.
 
 **Everything here is stable between the two depths.** No row changes by more than 0.005 from
 layer 48 to layer 50, so nothing depends on the depth chosen.
@@ -688,12 +703,10 @@ underlying logic need careful evaluation. This is what carrying that out looks l
 is against a change of known kind, and on creativity the answer is that the three do not stand
 out from arbitrary ones.
 
-So the sentences this supports are that choosing a direction by its label is a way of forming a
-hypothesis and not a way of identifying a mechanism, and that a reported gain in score and a
-claim about mechanism are two claims needing two pieces of evidence, the second of which is not
-present here. The constructive half is the method rather than the verdict. A random draw level
-and an anchor of known kind together turn a cosine from an impression into a test, and once the
-anchor exists they cost no further model runs.
+This supports two sentences. The first is that choosing a direction by its label is a way of
+forming a hypothesis rather than a way of identifying a mechanism. The second is that a
+reported gain in score and a claim about mechanism are two separate claims needing two pieces
+of evidence, and the second piece of evidence is not present here.
 
 The probe result should keep its asymmetry rather than be averaged into one number. A direction
 fitted on judged unusualness points measurably along the model's own generation direction on the
@@ -720,9 +733,10 @@ survives swapping the two options, which must be about the answer itself, and th
 reverses when the options are swapped, which must be about which letter gets typed. The push
 columns are the pure push anchors for each game.
 
-**What the numbers say.** Every one of the fifteen is inside the level a random draw reaches. So
-the three creativity quantities have no measurable relationship to the direction that moves the
-answer, the direction that moves the letter, or a planted push, on either game.
+**What the numbers say.** Every one of the fifteen is inside the level a random draw reaches.
+So on either game the three creativity quantities have no measurable relationship to any of the
+three targets, whether that target is the direction that moves the answer or the direction that
+moves the letter or the planted push.
 
 **Why this is worth having.** It closes the objection that the three were judged against the
 wrong kind of target. They were judged against nine targets across three tasks and cleared none

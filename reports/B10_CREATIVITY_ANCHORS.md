@@ -1,11 +1,12 @@
 # Running the anchors on creativity: what was done and what was found
 
-A point by point account. Each step says how it was run, then gives the table, then says what
-every column and row and cell means, then what the numbers license.
+A point by point account. Each step says how it was run. Then it gives the table. Then it says
+what every column and every row and every cell means, and what the numbers license.
 
-Model: Llama-3.3-70B-Instruct, loaded from local weights. Dictionary:
-`Goodfire/Llama-3.3-70B-Instruct-SAE-l50`, the public checkpoint pinned at revision
-`128ee921`, 65,536 features of which 3,632 are dead. No hosted service is contacted anywhere.
+Model: Llama-3.3-70B-Instruct, loaded from local weights. The dictionary is
+`Goodfire/Llama-3.3-70B-Instruct-SAE-l50`. It is the public checkpoint pinned at revision
+`128ee921` and it holds 65,536 features of which 3,632 are dead. No hosted service is contacted
+anywhere.
 
 Two tasks, the two the paper calls capability tasks. **Divergent creativity** is the brick
 alternative-uses task, prompted with "List creative uses for a brick. Give several distinct
@@ -173,10 +174,10 @@ scored on, with only the rating source changed. A ridge fit on 8,192 features an
 has enough freedom to learn the texts, so part of 0.846 is the fit recognising activations it has
 already seen.
 
-The two tasks are pooled. Brick responses average 299 words on the lower-rated side of a pair and
-294 on the higher-rated side, where stapler responses average 100 and 115, and the
-two tasks sit at different judged originality levels. A direction that merely distinguishes brick
-from stapler therefore earns rank agreement without knowing anything about creativity.
+The two tasks are pooled. Brick responses average 299 words on the lower-rated side of a pair
+and 294 on the higher-rated side. Stapler responses average 100 and 115. The two tasks also sit
+at different judged originality levels. So a direction that merely distinguishes brick from
+stapler earns rank agreement without knowing anything about creativity.
 
 A recomputation that holds out responses as well as judges, and that repeats the measurement
 separately within each task so the task cannot carry the ranking, is running as job 23986960 and
@@ -209,10 +210,10 @@ only its overall lean moves. That is what makes it a push by construction rather
 taste. The preference version instead moves `w0`, so it changes how strongly judged originality
 translates into readiness, which is a change of taste and not a push.
 
-Three adapters are trained, a rank-16 low-rank addition on the attention and feed-forward
-projections, on the same 82 pairs in the same order with the same seed for 120 steps, one per
-agent. The difference between any two is therefore the planted change and nothing else. Training
-used gradient checkpointing and a 192-token cap on each response, recorded in
+Three adapters are trained, one per agent. Each is a rank-16 low-rank addition on the attention
+and feed-forward projections. All three see the same 82 pairs in the same order with the same
+seed for 120 steps, so the difference between any two is the planted change and nothing else.
+Training used gradient checkpointing and a 192-token cap on each response, recorded in
 `logs/B_DEVIATIONS.md` as a memory rerun.
 
 **The scale of the planted change is set by rule, not chosen.** The model's own readout on these
@@ -395,9 +396,9 @@ interpreted without the column it sits in.
 
 ### What every row means
 
-**Features 13142, 20117 and 4992** are the three the paper boosts during decoding for both
-capability tasks, listed in its appendix with their labels and their library identifiers. They are
-here because the question is whether a direction picked by reading a label has any measurable
+**The three feature rows** are the ones the paper boosts during decoding for both capability
+tasks, listed in its appendix with their labels and their library identifiers. They are here
+because the question is whether a direction picked by reading a label has any measurable
 relationship to a change of known kind.
 
 **The creativity probe rows** are the direction from Step 2, entered at both layers so that a
@@ -446,10 +447,11 @@ there as well.
 | 20117 | +0.011 | +0.009 | -0.006 | +0.003 | +0.012 |
 | 4992 | +0.011 | +0.016 | -0.028 | +0.012 | +0.020 |
 
-Every cell is inside the one-in-twenty level. The three directions have no measurable relationship
-to the answer-driving direction, the token-driving direction or a planted push on either game.
-This matters because it closes the objection that the features were judged against the wrong kind
-of anchor: they were judged against 9 poles across 3 tasks and cleared none of them.
+Every cell is inside the one-in-twenty level. So on either game the three directions have no
+measurable relationship to any of these targets, whether the target is the direction that
+drives the answer or the direction that drives the token or a planted push. This matters
+because it closes the objection that the features were judged against the wrong kind of anchor:
+they were judged against 9 poles across 3 tasks and cleared none of them.
 
 ### Why this happens, and what it licenses
 
@@ -467,11 +469,12 @@ activation strength and underlying logic." The measurement here is what carrying
 evaluation looks like: the check is against a change of known kind, and the answer on creativity
 is that the three features do not stand out from randomly drawn ones.
 
-So the narrative for the paper is that label-based feature selection is a hypothesis-generating
-step and not an identification, that a reported steering gain and a mechanistic claim are separate
-claims needing separate evidence, and that the second one does not hold here. The constructive
-half is the method rather than the verdict: a random-feature null and an anchor of known kind turn
-a cosine into a test, and they cost no additional model runs once the anchor exists.
+So the narrative for the paper has two parts. Choosing a feature by reading its label generates
+a hypothesis rather than identifying a mechanism. And a reported steering gain and a claim
+about mechanism are separate claims needing separate evidence, where the second kind of
+evidence is not present here. The constructive half is the method rather than the verdict: a
+random-feature null and an anchor of known kind turn a cosine into a test, and they cost no
+additional model runs once the anchor exists.
 
 The probe result should be stated with its asymmetry intact rather than averaged away. A probe
 fitted on judged originality points measurably along the model's own generation direction on the
@@ -488,17 +491,19 @@ features achieve anywhere.
 Every number above rests on the judges, so the judges were examined directly, using the project's
 own combined evaluation file and no new model runs.
 
-Two things were computed. First, how much of each judge's score is predictable from response
-length alone: judged score regressed on the natural logarithm of the word count, per judge and per
-task, reporting the fraction of variance explained. Second, how much the judges agree with each
-other once length is removed: the mean Spearman correlation across all 10 judge pairs, computed
-separately for each task and each condition, both on the scores as given and on the scores with
-the length relationship regressed out. Code is `cv_bench/anchors/creativity_length.py`.
+Two things were computed. The first is how much of each judge's score is predictable from response
+length alone. Each judge's score was regressed on the natural logarithm of the word count,
+separately for each judge and each task, and the fraction of variance explained was recorded.
 
-Conditions were compared only against a baseline from their own stack, because the steering and
-temperature conditions come from one generation pipeline and the prompting-ladder conditions from
-another, with baselines 5.034 and 6.120 on brick. Differencing across the two was the source of an
-earlier error and is recorded in `logs/DECISIONS.md`.
+The second is how much the judges agree with each other. That is the mean Spearman correlation
+across all 10 judge pairs, computed separately for each task and each condition. It was computed
+twice over, once on the scores as given and once on the scores with the length relationship
+regressed out. Code is `cv_bench/anchors/creativity_length.py`.
+
+Conditions were compared only against a baseline from their own stack. The steering and
+temperature conditions come from one generation pipeline and the prompting-ladder conditions
+from another, and their baselines on brick are 5.034 and 6.120. Differencing across the two was
+the source of an earlier error and is recorded in `logs/DECISIONS.md`.
 
 ### The length table
 
@@ -536,11 +541,9 @@ Mean Spearman correlation across all 10 judge pairs, within one task and one con
 
 ### What every row and cell means
 
-**as reported** is the judges' agreement computed on their scores as given. The lowest cell is the
-stapler prompting condition at 0.020, which is no agreement at all, and the highest is the brick
-steering condition at 0.654. **with length removed** repeats it after regressing out the length
-relationship, and the range barely moves, from 0.045 to 0.657, so the disagreement between judges
-is not caused by length.
+**as reported** is the judges' agreement computed on their scores as given. The lowest cell is
+the stapler prompting condition at 0.020, which is no agreement at all. The highest is the
+brick steering condition at 0.654.
 
 **The third row is the paper's own figure**, a mean pairwise Spearman of 0.770, computed by pooling
 responses across conditions. Every within-condition cell is below it and most are far below it.
