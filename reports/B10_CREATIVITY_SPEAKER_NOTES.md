@@ -99,7 +99,7 @@ judging transfers to writing is the open question rather than something availabl
 has to be a choice the model makes. It does not. A reading only has to be a number taken from
 the model without asking it anything. The model assigns a probability to every piece of text
 it could produce, including text it has already produced, and that probability is available
-without a question being put to it. The reading built in section 6 uses exactly that, and once
+without a question being put to it. The reading built in section 7 uses exactly that, and once
 a reading exists both anchors follow in the ordinary way. The withdrawal was right about the
 ranking design and wrong about the general case.
 
@@ -128,7 +128,91 @@ this work.
 
 ---
 
-## 6. What the judges do, and the first step of building a reading
+## 6. The order it was built in, and what happened at each stage
+
+Everything below ran on this cluster on four graphics cards of 44 gigabytes each, which is the
+most that can be held at once under the share allotted here. The model alone occupies about 35
+gigabytes of each card, so whatever a step needs on top of the model has to fit in the remaining
+9. That constraint decided several things later on.
+
+The order matters because each stage needed the one before it. There was no way to place a
+direction against an anchor before the anchor existed, and no way to build an anchor before a
+reading existed.
+
+| stage | what it did | how long it took | how it ended |
+|---|---|---:|---|
+| 1. forming the pairs | read the project's own recorded responses and judge scores and paired a high scoring response with a low scoring one from the same task and condition | seconds, on ordinary processors | 42 brick pairs and 40 stapler pairs |
+| 2. the reading and the gradient | measured how readily the model would produce each side of each pair, then took the direction that most raises that difference | 6 minutes 28 seconds | completed |
+| 3. the probe | took the internal state for each of 320 responses and found the direction that best predicts judged unusualness | 7 minutes 24 seconds | completed |
+| 4. the push anchor, first try | tried to train the three adapters | 1 minute 35 seconds | **failed, out of memory** |
+| 5. the push anchor, second try | the same with memory use reduced | 26 minutes 47 seconds | completed, and **the result was unusable** |
+| 6. the push anchor, third try | the same with the rule that sets the sizes corrected | 23 minutes 46 seconds | completed and usable |
+| 7. turning the adapters into directions | ran the same text under each adapter and took the average change in the internal state | 3 minutes 43 seconds | completed |
+| 8. the placement | compared every direction with every anchor, and drew 2,000 random quantities for the comparison level | 19 seconds, no cards needed | completed |
+| 9. the judges' own scores | measured how much of each judge's score follows from length, and how much the judges agree | seconds, no cards needed | completed |
+| 10. rechecking the probe | repeating stage 3 with responses held out as well as judges, and inside each task separately | running | not yet available |
+
+### What happened at stage 4, and what was done about it
+
+The first attempt to train the adapters stopped after 1 minute 35 seconds because it ran out of
+memory on the cards. The reason is the arithmetic above. Training needs to keep, for every word of
+every response, the intermediate quantities required to work out how to adjust the weights, and
+two full responses at once did not fit in the 9 gigabytes left over after the model.
+
+Two things were changed and neither touches what was being measured. The intermediate quantities
+are now recomputed when they are needed instead of being kept, which costs time and saves memory.
+And each response is cut off at 192 words worth of text rather than 320.
+
+Everything else was left exactly as it was. The agents, the two sizes and the rules that set them,
+the set of pairs, the starting point, the number of steps, the learning rate and the measure of
+error are all unchanged. This matters because the project's rules allow a rerun for a technical
+reason and forbid one because a result was unwelcome, so the reason and the list of what did not
+change are both written into the log of deviations. Two further submissions of the same job were
+cancelled before they ever started, while waiting for cards to become free, so they ran nothing
+and measured nothing.
+
+### What happened at stage 5, and why it was run a third time
+
+The second attempt completed normally after 26 minutes 47 seconds. Nothing failed and nothing
+crashed. The result was still unusable, and the reason was in how the sizes had been set rather
+than in anything that happened during the run.
+
+The three adapters agreed with the agents they were supposed to be copying at −0.066, +0.020 and
+−0.038. Those are not weak numbers. They are the numbers you get when there is nothing to learn.
+
+Working out why produced the explanation in section 11. The agent had been given a sensitivity
+computed from a ratio of averages, which made it vary by about 0.002, while the model it was
+being taught to imitate varies by 0.269. So the adapter was being asked to reproduce a signal
+roughly 70 times smaller than the variation surrounding it, which no amount of training can do.
+
+The rule was replaced with one that matches the agent's variation to the model's, and the run was
+repeated as stage 6. This is the second entry in the log of deviations and it is recorded the same
+way as the memory failure, with the numbers before and after and the list of what was not touched.
+
+### What happened after the anchors existed
+
+Stages 7 and 8 are quick and they are where the answer came from. Stage 7 took 3 minutes 43
+seconds because it only reads the model rather than training it. Stage 8 took 19 seconds and
+needed no cards at all, because once the directions are written down the comparison is arithmetic.
+
+That is worth saying plainly. The expensive part of this work was building the things to compare
+against. The comparison itself was the cheapest step in the entire sequence, and it is the step
+that produced every result in sections 12 and 13.
+
+Stage 9 needed no model runs whatsoever. It reads the judges' own scores, which the project
+already had, and asks two questions of them that had not been asked. It produced the finding in
+section 14, which is the one most likely to change a sentence already in the paper.
+
+### Where it stands now
+
+Nine of the ten stages are complete. The tenth is rechecking the probe and it is the only number
+in these notes that is reported as pending rather than given. It has spent longer loading the
+model than computing anything, because the shared storage this cluster uses was slow at the time
+it started, at about two minutes per piece of the model against the few seconds it had taken
+earlier the same night. Nothing about that affects the result it will produce.
+
+
+## 7. What the judges do, and the first step of building a reading
 
 ### What the judges are
 
@@ -197,14 +281,14 @@ reading is the weaker of the two constructions.
 
 ---
 
-## 7. The second step, building the direction that raises the reading
+## 8. The second step, building the direction that raises the reading
 
 ### What was done
 
 A gradient is the direction of fastest increase. Standing on a hillside, the gradient is the
 direction in which the ground rises most steeply.
 
-Here the quantity to be increased is the reading from section 6. So the gradient is the
+Here the quantity to be increased is the reading from section 7. So the gradient is the
 adjustment to the model's internal state that most efficiently raises the model's readiness to
 produce the more original of the two responses rather than the less original one. It is
 obtained by one pass forward through the model and one pass backward from the reading.
@@ -229,7 +313,7 @@ differentiating moved less.
 
 ---
 
-## 8. The third step, building a probe
+## 9. The third step, building a probe
 
 ### What was done
 
@@ -267,7 +351,7 @@ minus one to plus one, where zero means the ordering is unrelated.
 | length of the fitted direction | 2.992 | 2.935 |
 
 **What the last row is for.** The length of the direction the fit landed on. It is recorded
-because every comparison in section 11 is a cosine, which ignores length entirely, so the length
+because every comparison in section 12 is a cosine, which ignores length entirely, so the length
 has to be written down somewhere or it is lost. It plays no part in any result.
 
 **What each row is.** One row per judge. The row named Claude Sonnet 4.6 means that judge's
@@ -310,7 +394,7 @@ judge.
 
 ---
 
-## 9. Two terms that appear in every result from here on
+## 10. Two terms that appear in every result from here on
 
 ### The cosine
 
@@ -342,7 +426,7 @@ No number in the tables below can be read without the column it sits in.
 
 ---
 
-## 10. The fourth step, building the pure push
+## 11. The fourth step, building the pure push
 
 ### What was done
 
@@ -490,7 +574,7 @@ is a finding about what creativity allows as a measurement target.
 
 ---
 
-## 11. The fifth step, placing the three quantities and the probe
+## 12. The fifth step, placing the three quantities and the probe
 
 ### What was done
 
@@ -504,11 +588,11 @@ creativity were taken one at a time:
 | 4992 | professional innovation and creative problem solving |
 
 The paper's appendix states that these three were identified because their labels correspond to
-creativity related concepts. That is the point at issue. The probe direction from section 8 was
+creativity related concepts. That is the point at issue. The probe direction from section 9 was
 taken at both depths as well.
 
 Each direction was then compared by cosine with each anchor. There are four anchor targets. Two
-are the gradients of section 7, one per task. Two are the adapter movements of section 10, the
+are the gradients of section 8, one per task. Two are the adapter movements of section 11, the
 pure push and the change of taste.
 
 ### What was found against the gradients
@@ -554,7 +638,7 @@ factor of 6.
 tasks. They are here to answer whether a direction chosen by reading a label has any measurable
 relationship to a change of known kind.
 
-**The two probe rows** are the direction from section 8, entered at both depths so that a result
+**The two probe rows** are the direction from section 9, entered at both depths so that a result
 appearing at one depth only can be recognised.
 
 ### What every number says
@@ -619,7 +703,7 @@ label chosen quantities achieve anywhere.
 
 ---
 
-## 12. The same three quantities against the two games
+## 13. The same three quantities against the two games
 
 This is a cross check rather than a new test. The three creativity quantities were also compared
 with the anchors built for the lottery and the ultimatum game.
@@ -646,7 +730,7 @@ of them.
 
 ---
 
-## 13. What the judges' own scores already say, about length
+## 14. What the judges' own scores already say, about length
 
 ### What was done
 
@@ -698,7 +782,7 @@ has nothing to do with originality.
 
 ---
 
-## 14. What the judges' own scores already say, about agreement
+## 15. What the judges' own scores already say, about agreement
 
 ### What was done
 
@@ -745,7 +829,7 @@ presented with the same confidence as one where they agree at 0.654.
 
 ---
 
-## 15. One thing that does not yet add up, and is reported rather than resolved
+## 16. One thing that does not yet add up, and is reported rather than resolved
 
 Recomputing the condition effects from the project's combined file of scores does not reproduce
 the numbers in the paper's own figure, and the difference is not small.
@@ -774,7 +858,7 @@ was measured against.
 
 ---
 
-## 16. How this compares with the setup already in the paper
+## 17. How this compares with the setup already in the paper
 
 ### What is the same
 
@@ -800,8 +884,8 @@ turns a number that looks small or large into a number that is above or below a 
 
 ### The third difference is where the evidence comes from
 
-Every creativity number in the paper passes through the five judges. Every number in sections 6
-through 12 here comes from inside the model and never consults a judge, except in choosing which
+Every creativity number in the paper passes through the five judges. Every number in sections 7
+through 13 here comes from inside the model and never consults a judge, except in choosing which
 pairs of responses to use. That is why the two can be put next to each other: they are not two
 measurements of the same thing.
 
@@ -814,7 +898,7 @@ close the gap, and that is true of the game work as well.
 
 ---
 
-## 17. What is deliberately not being claimed
+## 18. What is deliberately not being claimed
 
 That the three quantities do not raise creativity scores. They do, by the paper's own
 measurement. What is shown is that they have no measurable relationship to either anchor, which
@@ -841,7 +925,7 @@ the two games either.
 
 ---
 
-## 18. Every result, and what each one means
+## 19. Every result, and what each one means
 
 A reference list rather than something to read aloud.
 
@@ -915,7 +999,7 @@ A reference list rather than something to read aloud.
 
 ---
 
-## 19. What would come next, in order
+## 20. What would come next, in order
 
 The first task is to finish the probe recomputation that holds out responses as well as judges
 and works inside each task, so that the agreement figure can either be quoted or withdrawn. It
