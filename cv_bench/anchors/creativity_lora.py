@@ -60,6 +60,8 @@ def main(argv=None) -> int:
     ap.add_argument("--lr", type=float, default=1e-4)
     ap.add_argument("--max-response-tokens", type=int, default=320)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--retrain", action="store_true",
+                    help="ignore adapters already on disk and train them again")
     a = ap.parse_args(argv)
     a.out.mkdir(parents=True, exist_ok=True)
 
@@ -114,6 +116,23 @@ def main(argv=None) -> int:
         "adapters": {}}
 
     for name in ADAPTERS:
+        # Each adapter is written the moment it finishes, so a job that died
+        # part way leaves the completed ones on disk. Reuse them rather than
+        # retraining, which makes a resubmit continue instead of starting over.
+        done = a.out / f"creativity_adapter_{name}.pt"
+        zpath = a.out / f"creativity_z_{name}.npy"
+        if done.exists() and zpath.exists() and not a.retrain:
+            from peft import set_peft_model_state_dict
+            set_peft_model_state_dict(peft_model, torch.load(done, map_location="cpu"),
+                                      adapter_name=name)
+            zz = np.load(zpath)
+            r = float(np.corrcoef(zz, targets[name])[0, 1])
+            result["adapters"][name] = {"r": r,
+                                        "slope": float(np.polyfit(targets[name], zz, 1)[0]),
+                                        "mean_z": float(zz.mean()),
+                                        "resumed": True}
+            print(f"{name}: already on disk, reused (clone r={r:.4f})", flush=True)
+            continue
         peft_model.set_adapter(name)
         params = [p for n, p in peft_model.named_parameters()
                   if p.requires_grad and name in n]
