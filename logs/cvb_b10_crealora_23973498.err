@@ -1,0 +1,92 @@
+Loading checkpoint shards:   0%|          | 0/30 [00:00<?, ?it/s]Loading checkpoint shards:   3%|▎         | 1/30 [00:00<00:26,  1.08it/s]Loading checkpoint shards:   7%|▋         | 2/30 [00:01<00:24,  1.15it/s]Loading checkpoint shards:  10%|█         | 3/30 [00:02<00:23,  1.16it/s]Loading checkpoint shards:  13%|█▎        | 4/30 [00:03<00:21,  1.19it/s]Loading checkpoint shards:  17%|█▋        | 5/30 [00:04<00:19,  1.26it/s]Loading checkpoint shards:  20%|██        | 6/30 [00:04<00:18,  1.30it/s]Loading checkpoint shards:  23%|██▎       | 7/30 [00:05<00:17,  1.31it/s]Loading checkpoint shards:  27%|██▋       | 8/30 [00:06<00:20,  1.09it/s]Loading checkpoint shards:  30%|███       | 9/30 [00:08<00:21,  1.02s/it]Loading checkpoint shards:  33%|███▎      | 10/30 [00:09<00:21,  1.07s/it]Loading checkpoint shards:  37%|███▋      | 11/30 [00:10<00:20,  1.10s/it]Loading checkpoint shards:  40%|████      | 12/30 [00:11<00:20,  1.12s/it]Loading checkpoint shards:  43%|████▎     | 13/30 [00:12<00:19,  1.16s/it]Loading checkpoint shards:  47%|████▋     | 14/30 [00:14<00:18,  1.19s/it]Loading checkpoint shards:  50%|█████     | 15/30 [00:15<00:17,  1.18s/it]Loading checkpoint shards:  53%|█████▎    | 16/30 [00:16<00:16,  1.18s/it]Loading checkpoint shards:  57%|█████▋    | 17/30 [00:17<00:15,  1.18s/it]Loading checkpoint shards:  60%|██████    | 18/30 [00:18<00:13,  1.16s/it]Loading checkpoint shards:  63%|██████▎   | 19/30 [00:19<00:12,  1.13s/it]Loading checkpoint shards:  67%|██████▋   | 20/30 [00:20<00:10,  1.09s/it]Loading checkpoint shards:  70%|███████   | 21/30 [00:21<00:09,  1.06s/it]Loading checkpoint shards:  73%|███████▎  | 22/30 [00:22<00:08,  1.03s/it]Loading checkpoint shards:  77%|███████▋  | 23/30 [00:23<00:07,  1.04s/it]Loading checkpoint shards:  80%|████████  | 24/30 [00:24<00:06,  1.05s/it]Loading checkpoint shards:  83%|████████▎ | 25/30 [00:25<00:05,  1.04s/it]Loading checkpoint shards:  87%|████████▋ | 26/30 [00:26<00:04,  1.02s/it]Loading checkpoint shards:  90%|█████████ | 27/30 [00:27<00:03,  1.02s/it]Loading checkpoint shards:  93%|█████████▎| 28/30 [00:28<00:02,  1.02s/it]Loading checkpoint shards:  97%|█████████▋| 29/30 [00:29<00:01,  1.01s/it]Loading checkpoint shards: 100%|██████████| 30/30 [00:30<00:00,  1.21it/s]Loading checkpoint shards: 100%|██████████| 30/30 [00:30<00:00,  1.01s/it]
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/orcd/home/002/guna23/shrey/risk-trackB/cv_bench/anchors/creativity_lora.py", line 166, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/orcd/home/002/guna23/shrey/risk-trackB/cv_bench/anchors/creativity_lora.py", line 124, in main
+    z = model_z(peft_model, tok, prompts[p["task"]], p, a.max_response_tokens)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/orcd/home/002/guna23/shrey/risk-trackB/cv_bench/anchors/creativity_lora.py", line 46, in model_z
+    logits = model(input_ids=ids, use_cache=False).logits[0, n_p - 1:-1, :].float()
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guna23/.local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guna23/.local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guna23/.local/lib/python3.11/site-packages/peft/peft_model.py", line 1644, in forward
+    return self.base_model(
+           ^^^^^^^^^^^^^^^^
+  File "/home/guna23/.local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guna23/.local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guna23/.local/lib/python3.11/site-packages/peft/tuners/tuners_utils.py", line 197, in forward
+    return self.model.forward(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guna23/.local/lib/python3.11/site-packages/accelerate/hooks.py", line 175, in new_forward
+    output = module._old_forward(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guna23/.local/lib/python3.11/site-packages/transformers/utils/deprecation.py", line 172, in wrapped_func
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guna23/.local/lib/python3.11/site-packages/transformers/models/llama/modeling_llama.py", line 853, in forward
+    outputs = self.model(
+              ^^^^^^^^^^^
+  File "/home/guna23/.local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guna23/.local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guna23/.local/lib/python3.11/site-packages/transformers/models/llama/modeling_llama.py", line 601, in forward
+    layer_outputs = decoder_layer(
+                    ^^^^^^^^^^^^^^
+  File "/home/guna23/.local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guna23/.local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guna23/.local/lib/python3.11/site-packages/accelerate/hooks.py", line 175, in new_forward
+    output = module._old_forward(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guna23/.local/lib/python3.11/site-packages/transformers/models/llama/modeling_llama.py", line 359, in forward
+    hidden_states = self.mlp(hidden_states)
+                    ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guna23/.local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guna23/.local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guna23/.local/lib/python3.11/site-packages/accelerate/hooks.py", line 175, in new_forward
+    output = module._old_forward(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guna23/.local/lib/python3.11/site-packages/transformers/models/llama/modeling_llama.py", line 197, in forward
+    down_proj = self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
+                                                                ^^^^^^^^^^^^^^^
+  File "/home/guna23/.local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guna23/.local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guna23/.local/lib/python3.11/site-packages/peft/tuners/lora/layer.py", line 584, in forward
+    result = result + lora_B(lora_A(dropout(x))) * scaling
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guna23/.local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guna23/.local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guna23/.local/lib/python3.11/site-packages/torch/nn/modules/linear.py", line 125, in forward
+    return F.linear(input, self.weight, self.bias)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 42.00 MiB. GPU 1 has a total capacity of 44.39 GiB of which 17.31 MiB is free. Including non-PyTorch memory, this process has 44.37 GiB memory in use. Of the allocated memory 42.72 GiB is allocated by PyTorch, and 1.15 GiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)

@@ -79,6 +79,12 @@ def main(argv=None) -> int:
         return_tensors="pt", add_special_tokens=False)["input_ids"]
         for task in spec["tasks"]}
     peft_model = attach_adapters(model)
+    # The backward pass runs over two full responses at once, which overflows a
+    # 44 GB card once the 70B weights are resident. Recomputing activations
+    # instead of storing them trades time for memory and is the only change.
+    peft_model.gradient_checkpointing_enable()
+    peft_model.enable_input_require_grads()
+    peft_model.config.use_cache = False
     from peft import get_peft_model_state_dict
 
     # -- measure the unmodified readout, then apply the BD59 rules ----------

@@ -154,3 +154,15 @@ Author decision, 22 Sept.
 - The adapters recover ~0.62 of the planted shift (slope 0.620 independent, 0.774 paired; BD50).
 - Therefore the anchor's known value is the **achieved alpha difference measured on the selection
   split**, not the planted target. Downstream comparisons use the achieved value.
+
+**B10.5 creativity weight-push anchor: rerun for memory, nothing else changed.**
+- *What happened:* job 23973498 failed after 1m35s with a CUDA out-of-memory error during the
+  first backward pass. The 70B weights occupy about 35 GB of each 44 GB card, and the backward
+  pass over two full responses at once needs more than the remainder.
+- *Fix:* gradient checkpointing enabled, so activations are recomputed instead of stored, and
+  the response length cap lowered from 320 tokens to 192. Allocator set to expandable segments.
+- *Unchanged:* the agent definition, the two constants and the rules that set them (BD59), the
+  pair set, the seed, the step count, the learning rate and the loss. The measured unmodified
+  readout is carried over: mean +0.0059, spread 0.2425, from which w0 +0.00412, detectable
+  change 0.00150 and push 0.0428 were derived before the failure.
+- *Not outcome driven:* no result had been produced when the job died.
