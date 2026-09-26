@@ -164,9 +164,10 @@ saved direction was fitted. **DeepSeek V4 Pro at 0.794** is the lowest, so the p
 like that judge. **direction length** is the size of the fitted weight vector and is reported so
 the placement in Step 4 can be read as an angle rather than a magnitude.
 
-### Why these numbers are an upper bound rather than a measurement
+### Why 0.846 is an upper bound, and what the number becomes when it is removed
 
-Two features of the design push agreement up and neither is visible in the table.
+Two features of the design push agreement up and neither is visible in the table. Both were
+suspected before the recomputation was run and only one of them turned out to matter.
 
 The judge is held out but the responses are not. The count of responses used to fit and the count
 used to evaluate are both 320, which means the probe was fitted on the same texts it was then
@@ -179,17 +180,36 @@ and 294 on the higher-rated side. Stapler responses average 100 and 115. The two
 at different judged originality levels. So a direction that merely distinguishes brick from
 stapler earns rank agreement without knowing anything about creativity.
 
-A recomputation that holds out responses as well as judges, and that repeats the measurement
-separately within each task so the task cannot carry the ranking, is running as job 23986960 and
-is not yet available. Until it returns, 0.846 should be treated as the ceiling of what this probe
-achieves and not as its held-out performance, and the paper should not quote it.
+Both were tested by recomputing the same quantity three ways, with the first way reproducing the
+original so that the comparison is like for like. The 320 responses split 160 to each task.
 
-What is already safe to say is narrower and still useful. A linear direction in the residual
-stream orders responses the way a judge who never contributed to it would order them, at a rank
-correlation in the 0.8 range under a protocol that at minimum removes judge circularity. That
-supports the paper's existing claim that probes give a usable linear knob for creativity, and it
-supplies the evaluation protocol that claim currently lacks, since the paper's own probe
-steering figure reports achieved scores per judge without a held-out fit anywhere.
+| how the agreement was computed | layer 48 | layer 50 | range across the 5 judges, layer 48 |
+|---|---:|---:|---|
+| judge held out, responses in sample, tasks pooled | **0.846** | 0.847 | 0.794 to 0.896 |
+| judge held out, responses held out, tasks pooled | 0.828 | 0.829 | 0.774 to 0.869 |
+| judge held out, responses held out, within brick | **0.437** | 0.439 | 0.330 to 0.507 |
+| judge held out, responses held out, within stapler | **0.541** | 0.543 | 0.438 to 0.667 |
+
+**What each row is.** The first row is the original design and it returns 0.846 and 0.847, which
+confirms the recomputation measures the same thing before it changes anything. The second holds
+out half the responses, fits on the other half and averages the two directions of the split. The
+third and fourth do the same inside one task at a time, so that telling brick from stapler cannot
+earn any agreement.
+
+**What the numbers say.** Holding out the responses costs 0.018, so the fit was not simply
+learning the particular texts and that suspicion was wrong. Pooling the two tasks was carrying
+about half the figure. Within one task the probe reaches 0.437 on brick and 0.541 on stapler, and
+both layers agree to within 0.002. At layer 48 the weakest single judge within brick is 0.330 and
+the strongest within stapler is 0.667.
+
+So the number the paper may quote is 0.44 on divergent creativity and 0.54 on product
+innovation, not 0.846. The claim it supports is that a single direction in the residual stream
+orders creative writing the way a judge who contributed nothing to building it would order it,
+at a rank correlation near 0.5 within a task. That is a real effect and it is half the size the
+pooled figure suggested. It supports the paper's existing use of probes as a linear control for
+creativity, and it supplies the evaluation protocol that use currently lacks, since the paper's
+own probe steering figure reports achieved scores per judge without a held-out fit anywhere.
+Code is `cv_bench/anchors/creativity_probe_check.py`.
 
 ---
 
@@ -596,6 +616,9 @@ it is done.
 - A probe fitted on judged originality points measurably along the generation direction on the
   stapler task, at +0.031 and +0.033 against a one-in-twenty level of 0.027, and not on the brick
   task.
+- That probe orders creative writing the way a judge who contributed nothing to it would order it,
+  at 0.437 within brick and 0.541 within stapler. The 0.846 obtained by pooling the 2 tasks is
+  about twice the within-task figure.
 - Length accounts for 18 to 77 percent of the variance in judge scores across the 10 judge-by-task
   cells, under the protocol the paper describes as length-controlled.
 - Judge agreement is 0.020 to 0.654 within a task and condition, against 0.770 pooled across
@@ -613,24 +636,23 @@ it is done.
   0.80 against a bar of 0.95, the preference pole is unusable, and the readout the gradient anchor
   differentiates moves by 5 percent of its own spread. A null result against these poles is weaker
   evidence than the same null against the ultimatum poles.
-- **The probe's held-out performance.** 0.846 is fitted and evaluated on the same responses and
-  pooled across 2 tasks, so it is a ceiling. The recomputation is job 23986960 and is pending.
+- **That the probe's agreement is 0.846.** That figure pools the 2 tasks. Within one task it is
+  0.437 on brick and 0.541 on stapler, and those are the figures that may be quoted.
 - **What any of these directions do when used.** Every placement here is a cosine. No creativity
   direction was steered with at a dose matched to the anchor's own behavioural effect, which is
   also true of the lottery and the ultimatum work.
 
 ## What would come next
 
-1. Finish the probe recomputation that holds out responses and works within task, so the agreement
-   number can be quoted or withdrawn. Running as job 23986960, 20 minutes.
-2. Reconcile the recomputed condition effects with the paper's Figure 5 aggregation, so the two
+1. Reconcile the recomputed condition effects with the paper's Figure 5 aggregation, so the two
    sets of numbers can appear in one document. Arithmetic on files already present.
-3. Fit a feature combination numerically against the creativity gradient pole, the way it was done
+2. Fit a feature combination numerically against the creativity gradient pole, the way it was done
    on the games, so the dictionary is tested rather than only the 3 labelled features. No new model
    runs for the fit itself.
-4. Steer with the probe and with each of the 3 features at a dose matched to the anchor's own
+3. Steer with the probe and with each of the 3 features at a dose matched to the anchor's own
    behavioural effect, and compare the change in judged score rather than the angle between
-   vectors. This is the test the cosines do not perform.
-5. Retrain the creativity adapters with a longer schedule so cloning can be brought to the bar,
-   run as a fresh anchor construction with the outcome reported whichever way it falls, rather than
-   as an extension of the present run.
+   vectors. This is the test the cosines do not perform. The judging is a paid API batch and needs
+   approval before it is run.
+4. Retrain the creativity adapters with a longer schedule so cloning can be brought to the bar.
+   This has to be set up as a fresh construction of the anchor with its outcome reported whichever
+   way it falls, and not as an extension of the present run.

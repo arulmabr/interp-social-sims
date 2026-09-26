@@ -1131,3 +1131,12 @@ spread.
 Both rules are fixed now. What the job measures is a property of the unmodified model rather
 than an outcome, in the same way the choice temperature was measured before the risk anchors
 were trained. The numbers they produce are recorded before any adapter is read.
+
+**BD60. The creativity probe's judge agreement is quoted within task, not pooled.**
+The figure from `creativity_probe.py` is 0.846, fitted and evaluated on the same 320 responses
+with the two tasks pooled. `creativity_probe_check.py` recomputes it three ways. Holding out
+responses costs 0.018, so the fit was not memorising texts. Pooling the tasks was carrying about
+half the figure: within brick it is 0.437 and within stapler 0.541, with both layers agreeing to
+0.002. The within-task figures are the ones reportable. Recorded because the check was designed
+after 0.846 was seen, and its three designs and the decision to report all three were fixed
+before it was run.

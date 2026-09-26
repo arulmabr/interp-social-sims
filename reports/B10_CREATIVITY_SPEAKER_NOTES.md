@@ -151,7 +151,7 @@ reading existed.
 | 7. turning the adapters into directions | ran the same text under each adapter and took the average change in the internal state | 3 minutes 43 seconds | completed |
 | 8. the placement | compared every direction with every anchor, and drew 2,000 random quantities for the comparison level | 19 seconds, no cards needed | completed |
 | 9. the judges' own scores | measured how much of each judge's score follows from length, and how much the judges agree | seconds, no cards needed | completed |
-| 10. rechecking the probe | repeating stage 3 with responses held out as well as judges, and inside each task separately | running | not yet available |
+| 10. rechecking the probe | repeated stage 3 with responses held out as well as judges, and inside each task separately | 45 minutes 15 seconds | completed, and it cut the probe's figure roughly in half |
 
 ### What happened at stage 4, and what was done about it
 
@@ -213,12 +213,18 @@ section 14, which is the one most likely to change a sentence already in the pap
 
 ### Where it stands now
 
-Nine of the ten stages are complete. The tenth is rechecking the probe and it is the only number
-in these notes that is reported as pending rather than given. It has spent longer loading the
-model than computing anything, because the shared storage this cluster uses was slow at the time
-it started, at about two minutes per piece of the model against the few seconds it had taken
-earlier the same night. Nothing about that affects the result it will produce.
+All ten stages are complete. Nothing is waiting to run.
 
+The tenth stage took 45 minutes 15 seconds, of which 35 were spent loading the model rather than
+computing anything, because the shared storage this cluster uses was slow at the time it started.
+It ran at about two minutes per piece of the model against the few seconds the same load had taken
+earlier the same night. That affected only how long it took and not what it found.
+
+What it found changed a number. The probe's agreement with a judge it had never seen drops from
+0.846 to 0.437 on the brick task and 0.541 on the stapler task once the two tasks are measured
+separately. Section 9 gives the full comparison and says which figure belongs in the paper.
+
+---
 
 ## 7. What the judges do, and the first step of building a reading
 
@@ -398,13 +404,45 @@ The second is that the two tasks were pooled into one ranking. Brick responses r
 A direction that does nothing but tell brick from stapler therefore earns ordering agreement
 without knowing anything about creativity at all.
 
-A recomputation is running and its result is not yet available. It holds out responses as well
-as judges, and it repeats the measurement inside each task separately so that the task cannot
-carry the ordering. Until it returns, 0.846 is the ceiling of what this probe achieves and not
-its performance, and the paper should not quote it. What can be said now is narrower and still
-worth saying: a single linear direction orders creative writing the way an independent judge
-does, under a protocol that at minimum removes the circularity of training and testing on one
-judge.
+Both suspicions were tested by computing the same quantity three ways, with the first way
+reproducing the original so the comparison is like for like. The 320 responses split 160 to each
+task.
+
+| how the agreement was computed | layer 48 | layer 50 | range across the 5 judges, layer 48 |
+|---|---:|---:|---|
+| judge held out, responses in sample, tasks pooled | 0.846 | 0.847 | 0.794 to 0.896 |
+| judge held out, responses held out, tasks pooled | 0.828 | 0.829 | 0.774 to 0.869 |
+| judge held out, responses held out, within brick | 0.437 | 0.439 | 0.330 to 0.507 |
+| judge held out, responses held out, within stapler | 0.541 | 0.543 | 0.438 to 0.667 |
+
+**What each row is.** The first is the original design and it comes back at 0.846 and 0.847, which
+is the check that the recomputation measures the same thing before it changes anything. The second
+fits on half the responses and tests on the other half, averaging the two halves. The third and
+fourth do the same inside one task at a time, so that telling brick writing from stapler writing
+earns no credit.
+
+**What the numbers say.** Holding out the responses costs 0.018. So the fit was not simply
+memorising the particular texts, and that suspicion was wrong. Pooling the two tasks was carrying
+about half the figure. Inside one task the probe reaches 0.437 on brick and 0.541 on stapler, and
+the two depths agree to within 0.002 of each other. At layer 48 the weakest single judge inside brick is 0.330 and
+the strongest inside stapler is 0.667.
+
+### What that means
+
+The figure the paper may quote is 0.44 on divergent creativity and 0.54 on product innovation. It
+is not 0.846.
+
+The effect is real and it is half the size the pooled figure suggested. A single straight direction
+inside the model orders creative writing about the way a judge who contributed nothing to building
+it would order it. That supports the paper's existing use of probes as a linear control for
+creativity, and it supplies the evaluation protocol that use currently lacks, since the paper's own
+probe figure reports achieved scores per judge without any fit that held a judge out.
+
+It is worth being clear about which suspicion was right. Fitting and testing on the same writing
+turned out to cost almost nothing. Putting two different tasks into one ranking turned out to be
+carrying half the result, because a direction that only tells a 300 word brick answer from a 100
+word stapler answer already earns a great deal of ordering agreement without knowing anything about
+creativity.
 
 ---
 
@@ -929,8 +967,8 @@ reading the gradient is built on moves by about 5 percent of its own variation. 
 nothing measured against these targets is weaker evidence than the same result on the ultimatum
 game.
 
-That the probe's agreement figure is its held out performance. 0.846 was fitted and tested on the
-same 320 responses and pooled across two tasks, so it is a ceiling. The recomputation is running.
+That the probe's agreement is 0.846. That figure puts both tasks into one ranking. Inside one task
+it is 0.437 on brick and 0.541 on stapler, and those are the figures that belong in the paper.
 
 What any of these directions do when used. Every comparison here is between directions. The
 behavioural test, steering with each direction at a dose matched to the anchor's own effect and
@@ -1015,25 +1053,22 @@ A reference list rather than something to read aloud.
 
 ## 20. What would come next, in order
 
-The first task is to finish the probe recomputation that holds out responses as well as judges
-and works inside each task, so that the agreement figure can either be quoted or withdrawn. It
-is running now and takes about twenty minutes once the model is loaded.
-
-The second task is to reconcile the recomputed condition effects with the paper's own figure, so
+The first task is to reconcile the recomputed condition effects with the paper's own figure, so
 that the two sets of numbers can appear in one document without contradicting each other. This
 needs no model runs and only the files already present.
 
-The third task is to search for a combination of dictionary quantities fitted numerically against
+The second task is to search for a combination of dictionary quantities fitted numerically against
 the creativity gradient, in the same way it was done on the two games. That is the test of the
-dictionary itself rather than of three labelled quantities, and on the games it is what found
-structure. The fit needs no new model runs.
+dictionary itself rather than of three quantities picked by their labels, and on the games it is
+what found structure. The fit needs no new model runs.
 
-The fourth task is the behavioural test. Steer with the probe and with each of the three
-quantities at a dose chosen so that each one produces the same size of effect as the anchor does,
-then compare the change in judged score rather than the angle between directions. This is the
-test the comparisons above do not perform, and it is outstanding for the two games as well.
+The third task is the behavioural test. Steer with the probe and with each of the three quantities
+at a dose chosen so that each one produces the same size of effect as the anchor does, then compare
+the change in judged score rather than the angle between directions. This is the test the
+comparisons above do not perform, and it is outstanding for the two games as well. The judging is a
+paid batch of calls to outside services and it needs approval before it is run.
 
-The fifth task is to retrain the creativity adapters on a longer schedule so that the copying
+The fourth task is to retrain the creativity adapters on a longer schedule so that the copying
 standard can be met. This has to be set up as a fresh construction of the anchor with its outcome
 reported whichever way it falls, and not as an extension of the present run, because extending a
 run whose result fell short is exactly the thing the project's rules prohibit.

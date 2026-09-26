@@ -120,3 +120,6 @@ automated review. Now added: the provenance of `GATE_S0_RESPONSE.md` above.
 - Drafted `reports/B10_CREATIVITY_SPEAKER_NOTES.md` and rendered it as
   `reports/B10_Creativity_Speaker_Notes.docx` with a navigable contents list. Every number in it
   was verified against its source file by script before commit.
+- Ran the probe recheck (job 23986960, 45m15s) and updated both creativity documents and the docx
+  with its result. The probe's judge agreement falls from 0.846 pooled to 0.437 within brick and
+  0.541 within stapler. Registered as 24 rows under `B10.8.*`. Recorded as BD60.
