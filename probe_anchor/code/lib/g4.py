@@ -71,6 +71,7 @@ from cv_bench.resume import (JsonlSink, install_stop_handler, run_units,
                              complete, mark_done)
 from cv_bench.s21_fix import MODELS, load
 from cv_bench.instr import decision_code, LABELS, STEM, prompt_for
+from cv_bench.probe_cv import grouped_cv_accuracy, label_ceiling
 
 RUNROOT = Path(os.environ.get("ICLR_RUNROOT",
                               "${ICLR_RUNROOT}"))
@@ -232,6 +233,13 @@ def phase_train(model_key: str, variant: str, layer: int, loaded=None,
     the legacy design gives one vector per level repeated PROBE_SAMPLES times;
     it is captured once here and replicated, which is the same matrix.
 
+    Because of that replication, `train_accuracy` (the fit scored on its own
+    rows) and any trial-level cross-validation score the probe on vectors it
+    has already seen. `heldout_prompt_accuracy` holds whole reward levels out
+    (cv_bench/probe_cv.py) and is the number that speaks to generalization;
+    `label_ceiling` is the group-majority rate, the most any function of the
+    activation could score here. Both are also computed for the reward probe.
+
     Trials the variant's coding cannot code are dropped, as the legacy builder
     drops unparseable ones. How many get dropped is part of the result.
     """
@@ -320,15 +328,22 @@ def phase_train(model_key: str, variant: str, layer: int, loaded=None,
             y_rw = (lvl > np.median(lvl)).astype(int)
             rw_std = rw_raw = None
             rw_acc = float("nan")
+            rw_ho = None
             if len(set(y_rw.tolist())) == 2:
                 lr_rw = LogisticRegression(penalty="l2", C=1.0, max_iter=2000)
                 lr_rw.fit(sc.transform(X), y_rw)
                 rw_acc = float(lr_rw.score(sc.transform(X), y_rw))
+                rw_ho = grouped_cv_accuracy(X, y_rw, levels_of, n_folds=5, seed=0)
                 rw_std = lr_rw.coef_[0] / (np.linalg.norm(lr_rw.coef_[0]) + 1e-12)
                 rw_raw = rw_std / np.clip(sc.scale_, 1e-8, None)
                 rw_raw = rw_raw / (np.linalg.norm(rw_raw) + 1e-12)
             cos = (float(np.dot(w_std, rw_std)) if rw_std is not None
                    else float("nan"))
+
+            # Prompt-held-out accuracy: folds are grouped by reward level, so
+            # the probe is scored on levels whose activation it never saw.
+            ho = grouped_cv_accuracy(X, y, levels_of, n_folds=5, seed=0)
+            ceiling = label_ceiling(y, levels_of)
 
             # --- G4b directions, from the same standardised activations -------
             Z = sc.transform(X)
@@ -355,6 +370,13 @@ def phase_train(model_key: str, variant: str, layer: int, loaded=None,
                 return r / (np.linalg.norm(r) + 1e-12)
             rec.update(trained=True,
                        train_accuracy=float(lr.score(sc.transform(X), y)),
+                       heldout_prompt_accuracy=ho["accuracy"],
+                       heldout_prompt_scheme=ho["scheme"],
+                       heldout_prompt_folds=ho["n_folds"],
+                       heldout_prompt_per_fold=ho["per_fold"],
+                       label_ceiling=ceiling,
+                       reward_probe_heldout_prompt_accuracy=(
+                           rw_ho["accuracy"] if rw_ho else float("nan")),
                        base_rate=float(y.mean()),
                        direction_standardised=[float(x) for x in w_std],
                        direction_raw=[float(x) for x in w_raw],
@@ -384,6 +406,11 @@ def phase_train(model_key: str, variant: str, layer: int, loaded=None,
                   f"({rec['drop_rate']:.1%}), train acc "
                   f"{rec['train_accuracy']:.3f}, base rate {rec['base_rate']:.3f}",
                   flush=True)
+            print(f"[g4] {variant} L{layer} {game}: prompt-held-out acc "
+                  f"{ho['accuracy']:.3f} ({ho['scheme']}, {ho['n_groups']} levels, "
+                  f"{ho['n_folds']} folds), label ceiling {ceiling:.3f}; "
+                  f"reward probe held-out "
+                  f"{rec['reward_probe_heldout_prompt_accuracy']:.3f}", flush=True)
     finally:
         handle.remove()
 

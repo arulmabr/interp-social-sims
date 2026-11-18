@@ -153,6 +153,46 @@ Outputs:
 
 The `--length-controlled` flag adds an explicit instruction to score on idea quality rather than length.
 
+## Prompt-held-out cross-validation
+
+Every trial sampled from one prompt shares that prompt's activation: the vector
+is captured from the prompt before the answer is generated, so the eight trials
+at one reward level are eight copies of one vector whose labels differ only
+through sampling. `train_probe` therefore takes `groups`, one prompt id per row,
+and builds folds with `StratifiedGroupKFold` so that no prompt appears in both
+the training and the validation fold (`LeaveOneGroupOut` when there are fewer
+prompts than folds). Both probe builders in `experiments/_common.py` pass the
+groups: the reward or offer level for the preference probes, and the distinct
+prompt text for the capability probe. The layer and `C` are selected on the
+grouped score. Each saved `Probe` records:
+
+| field | meaning |
+|---|---|
+| `cv_accuracy` | prompt-held-out accuracy, the number to report |
+| `cv_scheme` | `prompt_grouped` or `leave_one_prompt_out` |
+| `n_groups`, `n_folds_used` | how many distinct prompts and folds the estimate used |
+| `label_ceiling` | the group-majority rate: the most any function of the activation can score when rows share a vector |
+
+The capability probe has by default two distinct prompts (plain and
+persona-prefixed), so its held-out estimate holds one prompt out at a time.
+`build_capability_probe(prompt_variants=[...])` cycles alternative wordings
+through the samples to give the estimate more prompts.
+
+The cross-object runner (`experiments/cross_object_llama.py`, reused for Qwen)
+writes two conditions per object. `in_distribution` holds whole prompts of the
+same object out (`prompt_held_out=True`, with `cv_scheme`, `n_distinct_prompts`
+and `label_ceiling`). `cross_object` trains on the other objects and tests on
+this one; the test object's prompts never occur in the training pools.
+`run(..., prompt_variants={object: [...]})` adds wordings per object.
+
+`fit_and_score` and `eval_probe_split` require a test set that shares no
+activation vector with the training set (`shared_activation_rows` counts such
+rows) and raise otherwise.
+
+Tests: `python -m pytest Probes/tests -q` (NumPy and scikit-learn only).
+`tests/test_cross_object_runner.py` drives the cross-object runner end to end
+with a stub model and checks the split types, flags and group counts it writes.
+
 ## Layer-matched steering control (probe layer 48 vs SAE layer 50)
 
 The SAE interventions are applied at layer 50, but the probes are CV-selected to

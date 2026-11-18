@@ -77,6 +77,17 @@ released `data/` copy as the fallback instead of a hard-coded cluster path, and
 the repository root is found by walking up to whichever directory holds
 `cleaned/`. Both changes are so that the figures build from a clean checkout.
 
+## Probe accuracy: training versus prompt-held-out
+
+G4 fits the probe on one activation per reward level, copied once per sampled
+choice, so the fit's own accuracy (`train_accuracy`) scores it on vectors it has
+seen. `code/lib/probe_cv.py` supplies the held-out counterpart: `g4.py` records
+`heldout_prompt_accuracy` from folds grouped by reward level, the same for the
+reward probe, and `label_ceiling`, the group-majority rate that caps any probe
+on this data. `g4u.py` likewise reports `offer_probe_heldout_accuracy` by
+leaving one offer level out. `code/test_probe_cv.py` shows the gap between the
+two on synthetic data with per-level tendencies unrelated to the activation.
+
 ## What is not here
 
 The LoRA checkpoints, which are 28 GB across 36 files and exceed what a git

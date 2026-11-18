@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Dict, Iterable, List, Tuple
+from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
 import numpy as np
 from tqdm import tqdm
@@ -83,11 +83,20 @@ def build_preference_probe(
 
     # For every (param, sample): let the agent make its choice, then label the
     # captured activations by that choice. Unparseable generations are skipped.
+    #
+    # The activation is captured from the prompt, before any answer is sampled,
+    # so every sample at one reward level carries the identical vector. It is
+    # captured once per level and copied per kept sample, and the level index
+    # is recorded as the row's prompt group so that cross-validation holds
+    # whole prompts out. See Probes/probes.py.
     activations: Dict[int, List[np.ndarray]] = {layer: [] for layer in candidate_layers}
     labels: List[int] = []
+    groups: List[int] = []
 
     for param_idx, p in enumerate(tqdm(params, desc=f"Probe data ({game})")):
         prompt = prompt_fn(p)
+        h_by_layer = {layer: model.capture_activations(prompt, layer)
+                      for layer in candidate_layers}
         for sample in range(n_samples_per_param):
             gen = model.generate(
                 prompt,
@@ -100,9 +109,9 @@ def build_preference_probe(
             if choice is None:
                 continue  # unparseable -> no ground-truth label, drop the trial
             for layer in candidate_layers:
-                h = model.capture_activations(prompt, layer)
-                activations[layer].append(h)
+                activations[layer].append(h_by_layer[layer])
             labels.append(int(choice))
+            groups.append(param_idx)
 
     y = np.asarray(labels, dtype=int)
     if y.size == 0 or np.unique(y).size < 2:
@@ -112,12 +121,27 @@ def build_preference_probe(
             "Increase n_samples_per_param or widen the reward/offer grid."
         )
     acts_by_layer = {layer: np.stack(activations[layer], axis=0) for layer in candidate_layers}
-    return train_probe(
+    probe = train_probe(
         activations_by_layer=acts_by_layer,
         labels=y,
         candidate_layers=candidate_layers,
         random_state=0,
+        groups=np.asarray(groups),
     )
+    _report_probe_cv(probe, f"preference/{game}")
+    return probe
+
+
+def _report_probe_cv(probe: Probe, name: str) -> None:
+    """Print the held-out estimate and the ceiling."""
+    print(f"[probe {name}] layer {probe.layer}, C={probe.meta.get('best_C')}: "
+          f"prompt-held-out accuracy {probe.cv_accuracy:.3f} "
+          f"({probe.cv_scheme}, {probe.n_groups} prompts, {probe.n_folds_used} folds); "
+          f"label ceiling {probe.label_ceiling:.3f}", flush=True)
+    if probe.n_groups == 2:
+        print(f"[probe {name}] only two distinct prompts: the held-out number says "
+              "whether one prompt's labels predict the other's. Pass prompt_variants "
+              "to test generalization across more prompts.", flush=True)
 
 
 # =========================================================================
@@ -131,11 +155,21 @@ def build_capability_probe(
     n_samples_persona: int = 80,
     judge_score_fn=None,
     layer_sweep: bool = True,
+    prompt_variants: Optional[Sequence[str]] = None,
 ) -> Probe:
     """Generate creative outputs at two persona settings, score with judge,
     median-split on score, train probe on the captured activations.
 
     `judge_score_fn(text, task) -> creativity_score in [1,10]` is required.
+
+    Every sample at one persona setting is generated from the same prompt text,
+    so it carries the same activation. By default there are therefore exactly
+    two distinct prompts (plain and persona-prefixed), and the prompt-held-out
+    cross-validation reduces to holding one of them out, which can only ask
+    whether the plain prompt's labels predict the persona prompt's. To test
+    generalization across prompts, pass `prompt_variants`: alternative task
+    wordings that are cycled through the samples. Each distinct final prompt
+    text is one cross-validation group.
     """
     if judge_score_fn is None:
         from ..judge import score_response
@@ -144,6 +178,7 @@ def build_capability_probe(
             return res["creativity_score"] if res else 5.0
 
     prompt_text, _ = prompts.get_capability_prompt(task, obj)
+    variants = list(prompt_variants) if prompt_variants else [prompt_text]
 
     if layer_sweep:
         lo, hi = model.cfg.layer_sweep_range
@@ -153,20 +188,34 @@ def build_capability_probe(
 
     activations: Dict[int, List[np.ndarray]] = {layer: [] for layer in candidate_layers}
     scores: List[float] = []
+    groups: List[int] = []
+
+    # One activation per distinct prompt text, captured once and reused; the
+    # text's index is the row's cross-validation group.
+    group_of: Dict[str, int] = {}
+    cache: Dict[str, Dict[int, np.ndarray]] = {}
+
+    def record(text: str) -> None:
+        if text not in cache:
+            group_of[text] = len(group_of)
+            cache[text] = {layer: model.capture_activations(text, layer)
+                           for layer in candidate_layers}
+        for layer in candidate_layers:
+            activations[layer].append(cache[text][layer])
+        groups.append(group_of[text])
 
     # Baseline samples
     for i in tqdm(range(n_samples_baseline), desc=f"Baseline ({task}, {obj})"):
+        text = variants[i % len(variants)]
         seed = config.agent_seed(0, 0, i + 1)
         gen = model.generate(
-            prompt_text,
+            text,
             max_new_tokens=config.DECODING_DEFAULTS["max_new_tokens_capability"],
             temperature=config.DECODING_DEFAULTS["temperature_capability"],
             top_p=config.DECODING_DEFAULTS["top_p"],
             seed=seed,
         )
-        for layer in candidate_layers:
-            h = model.capture_activations(prompt_text, layer)
-            activations[layer].append(h)
+        record(text)
         scores.append(float(judge_score_fn(gen.text)))
 
     # High-creativity persona samples
@@ -175,27 +224,29 @@ def build_capability_probe(
         "Think outside the box. Be imaginative. "
     )
     for i in tqdm(range(n_samples_persona), desc=f"Persona ({task}, {obj})"):
+        text = persona_prefix + variants[i % len(variants)]
         seed = config.agent_seed(0, 1, i + 1)
         gen = model.generate(
-            persona_prefix + prompt_text,
+            text,
             max_new_tokens=config.DECODING_DEFAULTS["max_new_tokens_capability"],
             temperature=config.DECODING_DEFAULTS["temperature_capability"],
             top_p=config.DECODING_DEFAULTS["top_p"],
             seed=seed,
         )
-        for layer in candidate_layers:
-            h = model.capture_activations(persona_prefix + prompt_text, layer)
-            activations[layer].append(h)
+        record(text)
         scores.append(float(judge_score_fn(gen.text)))
 
     y = median_split(scores)
     acts_by_layer = {layer: np.stack(activations[layer], axis=0) for layer in candidate_layers}
-    return train_probe(
+    probe = train_probe(
         activations_by_layer=acts_by_layer,
         labels=y,
         candidate_layers=candidate_layers,
         random_state=0,
+        groups=np.asarray(groups),
     )
+    _report_probe_cv(probe, f"capability/{task}/{obj}")
+    return probe
 
 
 # =========================================================================

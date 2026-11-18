@@ -160,11 +160,17 @@ def _unit(v):
 
 
 def directions(X: np.ndarray, offers: np.ndarray,
-               fast_ridge: bool = False) -> Dict[str, np.ndarray]:
+               fast_ridge: bool = False, heldout: bool = False) -> Dict[str, np.ndarray]:
     """Everything G4 builds, with the offer contrast in place of the choice one.
 
     Built in standardised space and mapped back to raw, which is what G4's
     `*_raw` fields hold and therefore what the lottery panel compares.
+
+    `_offer_probe_acc` is the fit scored on its own rows. With `heldout=True`
+    the function also returns `_offer_probe_loo_acc`: each row here is one offer
+    level, so leave-one-row-out is leave-one-prompt-out, and that number is the
+    one that speaks to an unseen offer. It is skipped inside the permutation
+    null, where the direction is refitted hundreds of times.
     """
     from sklearn.linear_model import LogisticRegression
     from sklearn.preprocessing import StandardScaler
@@ -181,6 +187,19 @@ def directions(X: np.ndarray, offers: np.ndarray,
     lr = LogisticRegression(penalty="l2", C=1.0, max_iter=2000).fit(Z, hi)
     out["offer_probe"] = to_raw(_unit(lr.coef_[0]))
     out["_offer_probe_acc"] = float(lr.score(Z, hi))
+    if heldout:
+        hits = []
+        for i in range(X.shape[0]):
+            m = np.ones(X.shape[0], dtype=bool)
+            m[i] = False
+            if np.unique(hi[m]).size < 2:
+                hits.append(float(hi[i] == hi[m][0]))
+                continue
+            sc_i = StandardScaler().fit(X[m])
+            lr_i = LogisticRegression(penalty="l2", C=1.0, max_iter=2000).fit(
+                sc_i.transform(X[m]), hi[m])
+            hits.append(float(lr_i.predict(sc_i.transform(X[i:i + 1]))[0] == hi[i]))
+        out["_offer_probe_loo_acc"] = float(np.mean(hits))
 
     dm = Z[hi == 1].mean(0) - Z[hi == 0].mean(0)
     out["diffmean"] = to_raw(_unit(dm))
@@ -260,8 +279,9 @@ def build() -> Path:
     recs: List[dict] = []
     for layer in LAYERS:
         X = npz[f"acts_L{layer}"]
-        dirs = directions(X, offers)
+        dirs = directions(X, offers, heldout=True)
         acc = dirs.pop("_offer_probe_acc")
+        loo_acc = dirs.pop("_offer_probe_loo_acc")
         g = G4BDIR / f"fallback_gradient_L{layer}_ultimatum.npy"
         extra: Dict[str, np.ndarray] = {}
         if g.exists():
@@ -285,8 +305,10 @@ def build() -> Path:
                              clears_perm_null=bool(abs(c) > p95) if p95 == p95 else "",
                              perm_n=q.get("perm_n", 0),
                              d=X.shape[1], n_levels=len(offers),
-                             offer_probe_train_accuracy=round(acc, 4)))
-        print(f"[g4u] L{layer}: offer probe train accuracy {acc:.3f}", flush=True)
+                             offer_probe_train_accuracy=round(acc, 4),
+                             offer_probe_heldout_accuracy=round(loo_acc, 4)))
+        print(f"[g4u] L{layer}: offer probe train accuracy {acc:.3f}, "
+              f"leave-one-offer-out accuracy {loo_acc:.3f}", flush=True)
 
     # the acceptance curve, for panel A
     per: Dict[int, List[int]] = {}
