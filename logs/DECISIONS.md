@@ -1877,3 +1877,40 @@ reversing the sentence.
 
 Not done and not doable here: applying any of it. The binding constraint is Overleaf access,
 not analysis or compute.
+
+## D108 — 2026-09-24 — the text-only edits are applied to the manuscript source
+
+Earlier sessions recorded that the LaTeX source was absent. It was not: it is in the
+authors' separate manuscript tree, which `paper_patches/TEXT_EDITS.md` had been written
+without. All of Tier 2, Tier 3 and Tier 4 are now applied there, along with Tier 1.4 and
+five of the seven Tier 1.3 reference defects, and an AI-use section drafted from
+`logs/AI_USE_LOG.md`. The tree has no version control, so it was copied before any edit.
+Every edit asserted that its target string occurred exactly once before replacing it.
+
+Three of the drafted wordings were changed on contact with the data, and the reasons are
+recorded at the end of `TEXT_EDITS.md`: fluency is a judging factor rather than a quarter
+of a composite; high temperature is not degenerate under the five-judge rubric (4.91
+against a baseline of 5.00 on brick); and four judges, not three, rate SAE steering below
+baseline on brick.
+
+One thing was deliberately not fixed. The main text's four inline creativity means and
+Fig. 5A come from a scoring pass this repository does not contain, and under the rubric
+App. A.3.5 describes, the brick ordering reverses, so the main text and the appendix now
+disagree in the built paper. Rewriting reported numbers is the authors', so the claim
+carries an inline TODO naming the conflict. Rule 4 applies: the outcome does not decide a
+rerun, and nothing was rerun here.
+
+## D109 — 2026-09-24 — the AI-use section is pulled back out of the manuscript
+
+Two corrections to D108. First, the manuscript tree D108 edited was the superseded
+migration; the live tree is the newer one, which already carried an author-review pass
+(probe labelling by realized choice rather than a median split, the signed-lambda
+convention, three expanded captions). The edits were ported onto it as patches so that
+pass survives, and the two hunks that collided with it were re-applied by hand against
+its wording. A pre-edit copy was taken first; the tree has no version control.
+
+Second, the AI-use section was removed from the manuscript at the authors' request. It is
+not deleted: the draft is `paper_patches/ai_use_draft.tex`, with its two TODOs intact. The
+`\label{app:sae}` added only so that draft could cite the appendix came out with it, so
+`paper.tex` now differs from the live tree's original only by the abstract's construct
+rename. ICLR still requires the statement and it is still outstanding.

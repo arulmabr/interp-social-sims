@@ -1,8 +1,12 @@
 # Every change to the paper that is text only
 
-Drafted for the authors under rule 12. There is no LaTeX in this repository, so
-none of this is applied. Each entry gives the location, the sentence as it
-stands in the 21 Sept PDF, and the sentence to replace it with.
+Drafted for the authors under rule 12. Each entry gives the location, the
+sentence as it stands in the 21 Sept PDF, and the sentence to replace it with.
+
+**Status, 24 Sept 2026.** The LaTeX source is not in this repository; it lives in
+the authors' separate manuscript tree. Every entry below has now been applied
+there except the four noted at the end of this file, which need the authors'
+own judgement. This file remains the record of what changed and why.
 
 Ordered by what happens if it is skipped. Tier 1 risks the submission. Tier 2 is
 the paper disagreeing with its own data. Tier 3 answers the review. Tier 4 is the
@@ -241,3 +245,56 @@ them. Two cannot be fixed by any experiment.
 
 Changes that need a number we do not have, or a figure rebuild, or a rerun. They
 are in `paper_patches/CLAIMS.csv` under the data and figure rows.
+
+
+---
+
+## What was applied, and what was not (24 Sept 2026)
+
+Applied to the manuscript tree: 1.3 (five of seven reference defects), 1.4, 2.1,
+2.2, 2.3, 2.4, 2.5, 3.1, 3.2, 3.3, 3.4, 3.5 and Tier 4. Tier 4 was woven into the
+existing First/Second/Third structure of the limitations section as three further
+points rather than added as a new section. 3.2's construct rename was carried
+through the abstract, the introduction, the methodology, the results and the
+appendix; the persona and SAE feature names keep the vendor's own labels, with a
+note in the appendix saying why.
+
+Three wordings were changed from the draft above because the draft overstated
+what the data support:
+
+  - 3.4 said fluency "carries a quarter of the composite creativity score". The
+    judges return a single 1-10 rating with the four Torrance factors listed as
+    things to consider, so fluency is not a quarter of an average. The applied
+    text says the factor is fixed by the prompt's own ten-item cap (condition
+    means 9.98 to 10.00) and so cannot contribute to any difference between
+    conditions.
+  - 3.5 said high temperature "produces degenerate text". Under the five-judge
+    blind rubric brick high temperature scores 4.91 against a baseline of 5.00,
+    which is not degeneracy. The applied text says instead that temperature
+    raises output entropy globally rather than moving a trait direction, and
+    points at the formatting and multilingual features it activates.
+  - 2.5 said three of five judges rate SAE steering below baseline on brick. The
+    per-judge table has four below and the fifth flat at +0.01. The applied text
+    says four and flat.
+
+Not applied, and why:
+
+  - 1.1 The AI-use statement is drafted at `paper_patches/ai_use_draft.tex`, ready
+    to drop in as a starred section outside the page limit. It was briefly in the
+    manuscript and was pulled back out at the authors' request on 24 Sept, so it
+    is still outstanding. Two facts in it are the authors' to assert and are
+    marked with TODO comments in the draft: whether any prose in the manuscript
+    was drafted or edited by a language model, and whether any review document
+    used in revising it was machine-generated.
+  - 1.2 The page limit. Roughly 1.4 pages must come out and the edits above add
+    about half a page. Which text to cut is the authors' call.
+  - 1.3 Two of the seven reference items remain: the judges' access dates, which
+    are not recorded anywhere in this repository, and a check of Chang et al.'s
+    hyphenation in the built PDF, which is a typesetting artefact rather than a
+    bibliography error. The API model identifiers are now in the appendix.
+  - The capability numbers. The four inline creativity means and Fig. 5A come
+    from a scoring pass this repository does not contain, and under the rubric
+    the appendix describes the brick ordering reverses. The main text and the
+    appendix now contradict each other on this point. Rewriting reported numbers
+    is not ours to do, so the claim carries an inline TODO naming the conflict.
+    This is GATE_S0_RESPONSE 1.5 and it is still open.

@@ -1,0 +1,50 @@
+% AUTHORS: two facts below are yours to confirm before submission, and they are
+% marked inline with TODO comments. Everything else is drawn from the project's
+% running record of assistant activity (logs/AI_USE_LOG.md in the code release).
+% This section is not counted toward the page limit.
+
+Large language models were used in this work in three distinct roles, and we
+disclose each separately.
+
+\textbf{As objects of study.} The agents we interpret and steer are language
+models, and the experiments in this paper consist of prompting, reading from and
+intervening on them. This is the subject of the paper rather than a use of AI
+assistance, and the models, versions and sampling settings are documented in
+Appendix~\ref{app:sae}.
+
+\textbf{As measuring instruments.} All creativity responses are scored by five
+prompted language-model judges (GPT-5, Claude Sonnet 4.6, Gemini 2.5 Pro,
+Kimi K2.6 and DeepSeek V4 Pro), and the main-text capability figures report the
+mean across them. We collect no human creativity ratings. The training labels
+for the capability probe were produced by a single language-model judge (GPT-5),
+so a language model generated the labels that probe was fitted on, not only the
+scores it is evaluated against. A small local sentence encoder
+(\texttt{all-MiniLM-L6-v2}, 22M parameters) was used to compute the
+judge-independent text measures; our Divergent Semantic Integration column is an
+approximation of the published operationalisation with a different encoder and is
+labelled as such wherever it appears.
+
+\textbf{As research assistance.} We used a language-model coding assistant
+(Claude, via Claude Code) to implement analysis code, to compute summary
+statistics from our existing logged runs, to audit the manuscript against those
+logs, and to draft internal analysis reports. Under the ICLR policy this falls
+under implementing methods and analysing or interpreting results. Specifically,
+the assistant wrote the analysis and figure scripts released with the paper, read
+the pipeline source to establish what the probes were trained on and what the
+steering hook does at each token position, recomputed the switching points,
+acceptance thresholds, calibrated-$\lambda$ ranges, catch-trial rates,
+per-judge condition means and inter-rater statistics reported here, and
+identified places where an earlier draft disagreed with the repository's own
+data. A separate assistant session, at our request, produced written feedback on
+how to report several of these analyses, which we then acted on; under the policy
+this is feedback on methodology and we disclose it as such. No model was
+fine-tuned, no experiment was designed by an assistant, no hypothesis was
+proposed or refined by one, and no synthetic dataset was generated: every number
+reported here comes from runs we specified. The authors verified each analysis
+against its inputs and take full responsibility for all code, experiments,
+results and writing.
+% TODO(authors): state plainly whether any prose in this manuscript was drafted
+% or edited by a language model, and if so which sections. The policy treats a
+% misrepresentation here as an ethics violation by the authors.
+% TODO(authors): if any review or feedback document used in revising this paper
+% was itself machine-generated, say so here.
